@@ -7,6 +7,7 @@ receives what the engine returns, so locked clues and the solution never reach i
 """
 
 import re
+from pathlib import Path
 
 import altair as alt
 import pandas as pd
@@ -14,6 +15,8 @@ import streamlit as st
 
 import db
 from game.engine import Engine, Game, GameError
+
+COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
 
 st.set_page_config(page_title="The Carcavelos Paper", page_icon="🕵️", layout="wide")
 
@@ -202,13 +205,20 @@ if flash:
 
 # ---- Intro --------------------------------------------------------------------
 
-st.markdown(
-    "It is a stormy Thursday night on the Carcavelos campus. At 23:47 an anonymous number posted "
-    "`SV_Final_v3.pdf`, tomorrow's **Semiconductor Valuation** final, to all 212 students in the "
-    "cohort group chat. The Dean has made you examiner for the honour council: "
-    "*\"I do not want a scandal. I want a name, and I want it before nine.\"*"
-)
-st.caption(game.variables["weather"])
+cover_column, intro_column = st.columns([1, 2], vertical_alignment="center", gap="large")
+with cover_column:
+    if COVER.exists():
+        st.image(str(COVER), width=320)
+with intro_column:
+    st.title("The Carcavelos Paper")
+    st.markdown(
+        "It is a stormy Thursday night on the Carcavelos campus. At 23:47 an anonymous number posted "
+        "`SV_Final_v3.pdf`, tomorrow's **Semiconductor Valuation** final, to all 212 students in the "
+        "cohort group chat. The Dean has made you examiner for the honour council: "
+        "*\"I do not want a scandal. I want a name, and I want it before nine.\"*"
+    )
+    st.caption(game.variables["weather"])
+st.divider()
 
 # ---- Case closed ----------------------------------------------------------------
 
