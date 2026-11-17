@@ -49,10 +49,12 @@ def test_campus_map_is_the_first_tab():
     assert at.tabs[0].label == "🗺️ Campus map"
 
 
-def test_every_location_has_a_pin_on_the_map():
+def test_one_pin_for_each_place_drawn_on_the_map():
     markup = map_markup(start())
-    for clue_id in LOCATIONS:
+    assert markup.count("data-place=") == 4
+    for clue_id in ("L1", "L3", "L4", "L5"):
         assert f'data-place="{clue_id}"' in markup
+    assert 'data-place="L2"' not in markup  # the cafeteria is not drawn on this map
 
 
 def test_pins_show_each_locations_state():

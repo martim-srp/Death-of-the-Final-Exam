@@ -22,11 +22,11 @@ from game.engine import Engine, Game, GameError
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
 # The campus map picture. To swap it, replace the file (any size, WebP/PNG/JPG) and
 # move the pins below: each is (x, y) as a fraction of the picture's width and height,
-# set just above and to the right of the place's own marker on the picture.
+# set just above and to the right of the place's own marker on the picture. Only the places
+# drawn on the picture get a pin; the cafeteria (L2) is not on it, so it stays in the case file.
 CAMPUS_MAP = Path(__file__).resolve().parent / "assets" / "campus-map.webp"
 MAP_PINS = {
     "L1": (0.400, 0.390, "Library gate"),  # the library print station (crimson)
-    "L2": (0.552, 0.150, "Cafeteria"),  # the green building
     "L3": (0.346, 0.690, "Residence"),  # the residence (purple)
     "L4": (0.567, 0.510, "Faculty corridor"),  # the Professor's office (navy)
     "L5": (0.700, 0.072, "Beach café"),  # the beach café (orange)
