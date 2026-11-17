@@ -150,7 +150,7 @@
     "companion": {
       "name": "The Companion",
       "persona": "Introduces herself as a semiconductor consultant; the Professor's mistress. Charming, vague, answers questions with questions, mostly about the Professor's consulting work. A sharp professional who never admits to being a spy. No accent or nationality jokes.",
-      "cover": "I came to see the Professor, but he forgot our appointment, so I waited in the faculty lobby. Then I took the train to Lisbon and had dinner with him in Chiado from 21:00. His bag never left his chair. He is very attached to it.",
+      "cover": "I came to see the Professor, but he forgot our appointment, so I waited in the faculty lobby. I never went to his office door. Then I took the train to Lisbon and had dinner with him in Chiado from 21:00. His bag never left his chair. He is very attached to it.",
       "asks_password": true,
       "topic_unlocks": {"work": "D8"},
       "topic_lines": {
@@ -162,7 +162,7 @@
         "D1": "She reads Question 5 slowly and smiles for the first time. \"How generous of your students.\""
       },
       "claims": [
-        {"id": "waited_in_lobby", "text": "I waited in the faculty lobby.", "broken_by": ["L4"]}
+        {"id": "never_went_to_office_door", "text": "I never went to his office door.", "broken_by": ["L4"]}
       ]
     }
   },

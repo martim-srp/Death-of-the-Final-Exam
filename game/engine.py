@@ -313,7 +313,10 @@ class Engine:
         if suspect == "professor" and clue_id == "D8":
             self._award(game, "honey_trap")
         caught = self._catch_contradictions(game, suspect, clue_id)
-        game.history.append({"action": "present", "suspect": suspect, "clue": clue_id, "clock": game.clock})
+        event = {"action": "present", "suspect": suspect, "clue": clue_id, "clock": game.clock}
+        if caught:
+            event["contradictions"] = [item["claim"] for item in caught]
+        game.history.append(event)
         result = {"unlocked": unlocked, "reveal": self._fill(game, reveal)}
         if caught:
             result["contradictions"] = caught
@@ -342,16 +345,18 @@ class Engine:
         Only lists claims the player has broken, so it never gives away which
         clue breaks a claim they have not caught yet.
         """
+        sources = {
+            (event["suspect"], claim_id): event["clue"]
+            for event in game.history
+            for claim_id in event.get("contradictions", [])
+        }
         result = []
         for suspect, claim_id in game.contradictions:
             claims = {c["id"]: c for c in self._suspects(game)[suspect].get("claims", [])}
             if claim_id not in claims:
                 continue
             claim = claims[claim_id]
-            # The first clue shown to this suspect that breaks the claim is the one that caught it.
-            clue_id = next(
-                (c for s, c in game.presented if s == suspect and c in claim["broken_by"]), None
-            )
+            clue_id = sources.get((suspect, claim_id))
             result.append(self._claim_view(game, suspect, claim, clue_id))
         return result
 

@@ -439,6 +439,41 @@ def test_a_save_from_before_contradictions_still_loads(engine):
     assert engine.present(loaded, "class_rep", "L1")["contradictions"]
 
 
+def test_resumed_game_records_the_clue_that_caught_the_contradiction(engine):
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    engine.present(game, "class_rep", "L1")
+    old = game.to_dict()
+    del old["contradictions"]
+    old["history"][-1].pop("contradictions", None)
+    loaded = Game.from_dict(old)
+
+    engine.ask(loaded, "class_rep", "alibi")
+    engine.open_clue(loaded, "L3")
+    caught = engine.present(loaded, "class_rep", "L3")["contradictions"]
+    assert caught[0]["clue"] == "L3"
+    assert engine.contradiction_list(loaded) == caught
+    resumed = Game.from_dict(json.loads(json.dumps(loaded.to_dict())))
+    assert engine.contradiction_list(resumed) == caught
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_corridor_clue_breaks_the_companions_denial_about_the_office_door(engine, variant):
+    game = engine.new_game(seed=1, variant=variant)
+    engine.open_clue(game, "L4")
+    engine.open_clue(game, "D7")
+    assert not engine.present(game, "companion", "D7").get("contradictions")
+
+    [caught] = engine.present(game, "companion", "L4")["contradictions"]
+    assert caught == {
+        "suspect": "companion",
+        "claim": "never_went_to_office_door",
+        "text": "I never went to his office door.",
+        "clue": "L4",
+    }
+    assert caught["text"] in engine.character_brief(game, "companion")["cover"]
+
+
 def test_brief_never_contains_claims(engine):
     """The AI plays the suspect from their cover. It is never told which clues break it."""
     game = engine.new_game(seed=1, variant="A")
