@@ -1,0 +1,45 @@
+"""Load the case file and build the version of it that applies to one variant.
+
+The case file (data/case.json) holds the shared story. Each variant only lists
+what differs from it, so this module merges the variant's overrides on top.
+"""
+
+import copy
+import json
+from pathlib import Path
+
+CASE_PATH = Path(__file__).resolve().parent.parent / "data" / "case.json"
+
+
+def load_case(path=CASE_PATH):
+    """Read the case file from disk."""
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def deep_merge(base, override):
+    """Return a copy of base with override applied. Nested dicts merge key by key."""
+    result = copy.deepcopy(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = copy.deepcopy(value)
+    return result
+
+
+def resolve_variant(case, variant):
+    """Return the clues and suspects as they are in one variant."""
+    if variant not in case["variants"]:
+        raise KeyError(f"Unknown variant: {variant}")
+    v = case["variants"][variant]
+    return {
+        "clues": deep_merge(case["clues"], v.get("clues", {})),
+        "suspects": deep_merge(case["suspects"], v.get("suspects", {})),
+        "solution": dict(v["solution"]),
+    }
+
+
+def option_ids(case, column):
+    """The ids allowed in one accusation column (who, how, where or why)."""
+    return [option["id"] for option in case["accusation"][column]]
