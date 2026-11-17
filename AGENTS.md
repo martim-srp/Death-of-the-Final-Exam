@@ -5,7 +5,7 @@ Claude Code, Codex, Copilot and any other agent must follow this file.
 
 ## The project
 
-The Carcavelos Paper is a detective game. An exam has leaked the night before it is sat; the player
+Death of the Final Exam is a detective game. An exam has leaked the night before it is sat; the player
 opens clues, questions five AI-played suspects and accuses someone before 09:00. At the start of each
 game the server picks one of three variants (A, B, C), each with a different culprit, and randomises
 details such as card numbers.

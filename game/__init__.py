@@ -1,1 +1,1 @@
-"""The Carcavelos Paper game logic."""
+"""Death of the Final Exam: game logic."""
