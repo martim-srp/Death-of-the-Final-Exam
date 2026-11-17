@@ -20,6 +20,15 @@ from game.case import load_case
 from game.engine import Engine, Game, GameError
 
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
+CAMPUS_MAP = Path(__file__).resolve().parent / "assets" / "campus-map.svg"
+# Where each location clue sits on the campus map, in the map's own 400 x 300 units.
+MAP_PINS = {
+    "L1": (250, 64, "Library gate"),
+    "L2": (250, 211, "Cafeteria"),
+    "L3": (75, 262, "Residence"),
+    "L4": (124, 96, "Faculty corridor"),
+    "L5": (325, 232, "Beach café"),
+}
 PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.<png|jpg|webp|svg> each
 # File types a portrait may have, in order of preference: a picture someone supplies
 # (PNG, JPG or WebP) wins over the drawn SVG of the same suspect.
@@ -291,6 +300,112 @@ def clear_notebook():
         del st.session_state[key]
 
 
+# ---- The campus map ---------------------------------------------------------------
+
+PIN_COLORS = {"locked": "#5a5048", "available": "#c0392b", "open": "#efe6d8"}
+PIN_STATES = {"locked": "Locked", "available": "Not searched yet", "open": "Searched"}
+
+
+def map_points(game):
+    """One pin per location clue on the map, with its state from the engine."""
+    points = []
+    for item in engine.clue_list(game):
+        if item["id"] in MAP_PINS:
+            x, y, place = MAP_PINS[item["id"]]
+            points.append(
+                {"id": item["id"], "x": x, "y": y, "place": place, "title": item["title"],
+                 "state": item["state"], "status": PIN_STATES[item["state"]]}
+            )
+    return points
+
+
+MAP_JS = """
+export default function(component) {
+    const { data, setTriggerValue, parentElement } = component;
+    let holder = parentElement.querySelector(".campus-map");
+    if (!holder) {
+        holder = document.createElement("div");
+        holder.className = "campus-map";
+        parentElement.appendChild(holder);
+    }
+    holder.innerHTML = data;
+    holder.querySelectorAll("[data-place]").forEach((pin) => {
+        const go = () => setTriggerValue("place", pin.getAttribute("data-place"));
+        pin.addEventListener("click", go);
+        pin.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    });
+}
+"""
+
+MAP_CSS = """
+.campus-map svg { width: 100%; max-width: 560px; height: auto; display: block; border-radius: 10px; }
+.campus-map [data-place] { cursor: pointer; }
+.campus-map [data-place]:hover circle.pin, .campus-map [data-place]:focus circle.pin { stroke: #b8924f; stroke-width: 3; }
+.campus-map [data-place]:focus { outline: none; }
+"""
+
+map_component = st.components.v2.component("campus_map", js=MAP_JS, css=MAP_CSS)
+
+
+def campus_svg(points, picked=None):
+    """The campus drawing with a clickable pin on each location. All of it is our own trusted markup."""
+    drawing = CAMPUS_MAP.read_text(encoding="utf-8")
+    pins = []
+    for p in points:
+        ring = '<circle r="19" fill="none" stroke="#b8924f" stroke-width="2" stroke-dasharray="3 3"/>' if p["id"] == picked else ""
+        text_color = "#14100e" if p["state"] == "open" else "#efe6d8"
+        label = html.escape(f"{p['place']}: {p['status']}")
+        pins.append(
+            f'<g data-place="{p["id"]}" transform="translate({p["x"]} {p["y"]})" role="button" tabindex="0" aria-label="{label}">'
+            f"<title>{label}</title>{ring}"
+            f'<circle class="pin" r="14" fill="{PIN_COLORS[p["state"]]}" stroke="#14100e" stroke-width="2"/>'
+            f'<text y="3.5" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" '
+            f'fill="{text_color}">{p["id"]}</text></g>'
+        )
+    return drawing.replace("</svg>", "".join(pins) + "</svg>")
+
+
+def picked_on_map():
+    """Copy a tap on a map pin into the place picker, before the page is drawn again."""
+    state = st.session_state.get("campus_map") or {}
+    place = state.get("place") if hasattr(state, "get") else getattr(state, "place", None)
+    if place in MAP_PINS:
+        st.session_state.map_pick = place
+
+
+def campus_map(game):
+    """The map tab: tap a pin (or a name below the map) to go there."""
+    points = map_points(game)
+    by_id = {p["id"]: p for p in points}
+    map_column, place_column = st.columns([3, 2], gap="large")
+    with map_column:
+        map_component(
+            data=campus_svg(points, st.session_state.get("map_pick")), key="campus_map",
+            on_place_change=picked_on_map,
+        )
+        st.caption("🔴 not searched yet · ⚪ searched · ⚫ locked")
+    with place_column:
+        place = st.pills(
+            "Go to", list(by_id), key="map_pick", format_func=lambda i: by_id[i]["place"]
+        )
+        if place is None:
+            st.caption("Tap a pin on the map, or a place above, to go there.")
+            return
+        point = by_id[place]
+        st.markdown(f"#### 📍 {plain(point['title'])}")
+        if point["state"] == "locked":
+            st.markdown("🔒 Locked. You have no reason to be here yet. Keep investigating.")
+        elif point["state"] == "available":
+            if st.button(f"Search it ({case['clock']['clue_cost']} min)", key="map_search", type="primary"):
+                run(engine.open_clue, place)
+                st.rerun()
+        else:
+            clue = engine.read_clue(game, place)
+            st.write(clue["text"])
+            if clue["log"]:
+                st.caption("Its log is in the 📁 Case file, where you can search it.")
+
+
 def run(action, *args):
     """Run an engine action, save the game, and turn rule errors into messages."""
     game = current_game()
@@ -376,7 +491,12 @@ if game.status != "playing":
 
 suspect_cards(game)
 
-case_tab, question_tab, accuse_tab = st.tabs(["📁 Case file", "🗣️ Question suspects", "⚖️ Accuse"])
+map_tab, case_tab, question_tab, accuse_tab = st.tabs(
+    ["🗺️ Campus map", "📁 Case file", "🗣️ Question suspects", "⚖️ Accuse"]
+)
+
+with map_tab:
+    campus_map(game)
 
 # ---- Case file ------------------------------------------------------------------
 
