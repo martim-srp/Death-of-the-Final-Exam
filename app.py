@@ -386,9 +386,17 @@ with accuse_tab:
                 column.capitalize(),
                 [o["id"] for o in case["accusation"][column]],
                 format_func=lambda o, c=column: label(c, o),
+                index=None,  # start empty so a default click can't solve the case
                 key=f"accuse_{column}",
             )
     if st.button("Make the accusation", type="primary"):
+        missing = [c for c in ("who", "how", "where", "why") if choice[c] is None]
+        if missing:
+            st.session_state.flash = (
+                "warning",
+                f"Pick one option in each column first. Missing: {', '.join(missing)}.",
+            )
+            st.rerun()
         result = run(engine.accuse, choice["who"], choice["how"], choice["where"], choice["why"])
         if result and result["status"] == "playing":
             st.session_state.flash = (
