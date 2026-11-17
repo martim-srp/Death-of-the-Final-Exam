@@ -1,4 +1,4 @@
-"""The Carcavelos Paper: Streamlit interface.
+"""Death of the Final Exam: Streamlit interface.
 
 Run with:  streamlit run app.py
 
@@ -14,11 +14,13 @@ import pandas as pd
 import streamlit as st
 
 import db
+from game.case import load_case
 from game.engine import Engine, Game, GameError
 
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
+TITLE = load_case()["title"]  # the game's name lives in data/case.json
 
-st.set_page_config(page_title="The Carcavelos Paper", page_icon="🕵️", layout="wide")
+st.set_page_config(page_title=TITLE, page_icon="🕵️", layout="wide")
 
 
 @st.cache_resource
@@ -180,7 +182,7 @@ game = current_game()
 # ---- Sidebar: the clock -------------------------------------------------------
 
 with st.sidebar:
-    st.title("🕵️ The Carcavelos Paper")
+    st.title(f"🕵️ {TITLE}")
     st.metric("Time", engine.clock_label(game), help="You must accuse before 09:00.")
     st.progress(game.clock / case["clock"]["limit_minutes"])
     st.caption(
@@ -210,7 +212,7 @@ with cover_column:
     if COVER.exists():
         st.image(str(COVER), width=320)
 with intro_column:
-    st.title("The Carcavelos Paper")
+    st.title(TITLE)
     st.markdown(
         "It is a stormy Thursday night on the Carcavelos campus. At 23:47 an anonymous number posted "
         "`SV_Final_v3.pdf`, tomorrow's **Semiconductor Valuation** final, to all 212 students in the "

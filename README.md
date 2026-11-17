@@ -1,4 +1,4 @@
-# The Carcavelos Paper
+# Death of the Final Exam
 
 A detective game. The night before the Semiconductor Valuation final, the exam leaks in the cohort
 group chat. You have until 09:00 to question five suspects, played by AI, and name who did it, how,
