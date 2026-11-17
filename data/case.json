@@ -22,6 +22,15 @@
     }
   },
   "hedge_fund_minutes": 200,
+  "charts": {
+    "payoff": {
+      "title": "The Class Representative's payoff",
+      "prize": 20000,
+      "grades": [10, 20],
+      "subject_mocks": [15, 14, 15],
+      "rival_mocks": [19, 18, 19]
+    }
+  },
   "random": {
     "alias": ["M. Hari", "I. Adler", "C. Hale"],
     "pastry": [
