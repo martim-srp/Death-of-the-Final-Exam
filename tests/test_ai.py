@@ -40,12 +40,21 @@ def test_secret_is_never_sent(case, suspect, reply, badges):
 
 
 @pytest.mark.parametrize("raw", ["bad JSON", "[]", '{"reply": ""}', None])
-def test_garbage_falls_back_and_records_other(case, raw):
+def test_garbage_falls_back_and_preserves_unlock(case, raw):
     engine, game = case
     result = ai.ask(engine, game, "professor", "What is Question 5?", complete=lambda *_: raw)
     assert result["reply"] == engine.character_brief(game, "professor")["topic_lines"]["exam"]
-    assert result["unlocked"] == []
-    assert game.history[-1]["topic"] == "other"
+    assert result["unlocked"] == ["D3"]
+    assert game.history[-1]["topic"] == "exam"
+    assert game.clock == 10
+
+
+def test_fenced_json_uses_model_reply_and_topic(case):
+    engine, game = case
+    raw = '```json\n{"reply": "I was at the residence.", "topic": "alibi"}\n```'
+    result = ai.ask(engine, game, "class_rep", "Can you explain?", complete=lambda *_: raw)
+    assert result == {"reply": "I was at the residence.", "unlocked": ["L3"]}
+    assert game.history[-1]["topic"] == "alibi"
 
 
 def test_unknown_topic_becomes_other(case):

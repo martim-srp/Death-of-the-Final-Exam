@@ -74,17 +74,23 @@ def _requesty_answer(api_key, prompt, text):
 
 
 def _parse_answer(raw, topics):
+    if not isinstance(raw, str):
+        return None
+    raw = raw.strip()
+    fence = re.fullmatch(r"```(?:json)?[^\S\r\n]*\r?\n(.*?)\r?\n```", raw, re.IGNORECASE | re.DOTALL)
+    if fence:
+        raw = fence.group(1)
     try:
         answer = json.loads(raw)
-    except (TypeError, ValueError):
-        return None, "other"
+    except json.JSONDecodeError:
+        return None
     if not isinstance(answer, dict):
-        return None, "other"
+        return None
 
     topic = answer.get("topic")
     reply = answer.get("reply")
     if not isinstance(reply, str) or not reply.strip():
-        return None, "other"
+        return None
     return reply.strip(), topic if topic in topics else "other"
 
 
@@ -125,14 +131,16 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
         if complete is not None:
             attempted = True
             try:
-                reply, topic = _parse_answer(complete(system_prompt(brief, topics), text), topics)
+                answer = _parse_answer(complete(system_prompt(brief, topics), text), topics)
             except (OpenAIError, TimeoutError):
-                pass  # Keep the locally matched topic if the request failed.
+                answer = None
+            if answer is not None:
+                reply, topic = answer
 
     result = engine.ask(game, suspect, topic)
     if attempted:
         # History is already serialized by the engine and survives a resume link.
         game.history[-1]["ai_call"] = True
     if reply is None:
-        reply = brief["topic_lines"].get(fallback_topic) or brief["cover"]
+        reply = brief["topic_lines"].get(topic) or brief["cover"]
     return {"reply": reply, "unlocked": result["unlocked"]}
