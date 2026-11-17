@@ -77,7 +77,7 @@
     "class_rep": {
       "name": "The Class Representative",
       "persona": "Top of the cohort, admired, administrator of the cohort group chat. Composed and helpful; says they are devastated for the cohort.",
-      "cover": "Was in their room at the residence all evening, revising. Saw the message at 23:47 and reported it at once, as any representative would.",
+      "cover": "I was in my room at the residence all evening, revising. I saw the message at 23:47 and reported it at once, as any representative would.",
       "topic_unlocks": {"alibi": "L3", "report": "D6"},
       "topic_lines": {
         "leak": "\"It is a disgrace. I reported it within five minutes. Someone has to care about this cohort.\""
@@ -92,7 +92,7 @@
     "ta": {
       "name": "The Teaching Assistant",
       "persona": "Doctoral candidate who proofread the exam, and the other administrator of the group chat. Nervous.",
-      "cover": "Proofread the exam on screen. Invigilated another exam from 18:00 to 20:00 with 80 students present.",
+      "cover": "I proofread the exam on screen. From 18:00 to 20:00 I was invigilating another exam, with 80 students in the room.",
       "topic_unlocks": {},
       "topic_lines": {},
       "reveals": {
@@ -104,7 +104,7 @@
     "exchange": {
       "name": "The Exchange Student",
       "persona": "Second in the cohort; sells private tutoring. Cool and commercial.",
-      "cover": "Tutoring six clients at a beach café from 18:00 to 20:30. The 'something special' promised to clients was a mock exam of their own.",
+      "cover": "I was tutoring six clients at a beach café from 18:00 to 20:30. The 'something special' I promised them was a mock exam I wrote myself.",
       "topic_unlocks": {"alibi": "L5"},
       "topic_lines": {
         "leak": "\"If I had the paper I would have sold it. Giving it to everyone makes it worthless. Ask who is better off when an exam is worth nothing.\""
@@ -116,7 +116,7 @@
     "professor": {
       "name": "The Professor",
       "persona": "Wrote the exam; valuation adviser on the sale of Meridian Silicon. Irritable, evasive about the evening, and far more upset about Question 5 than about the leak itself.",
-      "cover": "Was at a faculty dinner in Lisbon. Rewrote Question 5 at 16:10; only he has that version, on a laptop that was with him all evening. Sent v3 to the Teaching Assistant at 11:00. Printed nothing.",
+      "cover": "I was at a faculty dinner in Lisbon. I rewrote Question 5 at 16:10, and only I have that version, on a laptop that was with me all evening. I sent v3 to the Teaching Assistant at 11:00. I printed nothing.",
       "topic_unlocks": {"exam": "D3"},
       "topic_lines": {
         "exam": "\"Whoever leaked this leaked yesterday's draft. Question 5 used illustrative figures. Entirely made up. Who told you they were real?\"",
@@ -130,7 +130,7 @@
     "companion": {
       "name": "The Companion",
       "persona": "Introduces herself as a semiconductor consultant; the Professor's mistress. Charming, vague, answers questions with questions, mostly about the Professor's consulting work. A sharp professional who never admits to being a spy. No accent or nationality jokes.",
-      "cover": "Came to see the Professor, who forgot their appointment; waited in the faculty lobby; took the train to Lisbon; dinner with him in Chiado from 21:00. \"His bag never left his chair. He is very attached to it.\"",
+      "cover": "I came to see the Professor, but he forgot our appointment, so I waited in the faculty lobby. Then I took the train to Lisbon and had dinner with him in Chiado from 21:00. His bag never left his chair. He is very attached to it.",
       "asks_password": true,
       "topic_unlocks": {"work": "D8"},
       "topic_lines": {
@@ -267,7 +267,7 @@
       },
       "suspects": {
         "class_rep": {
-          "cover": "Went to the library in the early evening to return a book, then was in their room revising. Saw the message at 23:47 and reported it within minutes.",
+          "cover": "I went to the library in the early evening to return a book, then I was in my room revising. I saw the message at 23:47 and reported it within minutes.",
           "reveals": {
             "L1": "\"Yes, I told you. I returned a book.\"",
             "L2": "\"I had lunch there, yes. I did not pick anything up. Ask the Cashier.\"",
@@ -323,7 +323,7 @@
       },
       "suspects": {
         "class_rep": {
-          "cover": "Went to the library in the early evening to return a book, then was in their room revising. Saw the message at 23:47 and reported it within minutes.",
+          "cover": "I went to the library in the early evening to return a book, then I was in my room revising. I saw the message at 23:47 and reported it within minutes.",
           "reveals": {
             "L1": "\"Yes, I told you. I returned a book.\"",
             "L2": "\"I had lunch there, yes. I did not pick anything up. Ask the Cashier.\"",
