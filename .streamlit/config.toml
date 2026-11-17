@@ -1,0 +1,7 @@
+# Colours taken from assets/cover.webp: near-black background, stamp red, parchment text.
+[theme]
+base = "dark"
+primaryColor = "#c0392b"
+backgroundColor = "#14100e"
+secondaryBackgroundColor = "#241c18"
+textColor = "#efe6d8"
