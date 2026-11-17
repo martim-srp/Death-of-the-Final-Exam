@@ -78,6 +78,13 @@ def test_accuse_without_choosing_does_not_solve_or_cost_a_strike():
     assert at.session_state["game"]["status"] == "playing"
 
 
+def test_missing_choice_warning_is_shown_in_the_accuse_tab():
+    at = start()
+    button(at, "Make the accusation").click().run()
+    accuse_tab = next(t for t in at.tabs if "Accuse" in t.label)
+    assert any("Pick one option in each column" in w.value for w in accuse_tab.warning)
+
+
 def test_accuse_with_one_column_missing_is_refused():
     at = start()
     solution = variant_a_solution()
