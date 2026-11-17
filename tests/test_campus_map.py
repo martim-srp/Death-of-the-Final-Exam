@@ -1,7 +1,6 @@
 """The campus map: a pin for every location, and going there from the map."""
 
 import json
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
@@ -11,7 +10,7 @@ from game.engine import Engine
 
 ROOT = Path(__file__).resolve().parent.parent
 APP = str(ROOT / "app.py")
-MAP = ROOT / "assets" / "campus-map.svg"
+MAP = ROOT / "assets" / "campus-map.webp"
 LOCATIONS = [clue_id for clue_id in load_case()["clues"] if clue_id.startswith("L")]
 
 
@@ -35,11 +34,14 @@ def search_buttons(at):
     return [b for b in at.button if b.label.startswith("Search it")]
 
 
-def test_map_drawing_is_in_the_repo_small_and_titled():
-    assert MAP.stat().st_size < 50_000
-    root = ET.parse(MAP).getroot()
-    assert root.get("viewBox") == "0 0 400 300"
-    assert root.find("{http://www.w3.org/2000/svg}title").text
+def test_map_picture_is_in_the_repo_and_small_enough_for_a_phone():
+    assert MAP.stat().st_size < 300_000
+
+
+def test_map_shows_the_picture_with_the_pins_on_top():
+    markup = map_markup(start())
+    assert '<image href="data:image/' in markup
+    assert markup.index("<image") < markup.index("data-place=")
 
 
 def test_campus_map_is_the_first_tab():

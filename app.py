@@ -20,14 +20,16 @@ from game.case import load_case
 from game.engine import Engine, Game, GameError
 
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
-CAMPUS_MAP = Path(__file__).resolve().parent / "assets" / "campus-map.svg"
-# Where each location clue sits on the campus map, in the map's own 400 x 300 units.
+# The campus map picture. To swap it, replace the file (any size, WebP/PNG/JPG) and
+# move the pins below: each is (x, y) as a fraction of the picture's width and height,
+# set just above and to the right of the place's own marker on the picture.
+CAMPUS_MAP = Path(__file__).resolve().parent / "assets" / "campus-map.webp"
 MAP_PINS = {
-    "L1": (250, 64, "Library gate"),
-    "L2": (250, 211, "Cafeteria"),
-    "L3": (75, 262, "Residence"),
-    "L4": (124, 96, "Faculty corridor"),
-    "L5": (325, 232, "Beach café"),
+    "L1": (0.400, 0.390, "Library gate"),  # the library print station (crimson)
+    "L2": (0.552, 0.150, "Cafeteria"),  # the green building
+    "L3": (0.346, 0.690, "Residence"),  # the residence (purple)
+    "L4": (0.567, 0.510, "Faculty corridor"),  # the Professor's office (navy)
+    "L5": (0.700, 0.072, "Beach café"),  # the beach café (orange)
 }
 PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.<png|jpg|webp|svg> each
 # File types a portrait may have, in order of preference: a picture someone supplies
@@ -347,22 +349,42 @@ MAP_CSS = """
 map_component = st.components.v2.component("campus_map", js=MAP_JS, css=MAP_CSS)
 
 
+@st.cache_data
+def campus_picture():
+    """The map picture as a data URI, with its size in pixels."""
+    from PIL import Image  # installed with streamlit
+
+    with Image.open(CAMPUS_MAP) as picture:
+        size = picture.size
+        mime = Image.MIME[picture.format]
+    uri = f"data:{mime};base64," + base64.b64encode(CAMPUS_MAP.read_bytes()).decode("ascii")
+    return uri, size
+
+
 def campus_svg(points, picked=None):
-    """The campus drawing with a clickable pin on each location. All of it is our own trusted markup."""
-    drawing = CAMPUS_MAP.read_text(encoding="utf-8")
+    """The map picture with a clickable pin on each location. All of it is our own trusted markup."""
+    uri, (width, height) = campus_picture()
+    scale = width / 400  # pins are drawn at the same size whatever the picture's resolution
     pins = []
     for p in points:
-        ring = '<circle r="19" fill="none" stroke="#b8924f" stroke-width="2" stroke-dasharray="3 3"/>' if p["id"] == picked else ""
+        x, y = p["x"] * width, p["y"] * height
+        ring = '<circle r="19" fill="none" stroke="#efe6d8" stroke-width="2.5" stroke-dasharray="3 3"/>' if p["id"] == picked else ""
         text_color = "#14100e" if p["state"] == "open" else "#efe6d8"
         label = html.escape(f"{p['place']}: {p['status']}")
         pins.append(
-            f'<g data-place="{p["id"]}" transform="translate({p["x"]} {p["y"]})" role="button" tabindex="0" aria-label="{label}">'
+            f'<g data-place="{p["id"]}" transform="translate({x:.0f} {y:.0f}) scale({scale:.2f})" '
+            f'role="button" tabindex="0" aria-label="{label}">'
             f"<title>{label}</title>{ring}"
             f'<circle class="pin" r="14" fill="{PIN_COLORS[p["state"]]}" stroke="#14100e" stroke-width="2"/>'
             f'<text y="3.5" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" '
             f'fill="{text_color}">{p["id"]}</text></g>'
         )
-    return drawing.replace("</svg>", "".join(pins) + "</svg>")
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
+        f'aria-label="Map of the campus"><image href="{uri}" width="{width}" height="{height}"/>'
+        + "".join(pins)
+        + "</svg>"
+    )
 
 
 def picked_on_map():
