@@ -1,13 +1,14 @@
 """Free-text suspect questions. The engine owns secrets, time, and unlocks."""
 
 import json
+import logging
 import os
 import re
 from functools import partial
 from pathlib import Path
 
 from dotenv import dotenv_values
-from openai import OpenAI, OpenAIError
+from openai import OpenAI
 
 from game.engine import GameError
 
@@ -128,14 +129,23 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
             if key:
                 complete = partial(_requesty_answer, key)
 
-        if complete is not None:
+        if complete is None:
+            logging.warning("AI: no REQUESTY_API_KEY found, using scripted replies")
+        else:
             attempted = True
             try:
                 answer = _parse_answer(complete(system_prompt(brief, topics), text), topics)
-            except (OpenAIError, TimeoutError):
-                answer = None
-            if answer is not None:
-                reply, topic = answer
+            except Exception as error:
+                status = getattr(error, "status_code", None)
+                if isinstance(status, int) and 100 <= status <= 599:
+                    logging.warning("AI: model call failed (%s %d)", type(error).__name__, status)
+                else:
+                    logging.warning("AI: model call failed (%s)", type(error).__name__)
+            else:
+                if answer is None:
+                    logging.warning("AI: could not parse model reply")
+                else:
+                    reply, topic = answer
 
     result = engine.ask(game, suspect, topic)
     if attempted:

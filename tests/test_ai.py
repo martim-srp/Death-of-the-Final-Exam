@@ -80,6 +80,48 @@ def test_api_error_uses_scripted_path(case):
     assert game.history[-1]["ai_call"]
 
 
+@pytest.mark.parametrize("status", [None, 429])
+def test_unexpected_client_error_logs_only_type_and_status(case, caplog, status):
+    engine, game = case
+    error = RuntimeError("sensitive exception details")
+    error.status_code = status
+
+    def complete(*args):
+        raise error
+
+    result = ai.ask(engine, game, "professor", "What is Question 5?", complete=complete)
+    detail = "RuntimeError 429" if status else "RuntimeError"
+    assert caplog.messages == [f"AI: model call failed ({detail})"]
+    assert result["unlocked"] == ["D3"]
+    assert game.clock == 10
+    assert game.history[-1]["ai_call"]
+
+
+def test_unreadable_reply_logs_without_model_text(case, caplog):
+    engine, game = case
+    result = ai.ask(
+        engine, game, "professor", "What is Question 5?",
+        complete=lambda *_: "sensitive unstructured model reply",
+    )
+    assert caplog.messages == ["AI: could not parse model reply"]
+    assert result["unlocked"] == ["D3"]
+
+
+def test_missing_key_logs_without_attempting_model(case, monkeypatch, tmp_path, caplog):
+    engine, game = case
+    monkeypatch.delenv("REQUESTY_API_KEY", raising=False)
+    monkeypatch.setattr(ai, "ENV_FILE", tmp_path / ".env")
+
+    def unexpected_request(*args):
+        pytest.fail("No request should be made without a key")
+
+    monkeypatch.setattr(ai, "_requesty_answer", unexpected_request)
+    result = ai.ask(engine, game, "professor", "What is Question 5?", cloud_key=lambda: None)
+    assert caplog.messages == ["AI: no REQUESTY_API_KEY found, using scripted replies"]
+    assert result["unlocked"] == ["D3"]
+    assert not game.history[-1].get("ai_call")
+
+
 def test_prompt_uses_only_character_brief(case):
     engine, game = case
     suspect = "professor"
