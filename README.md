@@ -10,10 +10,10 @@ where and why. The culprit changes from game to game.
 
 | Name | Student number |
 | --- | --- |
-| _name_ | _number_ |
-| _name_ | _number_ |
-| _name_ | _number_ |
-| _name_ | _number_ |
+| Duarte Furtado | 80573 |
+| Lúcia Pereira | 78729 |
+| Martim Pereira | 62329 |
+| Salvador Rendeiro | 62548 |
 
 ## Run it locally
 
