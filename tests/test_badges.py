@@ -174,3 +174,58 @@ def test_every_log_field_in_the_case_file_is_exempt():
     fields = {m.lower() for m in re.findall(r"\b([A-Za-z_]+)=", raw)}
     json.loads(raw)  # still valid JSON
     assert fields <= _GAME_FIELDS, fields - _GAME_FIELDS
+
+
+# ---- File names and card numbers do not hide a password (review of #11) ----------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "secret2026.txt",
+        "here it is: Carcavelos2026.pdf",
+        "hunter2026x.docx",
+        "notes_benfica1904.csv",
+        "my-Lisboa2026x.png",
+        "Lisboa2026/STU-2291",
+        "STU-2291-benfica1904",
+        "staff-0417.hunter2026",
+        "card=STU-2291benfica1904",
+        "owner=Carcavelos2026",
+        "job=abc123def456",
+    ],
+)
+def test_passwords_inside_file_names_and_card_numbers_are_caught(engine, text):
+    assert looks_like_secret(text)
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.check_secret(game, "companion", text)
+    assert game.badges == ["spy_password"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Who posted SV_Final_v3.pdf?",
+        "sv_final_v3.pdf",
+        "Is notes.txt yours?",
+        "Send me exam_final_v2.docx",
+        "Whose is STU-2291's card?",
+        "staff-0417",
+        "Was owner=STAFF-0417 yours?",
+        "What is expires=02:32?",
+    ],
+)
+def test_ordinary_file_names_and_cards_are_still_not_secrets(engine, text):
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.check_secret(game, "companion", text) is False
+    assert game.badges == []
+
+
+@pytest.mark.parametrize("variant", ["A", "B", "C"])
+def test_randomised_card_numbers_are_never_secrets(engine, variant):
+    """Every card the game can draw (1000-9999), alone, as a log field and in a possessive."""
+    game = engine.new_game(seed=1, variant=variant)
+    for number in range(1000, 10000):
+        for text in (f"STU-{number}", f"card=STAFF-{number}", f"STU-{number}'s"):
+            assert not engine.check_secret(game, "companion", text), text
+    assert game.badges == []

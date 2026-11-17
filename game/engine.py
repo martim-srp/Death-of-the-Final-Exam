@@ -23,8 +23,12 @@ _KEY_PATTERN = re.compile(r"\b(sk|pk|rk|ghp|gho|xoxb|xoxp)[-_][A-Za-z0-9_-]{8,}"
 _PASSWORD_WORDS = re.compile(
     r"\b(password|passwd|pwd|passcode|senha|palavra-passe)\b\s*(is|=|:|é)?\s*\S{4,}", re.IGNORECASE
 )
-_CARD_NUMBER = re.compile(r"\b(stu|staff)-\d{4}\b", re.IGNORECASE)
-_FILE_NAME = re.compile(r"^[\w.-]+\.(pdf|docx?|xlsx?|csv|txt|png|jpe?g)$", re.IGNORECASE)
+# A whole word that is a card number (STU-2291, staff-0417, STU-2291's). Matched against the
+# whole word, so a password with a card number glued on (Lisboa2026/STU-2291) is not exempt.
+_CARD_NUMBER = re.compile(r"(stu|staff)-\d{4}(['’]s)?", re.IGNORECASE)
+# A file name: a stem, then a known extension. The stem is still checked for passwords.
+_FILE_NAME = re.compile(r"([\w.-]+)\.(pdf|docx?|xlsx?|csv|txt|png|jpe?g)", re.IGNORECASE)
+_NAME_PARTS = re.compile(r"[._-]+")
 _STRIP = ".,;:!?\"'()[]"
 # Field names used in the case file's logs (job=88213, card=STU-2291, ...). Only these
 # key=value words count as game data; token=..., pass=... and any other assignment do not.
@@ -39,35 +43,38 @@ def _words(text):
     return [w.strip(_STRIP) for w in text.split() if w.strip(_STRIP)]
 
 
-def _is_game_data(word, known_words):
-    """True for words that come from the game itself, which are never secrets:
-    card numbers, file names, log fields like job=88213, and words in the case file."""
+def _looks_like_password(word, known_words):
+    """True if one word looks like a password: 8+ characters mixing lowercase letters and digits.
+
+    Game data is never a password: words from the case file and card numbers. Log fields
+    (job=88213) and file names (SV_Final_v3.pdf) only wrap a value, so the value inside is
+    checked instead: card=STU-2291 is fine, owner=Carcavelos2026 and secret2026.txt are not.
+    A file name's stem is checked part by part (report_final2.docx is "report" and "final2").
+    """
+    if word.lower() in known_words or _CARD_NUMBER.fullmatch(word):
+        return False
     field = _FIELD.match(word)
-    return (
-        bool(_CARD_NUMBER.search(word))
-        or bool(_FILE_NAME.match(word))
-        or bool(field and field.group(1).lower() in _GAME_FIELDS)
-        or word.lower() in known_words
-    )
+    if field and field.group(1).lower() in _GAME_FIELDS:
+        return _looks_like_password(word[field.end():], known_words)
+    file_name = _FILE_NAME.fullmatch(word)
+    if file_name:
+        parts = _NAME_PARTS.split(file_name.group(1))
+        return any(_looks_like_password(part, known_words) for part in parts if part)
+    has_lower = any(c.islower() for c in word)
+    has_digit = any(c.isdigit() for c in word)
+    return len(word) >= 8 and has_lower and has_digit
 
 
 def looks_like_secret(text, known_words=frozenset()):
     """True if the text contains something that looks like a password or an API key.
 
     Explicit keys (sk-..., ghp_...) and phrases like "my password is ..." always count.
-    Otherwise a word of 8+ characters mixing lowercase letters and digits counts, unless it
-    is game data (see _is_game_data). known_words is the vocabulary of the case file.
+    Otherwise any word that looks like a password counts (see _looks_like_password).
+    known_words is the vocabulary of the case file.
     """
     if _KEY_PATTERN.search(text) or _PASSWORD_WORDS.search(text):
         return True
-    for word in _words(text):
-        if len(word) < 8 or _is_game_data(word, known_words):
-            continue
-        has_lower = any(c.islower() for c in word)
-        has_digit = any(c.isdigit() for c in word)
-        if has_lower and has_digit:
-            return True
-    return False
+    return any(_looks_like_password(word, known_words) for word in _words(text))
 
 
 def case_vocabulary(case):
