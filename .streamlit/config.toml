@@ -1,0 +1,25 @@
+# The look of the game: a golden-age country-house mystery.
+# Aged paper, ink, a wax-seal red and brass, with a dark mahogany study for the sidebar.
+
+[theme]
+base = "light"
+primaryColor = "#7A1F2B"              # wax-seal red
+backgroundColor = "#F4EDDC"           # cream paper
+secondaryBackgroundColor = "#E9DDC2"  # aged paper
+textColor = "#2A211A"                 # ink
+linkColor = "#7A1F2B"
+borderColor = "#C2A66B"               # brass
+showWidgetBorder = true
+baseRadius = "small"
+codeBackgroundColor = "#EFE4CB"       # a typed sheet
+codeTextColor = "#2A211A"
+font = "Lora:https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&display=swap, serif"
+headingFont = "Playfair Display:https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap, serif"
+codeFont = "Special Elite:https://fonts.googleapis.com/css2?family=Special+Elite&display=swap, monospace"
+
+[theme.sidebar]
+backgroundColor = "#2B1D16"           # mahogany study
+secondaryBackgroundColor = "#3A2A20"
+textColor = "#F4EDDC"
+primaryColor = "#C9A45C"              # brass
+borderColor = "#5A4332"
