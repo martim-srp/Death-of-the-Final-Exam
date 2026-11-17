@@ -26,6 +26,12 @@ _PASSWORD_WORDS = re.compile(
 _CARD_NUMBER = re.compile(r"\b(stu|staff)-\d{4}\b", re.IGNORECASE)
 _FILE_NAME = re.compile(r"^[\w.-]+\.(pdf|docx?|xlsx?|csv|txt|png|jpe?g)$", re.IGNORECASE)
 _STRIP = ".,;:!?\"'()[]"
+# Field names used in the case file's logs (job=88213, card=STU-2291, ...). Only these
+# key=value words count as game data; token=..., pass=... and any other assignment do not.
+_GAME_FIELDS = frozenset(
+    {"admin", "card", "expires", "job", "owner", "pages", "queue", "staff", "station"}
+)
+_FIELD = re.compile(r"^([A-Za-z_]+)=")
 
 
 def _words(text):
@@ -36,10 +42,11 @@ def _words(text):
 def _is_game_data(word, known_words):
     """True for words that come from the game itself, which are never secrets:
     card numbers, file names, log fields like job=88213, and words in the case file."""
+    field = _FIELD.match(word)
     return (
         bool(_CARD_NUMBER.search(word))
         or bool(_FILE_NAME.match(word))
-        or "=" in word
+        or bool(field and field.group(1).lower() in _GAME_FIELDS)
         or word.lower() in known_words
     )
 
