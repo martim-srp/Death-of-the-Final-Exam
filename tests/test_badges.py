@@ -102,3 +102,43 @@ def test_slow_solve_earns_no_hedge_fund(engine):
     engine.accuse(game, s["who"], s["how"], s["where"], s["why"])
     assert game.status == "solved"
     assert "hedge_fund" not in game.badges
+
+
+# ---- Game data is never a secret (false positives reported in the review of #7) ----------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Did you post SV_Final_v3.pdf?",
+        "What is job=88213?",
+        "Was card=STU-2291 yours?",
+        "Why was staff=STAFF-0417 at LIB-1?",
+        "Who has the file report_final2.docx?",
+    ],
+)
+def test_game_data_in_a_question_is_not_a_secret(engine, text):
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.check_secret(game, "companion", text) is False
+    assert game.badges == []
+
+
+@pytest.mark.parametrize("variant", ["A", "B", "C"])
+def test_no_word_from_any_clue_or_log_counts_as_a_secret(engine, variant):
+    """Players copy words from clues into their questions. None of them may trip the trap."""
+    for seed in range(20):
+        game = engine.new_game(seed=seed, variant=variant)
+        for clue_id in engine.case["clues"]:
+            game.opened.append(clue_id)
+        for clue_id in engine.case["clues"]:
+            clue = engine.read_clue(game, clue_id)
+            for key in ("text", "log", "hidden_text"):
+                if clue[key]:
+                    for line in clue[key].splitlines():
+                        assert not engine.check_secret(game, "companion", line), line
+
+
+def test_a_real_password_mixed_with_game_data_is_still_caught(engine):
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.check_secret(game, "companion", "card=STU-2291, and my login is Carcavelos2026")
+    assert game.badges == ["spy_password"]
