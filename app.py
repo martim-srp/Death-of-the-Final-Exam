@@ -22,14 +22,14 @@ from game.engine import Engine, Game, GameError
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
 # The campus map picture. To swap it, replace the file (any size, WebP/PNG/JPG) and
 # move the pins below: each is (x, y) as a fraction of the picture's width and height,
-# set just above and to the right of the place's own marker on the picture. Only the places
+# at the centre of the round head of the pin drawn on the picture. Only the places
 # drawn on the picture get a pin; the cafeteria (L2) is not on it, so it stays in the case file.
 CAMPUS_MAP = Path(__file__).resolve().parent / "assets" / "campus-map.webp"
 MAP_PINS = {
-    "L1": (0.400, 0.390, "Library gate"),  # the library print station (crimson)
-    "L3": (0.346, 0.690, "Residence"),  # the residence (purple)
-    "L4": (0.567, 0.510, "Faculty corridor"),  # the Professor's office (navy)
-    "L5": (0.700, 0.072, "Beach café"),  # the beach café (orange)
+    "L1": (0.365, 0.440, "Library gate"),  # the printer pin, library print station
+    "L3": (0.317, 0.731, "Residence"),  # the house pin
+    "L4": (0.537, 0.550, "Faculty corridor"),  # the graduation cap pin, Professor's office
+    "L5": (0.672, 0.115, "Beach café"),  # the coffee cup pin
 }
 PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.<png|jpg|webp|svg> each
 # File types a portrait may have, in order of preference: a picture someone supplies
@@ -342,7 +342,7 @@ export default function(component) {
 MAP_CSS = """
 .campus-map svg { width: 100%; max-width: 560px; height: auto; display: block; border-radius: 10px; }
 .campus-map [data-place] { cursor: pointer; }
-.campus-map [data-place]:hover circle.pin, .campus-map [data-place]:focus circle.pin { stroke: #b8924f; stroke-width: 3; }
+.campus-map [data-place]:hover circle.pin, .campus-map [data-place]:focus circle.pin { stroke-width: 9; }
 .campus-map [data-place]:focus { outline: none; }
 """
 
@@ -362,22 +362,32 @@ def campus_picture():
 
 
 def campus_svg(points, picked=None):
-    """The map picture with a clickable pin on each location. All of it is our own trusted markup."""
+    """The map picture, with each pin drawn on it made clickable and ringed in its state's colour.
+
+    All of it is our own trusted markup.
+    """
     uri, (width, height) = campus_picture()
-    scale = width / 400  # pins are drawn at the same size whatever the picture's resolution
+    scale = width / 1200  # sizes below are for a 1200-pixel-wide picture
     pins = []
     for p in points:
         x, y = p["x"] * width, p["y"] * height
-        ring = '<circle r="19" fill="none" stroke="#efe6d8" stroke-width="2.5" stroke-dasharray="3 3"/>' if p["id"] == picked else ""
+        color = PIN_COLORS[p["state"]]
         text_color = "#14100e" if p["state"] == "open" else "#efe6d8"
+        picked_ring = (
+            '<circle r="38" fill="none" stroke="#efe6d8" stroke-width="3" stroke-dasharray="6 5"/>'
+            if p["id"] == picked
+            else ""
+        )
         label = html.escape(f"{p['place']}: {p['status']}")
         pins.append(
-            f'<g data-place="{p["id"]}" transform="translate({x:.0f} {y:.0f}) scale({scale:.2f})" '
+            f'<g data-place="{p["id"]}" transform="translate({x:.0f} {y:.0f}) scale({scale:.3f})" '
             f'role="button" tabindex="0" aria-label="{label}">'
-            f"<title>{label}</title>{ring}"
-            f'<circle class="pin" r="14" fill="{PIN_COLORS[p["state"]]}" stroke="#14100e" stroke-width="2"/>'
-            f'<text y="3.5" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" '
-            f'fill="{text_color}">{p["id"]}</text></g>'
+            f"<title>{label}</title>{picked_ring}"
+            f'<circle class="pin" r="29" fill="none" stroke="{color}" stroke-width="6"/>'
+            '<circle r="55" fill="#000" fill-opacity="0"/>'  # a finger-sized target on a phone
+            f'<g transform="translate(26 -26)"><circle r="14" fill="{color}" stroke="#14100e" stroke-width="2"/>'
+            f'<text y="4.5" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" '
+            f'fill="{text_color}">{p["id"]}</text></g></g>'
         )
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
