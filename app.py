@@ -147,12 +147,31 @@ with case_tab:
 # ---- Questioning --------------------------------------------------------------
 
 with question_tab:
+    from streamlit.errors import StreamlitSecretNotFoundError
+
+    from game import ai
+
+    def cloud_key():
+        try:
+            return st.secrets.get("REQUESTY_API_KEY")
+        except StreamlitSecretNotFoundError:
+            return None
+
     suspect_ids = list(case["suspects"])
     suspect = st.selectbox(
         "Suspect", suspect_ids, format_func=lambda s: case["suspects"][s]["name"]
     )
     brief = engine.character_brief(game, suspect)
     st.caption(brief["persona"])
+
+    with st.form("suspect_chat", clear_on_submit=True):
+        question = st.text_input("Your question", help=f"Up to {ai.MAX_QUESTION_LENGTH} characters.")
+        send = st.form_submit_button(f"Send question ({case['clock']['question_cost']} min)")
+    if send:
+        result = run(lambda game: ai.ask(engine, game, suspect, question, cloud_key=cloud_key))
+        if result:
+            st.session_state.last_answer = result
+        st.rerun()
 
     left, right = st.columns(2)
     with left:
@@ -176,7 +195,13 @@ with question_tab:
                 st.rerun()
 
     if "last_answer" in st.session_state:
-        st.info(st.session_state.last_answer)
+        answer = st.session_state.last_answer
+        if isinstance(answer, dict):
+            st.text(answer["reply"])
+            if answer["unlocked"]:
+                st.success(f"🔓 New clue unlocked: {', '.join(answer['unlocked'])}")
+        else:
+            st.info(answer)
 
 # ---- Accusation -------------------------------------------------------------------
 
