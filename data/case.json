@@ -308,7 +308,8 @@
             "D1": "Reads Question 5 and almost smiles. \"Good. Let everyone see what he puts in exams.\""
           },
           "claims": [
-            {"id": "proofread_on_screen", "text": "I proofread the exam on screen.", "broken_by": ["D2", "L1"]}
+            {"id": "proofread_on_screen", "text": "I proofread the exam on screen.", "broken_by": ["D2", "L1"]},
+            {"id": "card_lost_at_lunch", "text": "My card went missing at lunch, in the cafeteria.", "broken_by": ["L2"]}
           ]
         },
         "professor": {
@@ -371,10 +372,15 @@
           }
         },
         "companion": {
+          "cover": "I came to see the Professor, but he forgot our appointment, so I waited in the faculty lobby. I never went to his office door. Then I took the train to Lisbon and had dinner with him in Chiado from 21:00. His bag never left his chair. He is very attached to it. I never touched his laptop.",
           "reveals": {
             "D5": "\"Two? A woman likes a spare.\"",
             "D1": "\"An iPad? Half of Lisbon has an iPad, darling.\""
-          }
+          },
+          "claims": [
+            {"id": "never_went_to_office_door", "text": "I never went to his office door.", "broken_by": ["L4"]},
+            {"id": "never_touched_laptop", "text": "I never touched his laptop.", "broken_by": ["D1"]}
+          ]
         }
       },
       "shortest_path": [
