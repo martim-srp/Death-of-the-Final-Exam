@@ -10,12 +10,38 @@ has not opened, and nothing returns the solution while the game is running.
 """
 
 import random
+import re
 import secrets
 from dataclasses import asdict, dataclass, field
 
 from game.case import load_case, option_ids, resolve_variant
 
 COLUMNS = ("who", "how", "where", "why")
+
+# Things that look like a password or an API key. Used for the Companion's password trap.
+_KEY_PATTERN = re.compile(r"\b(sk|pk|rk|ghp|gho|xoxb|xoxp)[-_][A-Za-z0-9_-]{8,}", re.IGNORECASE)
+_PASSWORD_WORDS = re.compile(
+    r"\b(password|passwd|pwd|passcode|senha|palavra-passe)\b\s*(is|=|:|é)?\s*\S{4,}", re.IGNORECASE
+)
+_CARD_NUMBER = re.compile(r"^(stu|staff)-\d{4}$", re.IGNORECASE)
+
+
+def looks_like_secret(text):
+    """True if the text contains something that looks like a password or an API key.
+
+    Card numbers from the logs (like STU-2291) are not secrets.
+    """
+    if _KEY_PATTERN.search(text) or _PASSWORD_WORDS.search(text):
+        return True
+    for word in text.split():
+        word = word.strip(".,;!?\"'()")
+        if len(word) < 8 or _CARD_NUMBER.match(word):
+            continue
+        has_lower = any(c.islower() for c in word)
+        has_digit = any(c.isdigit() for c in word)
+        if has_lower and has_digit:
+            return True
+    return False
 
 
 class GameError(Exception):
@@ -36,6 +62,7 @@ class Game:
     strikes: int = 0
     status: str = "playing"  # playing, solved or cold
     history: list = field(default_factory=list)
+    badges: list = field(default_factory=list)
 
     def to_dict(self):
         return asdict(self)
@@ -161,6 +188,14 @@ class Engine:
         if suspect not in self._suspects(game):
             raise GameError(f"There is no suspect called {suspect}.")
 
+    def _award(self, game, badge_id):
+        if badge_id not in game.badges:
+            game.badges.append(badge_id)
+
+    def badge_list(self, game):
+        """The badges earned in this game, with their titles."""
+        return [{"id": b, **self.case["badges"][b]} for b in game.badges]
+
     def _unlock(self, game, clue_id):
         if clue_id in game.unlocked or clue_id in game.opened:
             return []
@@ -213,6 +248,8 @@ class Engine:
             if rule and rule["suspect"] == suspect and rule["clue"] == clue_id:
                 unlocked += self._unlock(game, other_id)
         reveal = self._suspects(game)[suspect].get("reveals", {}).get(clue_id)
+        if suspect == "professor" and clue_id == "D8":
+            self._award(game, "honey_trap")
         game.history.append({"action": "present", "suspect": suspect, "clue": clue_id, "clock": game.clock})
         return {"unlocked": unlocked, "reveal": self._fill(game, reveal)}
 
@@ -231,6 +268,8 @@ class Engine:
         correct = sum(choice[c] == solution[c] for c in COLUMNS)
         if correct == len(COLUMNS):
             game.status = "solved"
+            if game.clock < self.case["hedge_fund_minutes"]:
+                self._award(game, "hedge_fund")
         else:
             game.strikes += 1
             if game.strikes >= self.case["max_strikes"]:
@@ -249,6 +288,20 @@ class Engine:
         return dict(self._resolved[game.variant]["solution"])
 
     # ---- For the AI layer ---------------------------------------------------
+
+    def check_secret(self, game, suspect, text):
+        """Run before any player message is sent to the AI.
+
+        Returns True if the message looks like a password or key. The AI layer must
+        then not send the message anywhere. Typing one to the Companion, who asks
+        for passwords, earns the badge.
+        """
+        self._check_suspect(game, suspect)
+        if not looks_like_secret(text):
+            return False
+        if self._suspects(game)[suspect].get("asks_password"):
+            self._award(game, "spy_password")
+        return True
 
     def character_brief(self, game, suspect):
         """What the AI needs to play one suspect, and nothing more.

@@ -15,6 +15,7 @@ details such as card numbers.
 - `data/case.json`: the story. Clues, suspects, unlock rules, accusation options and the three variants.
 - `game/case.py`: loads the case file and merges a variant's overrides.
 - `game/engine.py`: the rules. Clock, unlocks, questions, evidence, accusations, saving.
+- `db.py`: saved games in SQLite. All database code lives here.
 - `app.py`: the Streamlit interface. Game state lives in `st.session_state` on the server.
 - `tests/`: pytest tests for the engine and for the story's consistency.
 
@@ -25,6 +26,14 @@ python -m pip install -r requirements.txt   # install
 python -m pytest                            # run all tests
 streamlit run app.py                        # run the app locally
 ```
+
+## Storage
+
+- Saved games are stored in SQLite, in the file named by `DATABASE_PATH` (default `data/app.db`,
+  ignored by git). Each game has a random id that is its private resume link (`?game=<id>`).
+- To reset all saved games, delete `data/app.db`. It is recreated on the next run.
+- Tests use a temporary database (see `tests/conftest.py`).
+- On Streamlit Community Cloud the disk is temporary: saved games are lost when the app restarts.
 
 ## Rules for changes
 

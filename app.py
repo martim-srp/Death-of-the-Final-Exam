@@ -8,6 +8,7 @@ receives what the engine returns, so locked clues and the solution never reach i
 
 import streamlit as st
 
+import db
 from game.engine import Engine, Game, GameError
 
 st.set_page_config(page_title="The Carcavelos Paper", page_icon="🕵️", layout="wide")
@@ -22,14 +23,33 @@ engine = get_engine()
 case = engine.case
 
 
+def start_new_game():
+    """Start a game, save it, and put its private id in the URL as the resume link."""
+    game = engine.new_game()
+    game_id = db.create_game(game)
+    st.session_state.game = game.to_dict()
+    st.session_state.game_id = game_id
+    st.query_params["game"] = game_id
+
+
 def current_game():
     if "game" not in st.session_state:
-        st.session_state.game = engine.new_game().to_dict()
+        requested = st.query_params.get("game")
+        saved = db.load_game(requested) if requested else None
+        if saved is not None:
+            st.session_state.game = saved.to_dict()
+            st.session_state.game_id = requested
+        else:
+            if requested:
+                st.session_state.flash = ("warning", "That saved game was not found, so a new case has started.")
+            start_new_game()
     return Game.from_dict(st.session_state.game)
 
 
 def save(game):
     st.session_state.game = game.to_dict()
+    if "game_id" in st.session_state:
+        db.save_game(st.session_state.game_id, game)
 
 
 def label(column, option_id):
@@ -61,9 +81,16 @@ with st.sidebar:
         f"A question costs {case['clock']['question_cost']} min."
     )
     st.write(f"Wrong accusations left: **{case['max_strikes'] - game.strikes}**")
+    badges = engine.badge_list(game)
+    if badges:
+        st.subheader("Badges")
+        for badge in badges:
+            st.markdown(f"🏅 **{badge['title']}**", help=badge["description"])
     if st.button("New case", use_container_width=True):
-        st.session_state.game = engine.new_game().to_dict()
+        start_new_game()
+        st.session_state.pop("last_answer", None)
         st.rerun()
+    st.caption("Bookmark this page to come back to this case later.")
 
 flash = st.session_state.pop("flash", None)
 if flash:
