@@ -4,7 +4,7 @@ A detective game. The night before the Semiconductor Valuation final, the exam l
 group chat. You have until 09:00 to question five suspects, played by AI, and name who did it, how,
 where and why. The culprit changes from game to game.
 
-**Play it:** _deployed URL goes here_
+**Play it:** https://carcavelos-paper.streamlit.app
 
 ## Team
 
