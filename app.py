@@ -358,15 +358,13 @@ with accuse_tab:
     if st.button("Make the accusation", type="primary"):
         missing = [c for c in ("who", "how", "where", "why") if choice[c] is None]
         if missing:
-            st.session_state.flash = (
-                "warning",
-                f"Pick one option in each column first. Missing: {', '.join(missing)}.",
-            )
+            # Shown right under the button, so a player at the bottom of the tab sees it.
+            st.warning(f"Pick one option in each column first. Missing: {', '.join(missing)}.")
+        else:
+            result = run(engine.accuse, choice["who"], choice["how"], choice["where"], choice["why"])
+            if result and result["status"] == "playing":
+                st.session_state.flash = (
+                    "warning",
+                    f"{result['correct']} of 4 are right. Wrong accusations left: {result['strikes_left']}.",
+                )
             st.rerun()
-        result = run(engine.accuse, choice["who"], choice["how"], choice["where"], choice["why"])
-        if result and result["status"] == "playing":
-            st.session_state.flash = (
-                "warning",
-                f"{result['correct']} of 4 are right. Wrong accusations left: {result['strikes_left']}.",
-            )
-        st.rerun()
