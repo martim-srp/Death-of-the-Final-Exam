@@ -6,6 +6,10 @@ The game state lives in st.session_state on the server. The browser only ever
 receives what the engine returns, so locked clues and the solution never reach it.
 """
 
+import re
+
+import altair as alt
+import pandas as pd
 import streamlit as st
 
 import db
@@ -54,6 +58,106 @@ def save(game):
 
 def label(column, option_id):
     return next(o["label"] for o in case["accusation"][column] if o["id"] == option_id)
+
+
+_MARKDOWN_SPECIAL = re.compile(r"([\\`*_\[\]<>#$~|])")
+
+# Categorical slots 1 and 2 of the validated chart palette (blue, orange).
+SERIES_COLORS = ["#2a78d6", "#eb6834"]
+
+
+def plain(text):
+    """Escape Markdown so story text is shown exactly as written."""
+    return _MARKDOWN_SPECIAL.sub(r"\\\1", text)
+
+
+def search_log(log, query):
+    """The log lines that contain the query (case-insensitive), and the total line count."""
+    lines = log.splitlines()
+    needle = query.strip().lower()
+    if not needle:
+        return lines, len(lines)
+    return [line for line in lines if needle in line.lower()], len(lines)
+
+
+def payoff_chart(spec):
+    """The D4 payoff chart: the fellowship against the Class Representative's grade on Friday."""
+    low, high = spec["grades"]
+    prize = spec["prize"]
+    rival = round(sum(spec["rival_mocks"]) / len(spec["rival_mocks"]), 1)
+    mocks = spec["subject_mocks"]
+    grades = sorted({*range(low, high + 1), rival})
+    goes_ahead, annulled = "Exam goes ahead", "Exam annulled"
+    rows = [
+        {"grade": g, "scenario": s, "payoff": prize if s == annulled or g >= rival else 0}
+        for s in (goes_ahead, annulled)
+        for g in grades
+    ]
+    data = pd.DataFrame(rows)
+    color = alt.Color(
+        "scenario:N",
+        title=None,
+        scale=alt.Scale(domain=[goes_ahead, annulled], range=SERIES_COLORS),
+        legend=alt.Legend(orient="top", direction="vertical", labelLimit=0),
+    )
+    x_scale = alt.Scale(domain=[low, high], nice=False)
+    y_scale = alt.Scale(domain=[0, prize * 1.1], nice=False)
+    x = alt.X("grade:Q", title="Class Rep's grade on Friday", scale=x_scale)
+    y = alt.Y("payoff:Q", title="Fellowship won (€)", scale=y_scale, axis=alt.Axis(format=",.0f"))
+
+    mock_band = (
+        alt.Chart(pd.DataFrame([{"from": min(mocks), "to": max(mocks), "label": "Their mock finals"}]))
+        .mark_rect(opacity=0.12, color="gray")
+        .encode(x=alt.X("from:Q", scale=x_scale), x2="to:Q", tooltip=[alt.Tooltip("label:N", title="")])
+    )
+    def note(x_value, y_value, text, align):
+        return (
+            alt.Chart(pd.DataFrame([{"x": x_value, "y": y_value, "text": text}]))
+            .mark_text(fontSize=11, color="gray", align=align)
+            .encode(x=alt.X("x:Q", scale=x_scale), y=alt.Y("y:Q", scale=y_scale), text="text:N")
+        )
+
+    notes = note((min(mocks) + max(mocks)) / 2, prize * 0.6, "Their mocks", "center") + note(
+        rival - 0.15, prize * 0.25, f"Rival: {rival}", "right"
+    )
+    rival_rule = (
+        alt.Chart(pd.DataFrame([{"x": rival, "label": f"Exchange Student's mock average: {rival}"}]))
+        .mark_rule(strokeDash=[4, 4], color="gray")
+        .encode(x=alt.X("x:Q", scale=x_scale), tooltip=[alt.Tooltip("label:N", title="")])
+    )
+    lines = (
+        alt.Chart(data)
+        .mark_line(strokeWidth=2, interpolate="step-after")
+        .encode(
+            x=x,
+            y=y,
+            color=color,
+            strokeDash=alt.StrokeDash(
+                "scenario:N", scale=alt.Scale(domain=[goes_ahead, annulled], range=[[1, 0], [6, 4]]), legend=None
+            ),
+        )
+    )
+    hover = (
+        alt.Chart(data)
+        .mark_point(size=250, opacity=0)
+        .encode(
+            x=x,
+            y=y,
+            tooltip=[
+                alt.Tooltip("scenario:N", title="If the"),
+                alt.Tooltip("grade:Q", title="Grade"),
+                alt.Tooltip("payoff:Q", title="Fellowship (€)", format=",.0f"),
+            ],
+        )
+    )
+    return (mock_band + notes + rival_rule + lines + hover).properties(title=spec["title"], height=280)
+
+
+def denouement(game):
+    """The closing scene of this game's variant. Only once the case is closed."""
+    engine.solution(game)  # raises GameError while the game is still running
+    text = case["variants"][game.variant].get("denouement", "")
+    return text.format_map(game.variables)
 
 
 def run(action, *args):
@@ -114,6 +218,12 @@ if game.status != "playing":
         st.success(f"Case solved at {engine.clock_label(game)}.")
     else:
         st.error("The case has gone cold.")
+    scene = denouement(game)
+    if scene:
+        with st.container(border=True):
+            st.subheader("Half past seven, the boardroom")
+            for paragraph in scene.split("\n\n"):
+                st.markdown(plain(paragraph))
     st.subheader("What really happened")
     st.write(
         f"**{label('who', solution['who'])}**: {label('how', solution['how']).lower()}, "
@@ -140,7 +250,24 @@ with case_tab:
             with st.expander(title):
                 st.write(clue["text"])
                 if clue["log"]:
-                    st.code(clue["log"], language=None)
+                    query = st.text_input(
+                        "Search this log",
+                        key=f"search_{item['id']}",
+                        placeholder="A card number, a job, a time…",
+                    )
+                    matches, total = search_log(clue["log"], query)
+                    if query.strip():
+                        st.caption(f"{len(matches)} of {total} lines match “{query.strip()}”.")
+                    if matches:
+                        st.code("\n".join(matches), language=None, wrap_lines=True)
+                if clue["chart"] in case.get("charts", {}):
+                    spec = case["charts"][clue["chart"]]
+                    st.altair_chart(payoff_chart(spec), width="stretch")
+                    st.caption(
+                        "The fellowship is all or nothing. The flat line is what the Class Representative gets "
+                        "if the exam is annulled; the step is what they get if it goes ahead, assuming the "
+                        "Exchange Student scores their mock average."
+                    )
                 if clue["hidden_text"] and st.toggle("Show hidden text", key=f"hidden_{item['id']}"):
                     st.warning(clue["hidden_text"])
 
