@@ -163,6 +163,29 @@ def denouement(game):
     return text.format_map(game.variables)
 
 
+def caught_moment(caught, clue_titles):
+    """The moment a suspect is caught contradicting themselves, shown right under the answer."""
+    for item in caught:
+        name = case["suspects"][item["suspect"]]["name"]
+        clue = f"{item['clue']}. {clue_titles.get(item['clue'], '')}".rstrip(". ")
+        with st.container(border=True):
+            st.markdown(f"#### ⚡ Contradiction! {plain(name)} was caught out")
+            st.markdown(f"Earlier they told you: *“{plain(item['text'])}”*")
+            st.markdown(f"**{plain(clue)}** says otherwise.")
+
+
+def contradiction_board(game, clue_titles):
+    """Every contradiction caught so far, oldest first."""
+    caught = engine.contradiction_list(game)
+    with st.expander(f"🧩 Contradictions caught ({len(caught)})", expanded=bool(caught)):
+        if not caught:
+            st.caption("None yet. Show a suspect a clue that breaks their story to catch them out.")
+        for item in caught:
+            name = case["suspects"][item["suspect"]]["name"]
+            source = f"{item['clue']}. {clue_titles.get(item['clue'], '')}" if item["clue"] else "a clue"
+            st.markdown(f"- **{plain(name)}**: “{plain(item['text'])}” Broken by *{plain(source.rstrip('. '))}*.")
+
+
 def run(action, *args):
     """Run an engine action, save the game, and turn rule errors into messages."""
     game = current_game()
@@ -188,6 +211,7 @@ with st.sidebar:
         f"A question costs {case['clock']['question_cost']} min."
     )
     st.write(f"Wrong accusations left: **{case['max_strikes'] - game.strikes}**")
+    st.write(f"Contradictions caught: **{len(game.contradictions)}**")
     badges = engine.badge_list(game)
     if badges:
         st.subheader("Badges")
@@ -196,6 +220,7 @@ with st.sidebar:
     if st.button("New case", use_container_width=True):
         start_new_game()
         st.session_state.pop("last_answer", None)
+        st.session_state.pop("last_caught", None)
         st.rerun()
     st.caption("Bookmark this page to come back to this case later.")
 
@@ -308,6 +333,7 @@ with question_tab:
         result = run(lambda game: ai.ask(engine, game, suspect, question, cloud_key=cloud_key))
         if result:
             st.session_state.last_answer = result
+            st.session_state.pop("last_caught", None)
         st.rerun()
 
     left, right = st.columns(2)
@@ -317,6 +343,7 @@ with question_tab:
             result = run(engine.ask, suspect, topic)
             if result:
                 st.session_state.last_answer = result["line"] or brief["cover"]
+                st.session_state.pop("last_caught", None)
                 if result["unlocked"]:
                     st.session_state.last_answer += f"\n\n🔓 New clue unlocked: {', '.join(result['unlocked'])}"
                 st.rerun()
@@ -327,9 +354,13 @@ with question_tab:
             result = run(engine.present, suspect, evidence)
             if result:
                 st.session_state.last_answer = result["reveal"] or "They look at it and shrug."
+                st.session_state.last_caught = result.get("contradictions", [])
                 if result["unlocked"]:
                     st.session_state.last_answer += f"\n\n🔓 New clue unlocked: {', '.join(result['unlocked'])}"
                 st.rerun()
+            elif "flash" in st.session_state:
+                # Show the refusal under the button, where it is seen on a phone.
+                st.error(st.session_state.pop("flash")[1])
 
     if "last_answer" in st.session_state:
         answer = st.session_state.last_answer
@@ -339,6 +370,9 @@ with question_tab:
                 st.success(f"🔓 New clue unlocked: {', '.join(answer['unlocked'])}")
         else:
             st.info(answer)
+    clue_titles = {c["id"]: c["title"] for c in engine.clue_list(game)}
+    caught_moment(st.session_state.get("last_caught", []), clue_titles)
+    contradiction_board(game, clue_titles)
 
 # ---- Accusation -------------------------------------------------------------------
 
