@@ -50,3 +50,48 @@ def test_right_accusation_closes_the_case():
     at = start()
     button(at, "Make the accusation").click().run()  # defaults are variant A's answer
     assert any("Case solved" in s.value for s in at.success)
+
+
+# ---- Saved games ---------------------------------------------------------------
+
+
+def test_new_visit_creates_a_saved_game_with_a_resume_link():
+    import db
+
+    at = AppTest.from_file(APP, default_timeout=10)
+    at.run()
+    assert not at.exception
+    game_id = at.query_params["game"]
+    assert db.load_game(game_id) is not None
+
+
+def test_resume_link_restores_the_game():
+    import db
+
+    game = Engine().new_game(seed=4, variant="B")
+    Engine().open_clue(game, "D1")
+    game_id = db.create_game(game)
+    at = AppTest.from_file(APP, default_timeout=10)
+    at.query_params["game"] = game_id
+    at.run()
+    assert not at.exception
+    assert at.metric[0].value == "00:30"
+
+
+def test_actions_are_saved():
+    import db
+
+    at = AppTest.from_file(APP, default_timeout=10)
+    at.run()
+    game_id = at.query_params["game"]
+    button(at, "Open 📄 D1").click().run()
+    assert db.load_game(game_id).clock == 30
+
+
+def test_unknown_resume_link_starts_a_new_case_with_a_warning():
+    at = AppTest.from_file(APP, default_timeout=10)
+    at.query_params["game"] = "x" * 32
+    at.run()
+    assert not at.exception
+    assert any("not found" in w.value for w in at.warning)
+    assert at.metric[0].value == "00:00"

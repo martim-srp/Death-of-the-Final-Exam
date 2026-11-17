@@ -7,6 +7,21 @@
     "question_cost": 10
   },
   "max_strikes": 3,
+  "badges": {
+    "spy_password": {
+      "title": "Never give your password to a spy",
+      "description": "You typed something that looked like a password to the Companion. She says thank you."
+    },
+    "honey_trap": {
+      "title": "Honey trap",
+      "description": "You showed the Professor the newspaper clipping."
+    },
+    "hedge_fund": {
+      "title": "Hedge fund",
+      "description": "You solved the case before 03:20."
+    }
+  },
+  "hedge_fund_minutes": 200,
   "random": {
     "alias": ["M. Hari", "I. Adler", "C. Hale"],
     "pastry": [
