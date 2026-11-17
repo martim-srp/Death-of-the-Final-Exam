@@ -1,6 +1,5 @@
 """The noir look: suspect portraits, the row of suspect cards and the detective's notebook."""
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -53,13 +52,15 @@ def test_every_suspect_has_one_small_portrait(suspect):
 
 
 @pytest.mark.parametrize("suspect", SUSPECTS)
-def test_drawn_portraits_have_the_suspects_name_as_title(suspect):
-    path = PORTRAITS / f"{suspect}.svg"
-    if not path.exists():
-        pytest.skip("this suspect uses a supplied picture, not a drawing")
-    root = ET.parse(path).getroot()
-    assert root.tag.endswith("svg")
-    assert root.find("{http://www.w3.org/2000/svg}title").text == load_case()["suspects"][suspect]["name"]
+def test_picture_portraits_are_portrait_shaped(suspect):
+    from PIL import Image  # installed with streamlit
+
+    for ext in PORTRAIT_TYPES[:-1]:
+        path = PORTRAITS / f"{suspect}{ext}"
+        if path.exists():
+            with Image.open(path) as picture:
+                width, height = picture.size
+            assert abs(width / height - 0.8) < 0.02, f"{path.name} should be 4:5, like the cards"
 
 
 def test_portraits_are_not_extra_images():
@@ -73,7 +74,7 @@ def test_cards_show_every_suspect_not_questioned_at_the_start():
     row = cards(at)
     assert row.count('class="suspect-card') == len(SUSPECTS)
     assert row.count("Not questioned yet") == len(SUSPECTS)
-    assert row.count("data:image/svg+xml;base64,") == len(SUSPECTS)
+    assert row.count("data:image/") == len(SUSPECTS)
     assert "RULED OUT" not in row
 
 
