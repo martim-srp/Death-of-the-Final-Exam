@@ -20,7 +20,16 @@ from game.case import load_case
 from game.engine import Engine, Game, GameError
 
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
-PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.svg each
+PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.<png|jpg|webp|svg> each
+# File types a portrait may have, in order of preference: a picture someone supplies
+# (PNG, JPG or WebP) wins over the drawn SVG of the same suspect.
+PORTRAIT_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+}
 TITLE = load_case()["title"]  # the game's name lives in data/case.json
 
 st.set_page_config(page_title=TITLE, page_icon="🕵️", layout="wide")
@@ -197,7 +206,7 @@ NOIR_CSS = """
 <style>
 .suspect-row { display: flex; gap: 0.75rem; overflow-x: auto; padding: 0.25rem 0 0.5rem; }
 .suspect-card { flex: 1 0 104px; max-width: 160px; text-align: center; position: relative; }
-.suspect-card img { width: 100%; display: block; border-radius: 10px; }
+.suspect-card img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; border-radius: 10px; }
 .suspect-card.ruled-out img { filter: grayscale(1) brightness(0.55); }
 .suspect-card .name { font-family: Georgia, serif; font-size: 0.85rem; margin-top: 0.3rem; line-height: 1.2; }
 .suspect-card .status { font-size: 0.75rem; opacity: 0.75; }
@@ -210,18 +219,19 @@ NOIR_CSS = """
   .suspect-card .name { font-size: 0.75rem; }
   .suspect-card .status { font-size: 0.65rem; }
 }
-.suspect-portrait { width: 140px; max-width: 40vw; border-radius: 10px; }
+.suspect-portrait { width: 140px; max-width: 40vw; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; }
 </style>
 """
 
 
 @st.cache_data
 def portrait_uri(suspect):
-    """The suspect's portrait as a data URI, or None if there is no drawing for them."""
-    path = PORTRAITS / f"{suspect}.svg"
-    if not path.exists():
-        return None
-    return "data:image/svg+xml;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+    """The suspect's portrait as a data URI, or None if there is no picture for them."""
+    for extension, mime in PORTRAIT_TYPES.items():
+        path = PORTRAITS / f"{suspect}{extension}"
+        if path.exists():
+            return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+    return None
 
 
 def suspect_status(game):

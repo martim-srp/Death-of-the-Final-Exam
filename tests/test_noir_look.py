@@ -41,11 +41,22 @@ def notebook_box(at, label):
     return next(c for c in at.sidebar.checkbox if c.label == label)
 
 
+PORTRAIT_TYPES = (".png", ".jpg", ".jpeg", ".webp", ".svg")
+
+
 @pytest.mark.parametrize("suspect", SUSPECTS)
-def test_every_suspect_has_a_small_portrait_with_a_title(suspect):
+def test_every_suspect_has_one_small_portrait(suspect):
+    found = [PORTRAITS / f"{suspect}{ext}" for ext in PORTRAIT_TYPES if (PORTRAITS / f"{suspect}{ext}").exists()]
+    assert found, f"no portrait for {suspect} in assets/suspects"
+    for path in found:
+        assert path.stat().st_size < 300_000, f"{path.name} is too big for a phone; shrink it"
+
+
+@pytest.mark.parametrize("suspect", SUSPECTS)
+def test_drawn_portraits_have_the_suspects_name_as_title(suspect):
     path = PORTRAITS / f"{suspect}.svg"
-    assert path.exists()
-    assert path.stat().st_size < 20_000
+    if not path.exists():
+        pytest.skip("this suspect uses a supplied picture, not a drawing")
     root = ET.parse(path).getroot()
     assert root.tag.endswith("svg")
     assert root.find("{http://www.w3.org/2000/svg}title").text == load_case()["suspects"][suspect]["name"]
