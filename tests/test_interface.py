@@ -110,7 +110,9 @@ def test_solving_the_case_shows_that_variants_denouement(variant):
 
 def test_a_cold_case_also_shows_the_denouement():
     at = start()
-    at.radio(key="accuse_who").set_value("exchange")
+    wrong = {**CASE["variants"]["A"]["solution"], "who": "exchange"}
+    for column, value in wrong.items():
+        at.radio(key=f"accuse_{column}").set_value(value)
     for _ in range(CASE["max_strikes"]):
         click(at, "Make the accusation")
     assert any("gone cold" in e.value for e in at.error)

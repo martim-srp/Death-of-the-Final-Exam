@@ -38,9 +38,18 @@ def test_locked_clue_has_no_open_button():
     assert not any(b.label.startswith("Open 📄 D2") for b in at.button)
 
 
+def pick(at, **choice):
+    for column, value in choice.items():
+        at.radio(key=f"accuse_{column}").set_value(value)
+
+
+def variant_a_solution():
+    return dict(Engine().case["variants"]["A"]["solution"])
+
+
 def test_wrong_accusation_shows_how_many_are_right():
     at = start()
-    at.radio(key="accuse_who").set_value("exchange")
+    pick(at, **{**variant_a_solution(), "who": "exchange"})
     button(at, "Make the accusation").click().run()
     assert not at.exception
     assert any("of 4 are right" in w.value for w in at.warning)
@@ -48,8 +57,36 @@ def test_wrong_accusation_shows_how_many_are_right():
 
 def test_right_accusation_closes_the_case():
     at = start()
-    button(at, "Make the accusation").click().run()  # defaults are variant A's answer
+    pick(at, **variant_a_solution())
+    button(at, "Make the accusation").click().run()
     assert any("Case solved" in s.value for s in at.success)
+
+
+def test_accusation_options_start_empty():
+    at = start()
+    for column in ("who", "how", "where", "why"):
+        assert at.radio(key=f"accuse_{column}").value is None
+
+
+def test_accuse_without_choosing_does_not_solve_or_cost_a_strike():
+    at = start()
+    button(at, "Make the accusation").click().run()
+    assert not at.exception
+    assert not any("Case solved" in s.value for s in at.success)
+    assert any("Pick one option in each column" in w.value for w in at.warning)
+    assert at.session_state["game"]["strikes"] == 0
+    assert at.session_state["game"]["status"] == "playing"
+
+
+def test_accuse_with_one_column_missing_is_refused():
+    at = start()
+    solution = variant_a_solution()
+    del solution["why"]
+    pick(at, **solution)
+    button(at, "Make the accusation").click().run()
+    assert not any("Case solved" in s.value for s in at.success)
+    assert any("Missing: why" in w.value for w in at.warning)
+    assert at.session_state["game"]["strikes"] == 0
 
 
 # ---- Saved games ---------------------------------------------------------------
