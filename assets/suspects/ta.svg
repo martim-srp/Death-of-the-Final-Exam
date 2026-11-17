@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 250" role="img" aria-label="The Teaching Assistant">
+<title>The Teaching Assistant</title>
+<defs>
+<radialGradient id="spot" cx="0.85" cy="0" r="1.1"><stop offset="0" stop-color="#5a4632"/><stop offset="0.55" stop-color="#241c18"/><stop offset="1" stop-color="#14100e"/></radialGradient>
+<linearGradient id="shade" x1="0" x2="1"><stop offset="0" stop-color="#14100e" stop-opacity="0.55"/><stop offset="0.5" stop-color="#14100e" stop-opacity="0"/></linearGradient>
+<clipPath id="frame"><rect x="0" y="0" width="200" height="250" rx="10"/></clipPath>
+</defs>
+<g clip-path="url(#frame)">
+<rect width="200" height="250" fill="url(#spot)"/>
+<g fill="#efe6d8" opacity="0.05"><polygon points="120,0 140,0 40,250 20,250"/><polygon points="155,0 175,0 75,250 55,250"/><polygon points="190,0 210,0 110,250 90,250"/></g>
+<circle cx="100" cy="100" r="66" fill="#7d1d1a" opacity="0.85"/>
+
+<path d="M18 250 C22 196 58 172 100 170 C142 172 178 196 182 250 Z" fill="#5b4a3a" stroke="#14100e" stroke-width="1.5"/>
+<path d="M84 170 L100 196 L116 170 Z" fill="#cdd3d6"/>
+<path d="M84 172 L96 250 M116 172 L104 250" stroke="#c0392b" stroke-width="3"/>
+<rect x="92" y="232" width="16" height="10" rx="2" fill="none" stroke="#b8924f" stroke-width="2" stroke-dasharray="3 2"/>
+<g fill="#14100e" opacity="0.35"><circle cx="60" cy="214" r="2"/><circle cx="62" cy="230" r="2"/><circle cx="140" cy="214" r="2"/><circle cx="138" cy="230" r="2"/></g>
+<rect x="88" y="132" width="24" height="34" fill="#a8846a"/>
+<ellipse cx="68" cy="108" rx="6" ry="9" fill="#a8846a"/>
+<ellipse cx="132" cy="108" rx="6" ry="9" fill="#d9b99a"/>
+<ellipse cx="100" cy="104" rx="33" ry="41" fill="#d9b99a" stroke="#14100e" stroke-width="1.5"/>
+<path d="M100 63 A33 41 0 0 0 100 145 C86 124 90 84 100 63 Z" fill="#a8846a" opacity="0.6"/>
+<path d="M64 96 C56 70 66 52 84 54 C86 46 104 44 110 52 C122 46 140 58 136 76 C144 84 138 96 134 98 C132 86 126 78 118 80 C110 72 96 82 88 76 C80 82 70 86 64 96 Z" fill="#2a1d14" stroke="#14100e" stroke-width="1.5"/>
+<g fill="#2a1d14"><circle cx="72" cy="66" r="7"/><circle cx="92" cy="54" r="7"/><circle cx="116" cy="54" r="7"/><circle cx="132" cy="68" r="7"/></g>
+<path d="M79 93 L94 88 M106 88 L121 93" stroke="#14100e" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+<ellipse cx="87" cy="102" rx="4.5" ry="3" fill="#efe6d8"/><ellipse cx="113" cy="102" rx="4.5" ry="3" fill="#efe6d8"/>
+<circle cx="85" cy="102" r="2.2" fill="#14100e"/><circle cx="111" cy="102" r="2.2" fill="#14100e"/>
+<g fill="none" stroke="#14100e" stroke-width="2"><circle cx="87" cy="102" r="10"/><circle cx="113" cy="102" r="10"/><path d="M97 101 Q100 98 103 101 M77 100 L68 96 M123 100 L132 96"/></g>
+<g fill="#efe6d8" opacity="0.35"><path d="M81 97 L85 95 L84 99 Z"/><path d="M107 97 L111 95 L110 99 Z"/></g>
+<path d="M101 106 L105 119 L99 120" stroke="#6b4f3a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M91 128 Q97 124 103 128 Q108 131 112 127" stroke="#14100e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M134 80 C138 86 138 90 134 92 C130 90 130 86 134 80 Z" fill="#cfe1ea" stroke="#14100e" stroke-width="0.8"/>
+<g transform="translate(36 196) rotate(-8)">
+<rect x="0" y="6" width="56" height="44" fill="#d8ccb6" stroke="#14100e"/><rect x="4" y="2" width="56" height="44" fill="#efe6d8" stroke="#14100e"/>
+<g stroke="#6b4f3a" stroke-width="1.5"><path d="M10 12 H52 M10 18 H48 M10 24 H52 M10 30 H40"/></g>
+<path d="M30 34 L50 22" stroke="#c0392b" stroke-width="2.5"/>
+</g>
+
+<rect x="0" y="0" width="200" height="250" fill="url(#shade)"/>
+</g>
+<rect x="3" y="3" width="194" height="244" rx="8" fill="none" stroke="#b8924f" stroke-width="2" opacity="0.8"/>
+</svg>

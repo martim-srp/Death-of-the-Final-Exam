@@ -6,6 +6,8 @@ The game state lives in st.session_state on the server. The browser only ever
 receives what the engine returns, so locked clues and the solution never reach it.
 """
 
+import base64
+import html
 import re
 from pathlib import Path
 
@@ -18,6 +20,7 @@ from game.case import load_case
 from game.engine import Engine, Game, GameError
 
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
+PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.svg each
 TITLE = load_case()["title"]  # the game's name lives in data/case.json
 
 st.set_page_config(page_title=TITLE, page_icon="🕵️", layout="wide")
@@ -188,6 +191,96 @@ def contradiction_board(game, clue_titles):
             st.markdown(f"- **{plain(name)}**: “{plain(item['text'])}” Broken by *{plain(source.rstrip('. '))}*.")
 
 
+# ---- The noir look: portraits, suspect cards and the notebook ----------------------
+
+NOIR_CSS = """
+<style>
+.suspect-row { display: flex; gap: 0.75rem; overflow-x: auto; padding: 0.25rem 0 0.5rem; }
+.suspect-card { flex: 1 0 104px; max-width: 160px; text-align: center; position: relative; }
+.suspect-card img { width: 100%; display: block; border-radius: 10px; }
+.suspect-card.ruled-out img { filter: grayscale(1) brightness(0.55); }
+.suspect-card .name { font-family: Georgia, serif; font-size: 0.85rem; margin-top: 0.3rem; line-height: 1.2; }
+.suspect-card .status { font-size: 0.75rem; opacity: 0.75; }
+.suspect-card .caught { color: #e0645a; font-weight: 600; }
+.suspect-card .stamp { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%) rotate(-14deg);
+  border: 2px solid #c0392b; color: #c0392b; background: rgba(20, 16, 14, 0.75); padding: 0 0.35rem;
+  font: 700 0.8rem "Courier New", monospace; letter-spacing: 0.08em; white-space: nowrap; }
+@media (max-width: 640px) {
+  .suspect-card { flex-basis: 70px; }
+  .suspect-card .name { font-size: 0.75rem; }
+  .suspect-card .status { font-size: 0.65rem; }
+}
+.suspect-portrait { width: 140px; max-width: 40vw; border-radius: 10px; }
+</style>
+"""
+
+
+@st.cache_data
+def portrait_uri(suspect):
+    """The suspect's portrait as a data URI, or None if there is no drawing for them."""
+    path = PORTRAITS / f"{suspect}.svg"
+    if not path.exists():
+        return None
+    return "data:image/svg+xml;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+
+
+def suspect_status(game):
+    """For each suspect: whether you have questioned them, and how many contradictions you caught."""
+    questioned = {event["suspect"] for event in game.history if "suspect" in event}
+    caught = {}
+    for suspect, _claim in game.contradictions:
+        caught[suspect] = caught.get(suspect, 0) + 1
+    return {s: {"questioned": s in questioned, "caught": caught.get(s, 0)} for s in case["suspects"]}
+
+
+def ruled_out(suspect):
+    """Whether the player has ticked this suspect off in their notebook."""
+    return bool(st.session_state.get(f"note_suspect_{suspect}"))
+
+
+def suspect_cards(game):
+    """A row of portrait cards: who you have questioned, who you caught out, who you ruled out."""
+    cards = []
+    for suspect, status in suspect_status(game).items():
+        name = html.escape(case["suspects"][suspect]["name"].removeprefix("The "))
+        uri = portrait_uri(suspect)
+        picture = f'<img src="{uri}" alt="{name}">' if uri else ""
+        line = "Questioned" if status["questioned"] else "Not questioned yet"
+        if status["caught"]:
+            line += f' · <span class="caught">⚡ {status["caught"]} caught</span>'
+        out = ruled_out(suspect)
+        stamp = '<div class="stamp">RULED OUT</div>' if out else ""
+        cards.append(
+            f'<div class="suspect-card{" ruled-out" if out else ""}">{picture}{stamp}'
+            f'<div class="name">{name}</div><div class="status">{line}</div></div>'
+        )
+    st.markdown(NOIR_CSS + '<div class="suspect-row">' + "".join(cards) + "</div>", unsafe_allow_html=True)
+
+
+def notebook(game):
+    """The detective's notebook: tick off suspects and clues, and jot down hunches.
+
+    It is the player's own scratch paper, kept in this browser session only. It never
+    changes the game: the engine alone decides what is true.
+    """
+    with st.expander("📓 Detective's notebook", expanded=True):
+        st.markdown("**Suspects I have ruled out**")
+        for suspect, details in case["suspects"].items():
+            st.checkbox(details["name"], key=f"note_suspect_{suspect}")
+        opened = [c for c in engine.clue_list(game) if c["state"] == "open"]
+        st.markdown("**Clues I have dealt with**")
+        if not opened:
+            st.caption("Open a clue in the case file and it will appear here.")
+        for clue in opened:
+            st.checkbox(f"{clue['id']}. {clue['title']}", key=f"note_clue_{clue['id']}")
+        st.text_area("Hunches", key="note_hunches", placeholder="Who was lying, and about what?")
+
+
+def clear_notebook():
+    for key in [k for k in st.session_state if str(k).startswith("note_")]:
+        del st.session_state[key]
+
+
 def run(action, *args):
     """Run an engine action, save the game, and turn rule errors into messages."""
     game = current_game()
@@ -219,8 +312,11 @@ with st.sidebar:
         st.subheader("Badges")
         for badge in badges:
             st.markdown(f"🏅 **{badge['title']}**", help=badge["description"])
+    if game.status == "playing":
+        notebook(game)
     if st.button("New case", use_container_width=True):
         start_new_game()
+        clear_notebook()
         st.session_state.pop("last_answer", None)
         st.session_state.pop("last_caught", None)
         st.rerun()
@@ -267,6 +363,8 @@ if game.status != "playing":
         f"at {label('where', solution['where']).lower()}, {label('why', solution['why']).lower()}."
     )
     st.stop()
+
+suspect_cards(game)
 
 case_tab, question_tab, accuse_tab = st.tabs(["📁 Case file", "🗣️ Question suspects", "⚖️ Accuse"])
 
@@ -326,7 +424,18 @@ with question_tab:
         "Suspect", suspect_ids, format_func=lambda s: case["suspects"][s]["name"]
     )
     brief = engine.character_brief(game, suspect)
-    st.caption(brief["persona"])
+    uri = portrait_uri(suspect)
+    if uri:
+        portrait_column, persona_column = st.columns([1, 3], vertical_alignment="center")
+        with portrait_column:
+            st.markdown(
+                f'<img class="suspect-portrait" src="{uri}" alt="{html.escape(brief["name"])}">',
+                unsafe_allow_html=True,
+            )
+        with persona_column:
+            st.caption(brief["persona"])
+    else:
+        st.caption(brief["persona"])
 
     with st.form("suspect_chat", clear_on_submit=True):
         question = st.text_input("Your question", help=f"Up to {ai.MAX_QUESTION_LENGTH} characters.")
