@@ -117,6 +117,7 @@ class Game:
     status: str = "playing"  # playing, solved or cold
     history: list = field(default_factory=list)
     badges: list = field(default_factory=list)
+    contradictions: list = field(default_factory=list)  # [suspect, claim_id], in the order caught
 
     def to_dict(self):
         return asdict(self)
@@ -290,7 +291,13 @@ class Engine:
         return {"unlocked": unlocked, "line": self._fill(game, s.get("topic_lines", {}).get(topic))}
 
     def present(self, game, suspect, clue_id):
-        """Show an opened clue to a suspect. Costs one question."""
+        """Show an opened clue to a suspect. Costs one question.
+
+        Returns the clues it unlocked and the suspect's scripted reaction. If the
+        clue breaks claims of that suspect not caught before, they are recorded
+        and returned under "contradictions"; the key is left out when there are
+        none, so use result.get("contradictions", []).
+        """
         self._check_suspect(game, suspect)
         if self.clue_state(game, clue_id) != "open":
             raise GameError("You can only show a suspect a clue you have opened.")
@@ -305,8 +312,53 @@ class Engine:
         reveal = self._suspects(game)[suspect].get("reveals", {}).get(clue_id)
         if suspect == "professor" and clue_id == "D8":
             self._award(game, "honey_trap")
-        game.history.append({"action": "present", "suspect": suspect, "clue": clue_id, "clock": game.clock})
-        return {"unlocked": unlocked, "reveal": self._fill(game, reveal)}
+        caught = self._catch_contradictions(game, suspect, clue_id)
+        event = {"action": "present", "suspect": suspect, "clue": clue_id, "clock": game.clock}
+        if caught:
+            event["contradictions"] = [item["claim"] for item in caught]
+        game.history.append(event)
+        result = {"unlocked": unlocked, "reveal": self._fill(game, reveal)}
+        if caught:
+            result["contradictions"] = caught
+        return result
+
+    def _catch_contradictions(self, game, suspect, clue_id):
+        """Record each claim of the suspect that this clue breaks. Each claim counts once."""
+        caught = []
+        for claim in self._suspects(game)[suspect].get("claims", []):
+            if clue_id in claim["broken_by"] and [suspect, claim["id"]] not in game.contradictions:
+                game.contradictions.append([suspect, claim["id"]])
+                caught.append(self._claim_view(game, suspect, claim, clue_id))
+        return caught
+
+    def _claim_view(self, game, suspect, claim, clue_id):
+        return {
+            "suspect": suspect,
+            "claim": claim["id"],
+            "text": self._fill(game, claim["text"]),
+            "clue": clue_id,
+        }
+
+    def contradiction_list(self, game):
+        """The contradictions caught so far, oldest first, with each claim's text.
+
+        Only lists claims the player has broken, so it never gives away which
+        clue breaks a claim they have not caught yet.
+        """
+        sources = {
+            (event["suspect"], claim_id): event["clue"]
+            for event in game.history
+            for claim_id in event.get("contradictions", [])
+        }
+        result = []
+        for suspect, claim_id in game.contradictions:
+            claims = {c["id"]: c for c in self._suspects(game)[suspect].get("claims", [])}
+            if claim_id not in claims:
+                continue
+            claim = claims[claim_id]
+            clue_id = sources.get((suspect, claim_id))
+            result.append(self._claim_view(game, suspect, claim, clue_id))
+        return result
 
     def accuse(self, game, who, how, where, why):
         """Make an accusation. Free, but three wrong ones and the case goes cold.

@@ -96,7 +96,11 @@
         "L2": "\"I meant to hand it in. It slipped my mind.\"",
         "D6": "\"I like to be prepared.\"",
         "D1": "\"How awful. Poor thing. Although it was their card, wasn't it?\""
-      }
+      },
+      "claims": [
+        {"id": "home_all_evening", "text": "I was in my room at the residence all evening.", "broken_by": ["L1", "L3"]},
+        {"id": "reported_at_once", "text": "I saw the message at 23:47 and reported it at once.", "broken_by": ["D6"]}
+      ]
     },
     "ta": {
       "name": "The Teaching Assistant",
@@ -108,7 +112,10 @@
         "D2": "Gives way. \"I sent it to print. When I went to collect it, my card was gone. I last had it at lunch, in the cafeteria. A lost card is a security report and I did not want one on my file.\" Confirms staff card {ta_card} is theirs.",
         "D5": "\"Yes, I am an administrator. So is the Class Representative. I have not touched that link since it was reset.\"",
         "D1": "Close to tears. \"I did not write that. Who writes to an AI in white ink?\""
-      }
+      },
+      "claims": [
+        {"id": "proofread_on_screen", "text": "I proofread the exam on screen.", "broken_by": ["D2"]}
+      ]
     },
     "exchange": {
       "name": "The Exchange Student",
@@ -120,7 +127,8 @@
       },
       "reveals": {
         "D4": "\"Then I was going to win on Friday. Ask who stops me.\""
-      }
+      },
+      "claims": []
     },
     "professor": {
       "name": "The Professor",
@@ -134,12 +142,15 @@
       "reveals": {
         "L4": "\"A woman? I have no idea who that could be.\"",
         "D8": "Mortified. Admits there was no faculty dinner, and that Question 5 of v3 used the real Project Lantern figures. \"She asked about my laptop all evening. I thought she was interested in discounted cash flows.\" Her first message on Thursday came at 20:06: \"Running late, darling.\" His bag never left his chair."
-      }
+      },
+      "claims": [
+        {"id": "faculty_dinner", "text": "I was at a faculty dinner in Lisbon.", "broken_by": ["D8"]}
+      ]
     },
     "companion": {
       "name": "The Companion",
       "persona": "Introduces herself as a semiconductor consultant; the Professor's mistress. Charming, vague, answers questions with questions, mostly about the Professor's consulting work. A sharp professional who never admits to being a spy. No accent or nationality jokes.",
-      "cover": "I came to see the Professor, but he forgot our appointment, so I waited in the faculty lobby. Then I took the train to Lisbon and had dinner with him in Chiado from 21:00. His bag never left his chair. He is very attached to it.",
+      "cover": "I came to see the Professor, but he forgot our appointment, so I waited in the faculty lobby. I never went to his office door. Then I took the train to Lisbon and had dinner with him in Chiado from 21:00. His bag never left his chair. He is very attached to it.",
       "asks_password": true,
       "topic_unlocks": {"work": "D8"},
       "topic_lines": {
@@ -149,7 +160,10 @@
         "L4": "\"I was lost. Your corridors all look the same.\"",
         "D5": "\"A woman likes her privacy. Mine was the five past eight.\"",
         "D1": "She reads Question 5 slowly and smiles for the first time. \"How generous of your students.\""
-      }
+      },
+      "claims": [
+        {"id": "never_went_to_office_door", "text": "I never went to his office door.", "broken_by": ["L4"]}
+      ]
     }
   },
   "clues": {
@@ -282,7 +296,8 @@
             "L2": "\"I had lunch there, yes. I did not pick anything up. Ask the Cashier.\"",
             "D6": "\"I wrote it the moment I saw it. Look at the typos.\"",
             "D1": "\"That is me they are naming. I did not write that. Ask who else runs the group.\""
-          }
+          },
+          "claims": []
         },
         "ta": {
           "reveals": {
@@ -291,7 +306,11 @@
             "L2": "\"The cashier is wrong.\"",
             "D5": "\"Yes, I am an administrator. So is the Class Representative.\"",
             "D1": "Reads Question 5 and almost smiles. \"Good. Let everyone see what he puts in exams.\""
-          }
+          },
+          "claims": [
+            {"id": "proofread_on_screen", "text": "I proofread the exam on screen.", "broken_by": ["D2", "L1"]},
+            {"id": "card_lost_at_lunch", "text": "My card went missing at lunch, in the cafeteria.", "broken_by": ["L2"]}
+          ]
         },
         "professor": {
           "topic_lines": {
@@ -338,7 +357,8 @@
             "L2": "\"I had lunch there, yes. I did not pick anything up. Ask the Cashier.\"",
             "D6": "\"I wrote it the moment I saw it. Look at the typos.\"",
             "D1": "\"That is horrible. Someone is trying to blame the students.\""
-          }
+          },
+          "claims": []
         },
         "ta": {
           "reveals": {
@@ -352,10 +372,15 @@
           }
         },
         "companion": {
+          "cover": "I came to see the Professor, but he forgot our appointment, so I waited in the faculty lobby. I never went to his office door. Then I took the train to Lisbon and had dinner with him in Chiado from 21:00. His bag never left his chair. He is very attached to it. I never touched his laptop.",
           "reveals": {
             "D5": "\"Two? A woman likes a spare.\"",
             "D1": "\"An iPad? Half of Lisbon has an iPad, darling.\""
-          }
+          },
+          "claims": [
+            {"id": "never_went_to_office_door", "text": "I never went to his office door.", "broken_by": ["L4"]},
+            {"id": "never_touched_laptop", "text": "I never touched his laptop.", "broken_by": ["D1"]}
+          ]
         }
       },
       "shortest_path": [

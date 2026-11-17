@@ -319,3 +319,177 @@ def test_game_survives_a_save_and_load(engine):
     assert loaded == game
     engine.open_clue(loaded, "D2")
     assert loaded.clock == 70
+
+
+# ---- Contradictions -----------------------------------------------------------
+
+
+def open_library_gate(engine, game):
+    for clue_id in ("D1", "D2", "L1"):
+        engine.open_clue(game, clue_id)
+
+
+def test_no_contradictions_at_the_start(engine):
+    game = engine.new_game(seed=1, variant="A")
+    assert game.contradictions == []
+    assert engine.contradiction_list(game) == []
+
+
+def test_presenting_a_clue_that_breaks_a_claim_records_it(engine):
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    result = engine.present(game, "class_rep", "L1")
+    assert result["contradictions"] == [
+        {
+            "suspect": "class_rep",
+            "claim": "home_all_evening",
+            "text": "I was in my room at the residence all evening.",
+            "clue": "L1",
+        }
+    ]
+    assert game.contradictions == [["class_rep", "home_all_evening"]]
+    assert engine.contradiction_list(game) == result["contradictions"]
+
+
+def test_a_claim_is_only_caught_once(engine):
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    engine.present(game, "class_rep", "L1")
+    assert engine.present(game, "class_rep", "L1").get("contradictions", []) == []
+    engine.ask(game, "class_rep", "alibi")
+    engine.open_clue(game, "L3")
+    # L3 breaks the same claim, so nothing new is caught.
+    assert engine.present(game, "class_rep", "L3").get("contradictions", []) == []
+    assert game.contradictions == [["class_rep", "home_all_evening"]]
+    # The list names the clue that caught it first.
+    assert engine.contradiction_list(game)[0]["clue"] == "L1"
+
+
+def test_showing_the_clue_to_someone_else_catches_nothing(engine):
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    assert engine.present(game, "ta", "L1").get("contradictions", []) == []
+    assert engine.present(game, "exchange", "L1").get("contradictions", []) == []
+    assert game.contradictions == []
+
+
+def test_irrelevant_clue_catches_nothing(engine):
+    game = engine.new_game(seed=1, variant="A")
+    engine.open_clue(game, "D4")
+    assert engine.present(game, "class_rep", "D4").get("contradictions", []) == []
+    assert game.contradictions == []
+
+
+def test_rejected_present_records_no_contradiction(engine):
+    game = engine.new_game(seed=1, variant="A")
+    with pytest.raises(GameError):
+        engine.present(game, "professor", "D8")
+    assert game.contradictions == []
+
+
+def test_one_suspect_can_be_caught_twice(engine):
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    engine.present(game, "class_rep", "L1")
+    engine.ask(game, "class_rep", "report")
+    engine.open_clue(game, "D6")
+    caught = engine.present(game, "class_rep", "D6")["contradictions"]
+    assert [c["claim"] for c in caught] == ["reported_at_once"]
+    assert game.contradictions == [
+        ["class_rep", "home_all_evening"],
+        ["class_rep", "reported_at_once"],
+    ]
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_the_newspaper_breaks_the_professors_dinner_in_every_variant(engine, variant):
+    game = engine.new_game(seed=1, variant=variant)
+    engine.ask(game, "companion", "work")
+    engine.open_clue(game, "D8")
+    caught = engine.present(game, "professor", "D8")["contradictions"]
+    assert [c["claim"] for c in caught] == ["faculty_dinner"]
+
+
+def test_claims_follow_the_variant(engine):
+    """In B the Class Representative admits the library, so the gate log breaks
+    nothing of theirs, but it does break the Teaching Assistant's story."""
+    game = engine.new_game(seed=1, variant="B")
+    open_library_gate(engine, game)
+    assert engine.present(game, "class_rep", "L1").get("contradictions", []) == []
+    caught = engine.present(game, "ta", "L1")["contradictions"]
+    assert [c["claim"] for c in caught] == ["proofread_on_screen"]
+
+
+def test_contradictions_survive_a_save_and_load(engine):
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    engine.present(game, "class_rep", "L1")
+    loaded = Game.from_dict(json.loads(json.dumps(game.to_dict())))
+    assert loaded.contradictions == [["class_rep", "home_all_evening"]]
+    assert engine.contradiction_list(loaded) == engine.contradiction_list(game)
+
+
+def test_a_save_from_before_contradictions_still_loads(engine):
+    game = engine.new_game(seed=1, variant="A")
+    old = game.to_dict()
+    del old["contradictions"]
+    loaded = Game.from_dict(old)
+    assert loaded.contradictions == []
+    open_library_gate(engine, loaded)
+    assert engine.present(loaded, "class_rep", "L1")["contradictions"]
+
+
+def test_resumed_game_records_the_clue_that_caught_the_contradiction(engine):
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    engine.present(game, "class_rep", "L1")
+    old = game.to_dict()
+    del old["contradictions"]
+    old["history"][-1].pop("contradictions", None)
+    loaded = Game.from_dict(old)
+
+    engine.ask(loaded, "class_rep", "alibi")
+    engine.open_clue(loaded, "L3")
+    caught = engine.present(loaded, "class_rep", "L3")["contradictions"]
+    assert caught[0]["clue"] == "L3"
+    assert engine.contradiction_list(loaded) == caught
+    resumed = Game.from_dict(json.loads(json.dumps(loaded.to_dict())))
+    assert engine.contradiction_list(resumed) == caught
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_corridor_clue_breaks_the_companions_denial_about_the_office_door(engine, variant):
+    game = engine.new_game(seed=1, variant=variant)
+    engine.open_clue(game, "L4")
+    engine.open_clue(game, "D7")
+    assert not engine.present(game, "companion", "D7").get("contradictions")
+
+    [caught] = engine.present(game, "companion", "L4")["contradictions"]
+    assert caught == {
+        "suspect": "companion",
+        "claim": "never_went_to_office_door",
+        "text": "I never went to his office door.",
+        "clue": "L4",
+    }
+    assert caught["text"] in engine.character_brief(game, "companion")["cover"]
+
+
+def test_brief_never_contains_claims(engine):
+    """The AI plays the suspect from their cover. It is never told which clues break it."""
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    engine.present(game, "class_rep", "L1")
+    for suspect, s in engine.case["suspects"].items():
+        brief = engine.character_brief(game, suspect)
+        assert "claims" not in brief
+        text = json.dumps(brief)
+        assert "broken_by" not in text
+        for claim in s["claims"]:
+            assert claim["id"] not in text
+
+
+def test_present_leaves_out_contradictions_when_none_are_caught(engine):
+    game = engine.new_game(seed=1, variant="A")
+    open_library_gate(engine, game)
+    assert "contradictions" not in engine.present(game, "ta", "L1")
+    assert "contradictions" in engine.present(game, "class_rep", "L1")

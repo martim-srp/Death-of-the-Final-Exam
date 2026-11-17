@@ -160,3 +160,35 @@ def test_variant_c_timeline(seed):
     assert game.variables["alias"] in d7
     first_draft = min(line_time(l) for l in log_lines(engine, game, "D6"))
     assert first_draft > minutes("23:47")
+
+
+# ---- Contradictions -----------------------------------------------------------
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_claims_are_well_formed(variant):
+    engine = Engine()
+    resolved = resolve_variant(CASE, variant)
+    game = engine.new_game(seed=1, variant=variant)
+    for suspect, s in resolved["suspects"].items():
+        assert isinstance(s["claims"], list), suspect
+        ids = [c["id"] for c in s["claims"]]
+        assert len(ids) == len(set(ids)), suspect
+        for claim in s["claims"]:
+            assert set(claim) == {"id", "text", "broken_by"}, claim
+            assert claim["broken_by"], claim["id"]
+            for clue_id in claim["broken_by"]:
+                assert clue_id in resolved["clues"], (suspect, claim["id"], clue_id)
+            assert "{" not in engine._fill(game, claim["text"])
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_every_culprit_tells_a_lie_the_clues_can_break(variant):
+    culprit = CASE["variants"][variant]["solution"]["who"]
+    claims = resolve_variant(CASE, variant)["suspects"][culprit]["claims"]
+    assert claims
+
+
+@pytest.mark.parametrize("variant", ["B", "C"])
+def test_the_class_representatives_story_holds_when_innocent(variant):
+    assert resolve_variant(CASE, variant)["suspects"]["class_rep"]["claims"] == []
