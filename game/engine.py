@@ -23,25 +23,72 @@ _KEY_PATTERN = re.compile(r"\b(sk|pk|rk|ghp|gho|xoxb|xoxp)[-_][A-Za-z0-9_-]{8,}"
 _PASSWORD_WORDS = re.compile(
     r"\b(password|passwd|pwd|passcode|senha|palavra-passe)\b\s*(is|=|:|é)?\s*\S{4,}", re.IGNORECASE
 )
-_CARD_NUMBER = re.compile(r"^(stu|staff)-\d{4}$", re.IGNORECASE)
+_CARD_NUMBER = re.compile(r"\b(stu|staff)-\d{4}\b", re.IGNORECASE)
+_FILE_NAME = re.compile(r"^[\w.-]+\.(pdf|docx?|xlsx?|csv|txt|png|jpe?g)$", re.IGNORECASE)
+_STRIP = ".,;:!?\"'()[]"
+# Field names used in the case file's logs (job=88213, card=STU-2291, ...). Only these
+# key=value words count as game data; token=..., pass=... and any other assignment do not.
+_GAME_FIELDS = frozenset(
+    {"admin", "card", "expires", "job", "owner", "pages", "queue", "staff", "station"}
+)
+_FIELD = re.compile(r"^([A-Za-z_]+)=")
 
 
-def looks_like_secret(text):
+def _words(text):
+    """The words of a text, without surrounding punctuation."""
+    return [w.strip(_STRIP) for w in text.split() if w.strip(_STRIP)]
+
+
+def _is_game_data(word, known_words):
+    """True for words that come from the game itself, which are never secrets:
+    card numbers, file names, log fields like job=88213, and words in the case file."""
+    field = _FIELD.match(word)
+    return (
+        bool(_CARD_NUMBER.search(word))
+        or bool(_FILE_NAME.match(word))
+        or bool(field and field.group(1).lower() in _GAME_FIELDS)
+        or word.lower() in known_words
+    )
+
+
+def looks_like_secret(text, known_words=frozenset()):
     """True if the text contains something that looks like a password or an API key.
 
-    Card numbers from the logs (like STU-2291) are not secrets.
+    Explicit keys (sk-..., ghp_...) and phrases like "my password is ..." always count.
+    Otherwise a word of 8+ characters mixing lowercase letters and digits counts, unless it
+    is game data (see _is_game_data). known_words is the vocabulary of the case file.
     """
     if _KEY_PATTERN.search(text) or _PASSWORD_WORDS.search(text):
         return True
-    for word in text.split():
-        word = word.strip(".,;!?\"'()")
-        if len(word) < 8 or _CARD_NUMBER.match(word):
+    for word in _words(text):
+        if len(word) < 8 or _is_game_data(word, known_words):
             continue
         has_lower = any(c.islower() for c in word)
         has_digit = any(c.isdigit() for c in word)
         if has_lower and has_digit:
             return True
     return False
+
+
+def case_vocabulary(case):
+    """Every word that appears in the case file's text, lowercased.
+
+    Players copy these words from clues into their questions, so they are never secrets.
+    """
+    words = set()
+
+    def walk(value):
+        if isinstance(value, str):
+            words.update(w.lower() for w in _words(value))
+        elif isinstance(value, dict):
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(case)
+    return frozenset(words)
 
 
 class GameError(Exception):
@@ -79,6 +126,7 @@ class Engine:
         self.case = case if case is not None else load_case()
         self.clock_rules = self.case["clock"]
         self._resolved = {v: resolve_variant(self.case, v) for v in self.case["variants"]}
+        self._vocabulary = case_vocabulary(self.case)
 
     # ---- Starting a game -------------------------------------------------
 
@@ -297,7 +345,7 @@ class Engine:
         for passwords, earns the badge.
         """
         self._check_suspect(game, suspect)
-        if not looks_like_secret(text):
+        if not looks_like_secret(text, self._vocabulary):
             return False
         if self._suspects(game)[suspect].get("asks_password"):
             self._award(game, "spy_password")

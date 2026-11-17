@@ -2,7 +2,11 @@
 
 import pytest
 
-from game.engine import Engine, looks_like_secret
+import json
+import re
+from pathlib import Path
+
+from game.engine import _GAME_FIELDS, Engine, looks_like_secret
 
 
 @pytest.fixture(scope="module")
@@ -102,3 +106,71 @@ def test_slow_solve_earns_no_hedge_fund(engine):
     engine.accuse(game, s["who"], s["how"], s["where"], s["why"])
     assert game.status == "solved"
     assert "hedge_fund" not in game.badges
+
+
+# ---- Game data is never a secret (false positives reported in the review of #7) ----------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Did you post SV_Final_v3.pdf?",
+        "What is job=88213?",
+        "Was card=STU-2291 yours?",
+        "Why was staff=STAFF-0417 at LIB-1?",
+        "Who has the file report_final2.docx?",
+    ],
+)
+def test_game_data_in_a_question_is_not_a_secret(engine, text):
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.check_secret(game, "companion", text) is False
+    assert game.badges == []
+
+
+@pytest.mark.parametrize("variant", ["A", "B", "C"])
+def test_no_word_from_any_clue_or_log_counts_as_a_secret(engine, variant):
+    """Players copy words from clues into their questions. None of them may trip the trap."""
+    for seed in range(20):
+        game = engine.new_game(seed=seed, variant=variant)
+        for clue_id in engine.case["clues"]:
+            game.opened.append(clue_id)
+        for clue_id in engine.case["clues"]:
+            clue = engine.read_clue(game, clue_id)
+            for key in ("text", "log", "hidden_text"):
+                if clue[key]:
+                    for line in clue[key].splitlines():
+                        assert not engine.check_secret(game, "companion", line), line
+
+
+def test_a_real_password_mixed_with_game_data_is_still_caught(engine):
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.check_secret(game, "companion", "card=STU-2291, and my login is Carcavelos2026")
+    assert game.badges == ["spy_password"]
+
+
+# ---- Only the case file's own log fields are exempt (regression in #11) ---------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "token=demo2026Value",
+        "api_key=abc123def456",
+        "secret=Lisboa2026x",
+        "pass=benfica1904",
+        "login=Carcavelos2026",
+        "my creds: user=martim token=demo2026Value",
+    ],
+)
+def test_credential_assignments_are_still_secrets(engine, text):
+    assert looks_like_secret(text)
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.check_secret(game, "companion", text)
+
+
+def test_every_log_field_in_the_case_file_is_exempt():
+    """If the case file gains a new key=value field, it must be added to _GAME_FIELDS."""
+    raw = (Path(__file__).parent.parent / "data" / "case.json").read_text(encoding="utf-8")
+    fields = {m.lower() for m in re.findall(r"\b([A-Za-z_]+)=", raw)}
+    json.loads(raw)  # still valid JSON
+    assert fields <= _GAME_FIELDS, fields - _GAME_FIELDS
