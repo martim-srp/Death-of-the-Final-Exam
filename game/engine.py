@@ -14,7 +14,7 @@ import re
 import secrets
 from dataclasses import asdict, dataclass, field
 
-from game.case import load_case, option_ids, resolve_variant
+from game.case import load_case, load_hunches, option_ids, resolve_variant
 
 COLUMNS = ("who", "how", "where", "why")
 HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
@@ -135,8 +135,9 @@ class Game:
 class Engine:
     """Applies the rules of one case file to games."""
 
-    def __init__(self, case=None):
+    def __init__(self, case=None, hunches=None):
         self.case = case if case is not None else load_case()
+        self.hunch_lines = hunches if hunches is not None else load_hunches()
         self.clock_rules = self.case["clock"]
         self._resolved = {v: resolve_variant(self.case, v) for v in self.case["variants"]}
         self._vocabulary = case_vocabulary(self.case)
@@ -416,6 +417,25 @@ class Engine:
             rule = clue["unlock"].get("present")
             if rule and rule["clue"] in game.opened and self.clue_state(game, clue_id) == "locked":
                 result.append({"clue": clue_id, "from": rule["clue"], "text": self._hint_text(game, clue_id)})
+        return result
+
+    def hunches(self, game, clue_id):
+        """The detective's inner voice on an opened clue: a short line and the detail to highlight.
+
+        One per suspect story this clue breaks in this variant (from the claims'
+        broken_by lists), until that lie is caught. The line hints; it never names
+        the liar. Returns a list of {"line", "mark"}, with the case's variables filled in.
+        """
+        if self.clue_state(game, clue_id) != "open":
+            return []
+        result = []
+        for suspect, data in self._suspects(game).items():
+            for claim in data.get("claims", []):
+                if clue_id not in claim["broken_by"] or [suspect, claim["id"]] in game.contradictions:
+                    continue
+                hunch = self.hunch_lines.get(f"{clue_id}|{suspect}.{claim['id']}")
+                if hunch:
+                    result.append({"line": self._fill(game, hunch["line"]), "mark": self._fill(game, hunch.get("mark", ""))})
         return result
 
     def next_step(self, game):

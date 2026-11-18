@@ -208,6 +208,21 @@ def set_focus(kind, value=None):
         st.session_state.suspect = value
 
 
+def go_next():
+    """The phone's next-step button: open what the next step points at."""
+    step = engine.next_step(current_game())
+    parsed = board.parse_act(board.goal_act(step), case["suspects"], case["clues"]) if step else None
+    if parsed:
+        set_focus(*parsed)
+
+
+def next_step_button(game):
+    """On phones the strip above the map scrolls out of sight, so the panel ends with the next step too."""
+    step = engine.next_step(game)
+    if step:
+        st.button(step["text"], key="next_phone", icon=":material/arrow_forward:", on_click=go_next, use_container_width=True)
+
+
 def on_act(key):
     """A tap on the board: open what was tapped in the side panel. Free; it never changes the game."""
     state = st.session_state.get(key) or {}
@@ -317,9 +332,10 @@ PAGE_CSS = """
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Special+Elite&display=swap");
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
-[data-testid="stMainBlockContainer"] { padding: 3.4rem 1.2rem 1.5rem; max-width: 1480px; }
+[data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 1.5rem; max-width: 1480px; }
 .stApp { font-variant-numeric: lining-nums; }
-header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-filter: blur(6px); }
+header[data-testid="stHeader"] { display: none; }
+.st-key-next_phone { display: none; }  /* the game is full screen; Streamlit's bar covered the status bar */
 .st-key-panel h3, .finale h1, [data-testid="stDialog"] h2 { font-family: "Playfair Display", Georgia, serif !important; }
 .st-key-panel { background: #1c1613; border: 1px solid #3a2e28; border-radius: 14px; padding: 0.9rem 1rem 1rem; gap: 0.6rem; }
 .st-key-panel h3 { margin: 0 0 0.55rem !important; padding: 0.1rem 0 0.1rem; font-size: 1.35rem; line-height: 1.35; }
@@ -347,7 +363,7 @@ header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-fi
   font: 800 1.15rem "Special Elite", "Courier New", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
-.evidence { position: relative; border-radius: 12px; overflow: hidden; background: #efe6d8; color: #2a201b;
+.evidence { position: relative; border-radius: 12px; overflow: hidden; background: #efe6d8; color: #2a201b; margin-bottom: 0.9rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45); animation: flip 0.55s ease-out both; }
 .evidence img { width: 100%; display: block; max-height: 260px; object-fit: cover; }
 .evidence .icon { font-size: 2.6rem; text-align: center; padding: 0.8rem 0 0; }
@@ -363,7 +379,7 @@ header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-fi
 .tips div span { display: block; font-size: 1.6rem; }
 .lie { background: #2a1714; border: 1px solid #5a2a22; border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.88rem; }
 .lie b { color: #e0645a; }
-.verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; }
+.verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; margin-bottom: 0.6rem; }
 .verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem "Special Elite", "Courier New", monospace; letter-spacing: 0.08em; }
 .verdict .ok { background: #1f3a24; color: #8be09a; border: 2px solid #3d7a48; }
 .verdict .no { background: #3a1714; color: #ff8a7a; border: 2px solid #7a2c22; }
@@ -405,6 +421,13 @@ header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-fi
 .how-to li span { flex: 1 1 auto; }
 .how-to li em { font: 0.75rem "Special Elite", "Courier New", monospace; font-style: normal; color: #a89a88; white-space: nowrap; }
 .ic { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; }
+.evidence mark { background: rgba(192, 57, 43, 0.18); color: #8a1f14; border-bottom: 2px solid #c0392b; padding: 0 0.1em; }
+.hunch { display: flex; gap: 0.7rem; align-items: flex-start; margin: 0 0 0.8rem; padding: 0.65rem 0.8rem; border-left: 3px solid #e8c27a;
+  background: rgba(232, 194, 122, 0.07); border-radius: 0 10px 10px 0; animation: rise 0.5s ease-out both; animation-delay: 0.2s; }
+.hunch img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; border: 2px solid #e8c27a; flex: 0 0 auto; }
+.hunch p { margin: 0; font-family: "Playfair Display", Georgia, serif; font-style: italic; font-size: 0.98rem; line-height: 1.4; color: #efe6d8; }
+.hunch code { display: block; margin-top: 0.4rem; font-size: 0.75rem; background: #1c1613; color: #cdbfa8; padding: 0.3rem 0.45rem; border-radius: 6px; white-space: pre-wrap; }
+.hunch mark { background: rgba(232, 194, 122, 0.25); color: #ffe2a8; padding: 0 0.1em; border-radius: 3px; }
 .proof { display: flex; flex-direction: column; gap: 0.15rem; margin: -0.4rem 0 0.7rem; font-size: 0.8rem; color: #a89a88; }
 .proof .ic { color: #e8c27a; width: 13px; height: 13px; }
 .proof em { font-style: normal; font: 0.72rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
@@ -423,7 +446,12 @@ header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-fi
 @keyframes deal { from { opacity: 0; transform: translateY(-30px) rotate(-6deg); } to { opacity: 1; transform: none; } }
 @keyframes shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
 @media (max-width: 640px) {
-  [data-testid="stMainBlockContainer"] { padding: 3rem 0.6rem 1rem; }
+  [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1rem; }
+  .evidence img { max-height: 170px; }
+  .st-key-next_phone { display: block; margin-top: 0.4rem; }
+  .st-key-case_summary [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.4rem 0.8rem; }
+  .st-key-case_summary [data-testid="stColumn"] { min-width: 28% !important; width: 28% !important; flex: 1 1 28% !important; }
+  .st-key-next_phone button { border-color: #e8c27a; color: #e8c27a; }
   .tips { grid-template-columns: 1fr; }
   .st-key-suspect_row { display: none; }
   [data-testid="stDialog"] [data-testid="stColumn"]:has(.cover-art) { display: none; }
@@ -517,6 +545,10 @@ def panel_home(game):
             "".join(f'<div class="lead"><b>{esc(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
             unsafe_allow_html=True,
         )
+    elif game.history:
+        step = engine.next_step(game)
+        if step:
+            st.markdown(f"### {step['text']}")  # the next step, once the first move is made
     else:
         st.markdown("### Where to start")
         st.markdown(
@@ -704,6 +736,20 @@ def panel_suspect(game, suspect):
 # ---- Panel: one clue ------------------------------------------------------------------
 
 
+def hunch_html(hunches, log):
+    """The detective's inner voice: a line per broken story, quoting the log line that caught their eye."""
+    face = board.find_picture("detectives", player_avatar()) or ""
+    rows = []
+    for hunch in hunches:
+        quote = ""
+        line = next((x for x in (log or "").splitlines() if hunch["mark"] and hunch["mark"] in x), None)
+        if line:
+            marked = esc(line.strip()).replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
+            quote = f"<code>{marked}</code>"
+        rows.append(f'<div class="hunch"><img src="{face}" alt=""><div><p>{esc(hunch["line"])}</p>{quote}</div></div>')
+    return "".join(rows)
+
+
 def panel_clue(game, clue_id, fresh):
     item = next(c for c in engine.clue_list(game) if c["id"] == clue_id)
     verb = "Search it" if item["kind"] == "location" else "Open it"
@@ -733,7 +779,14 @@ def panel_clue(game, clue_id, fresh):
     picture = board.find_picture("clues", clue_id)
     art = f'<img src="{picture}" alt="">' if picture else f'<div class="icon">{board.icon(board.CARD_ICON.get(clue_id, "doc"))}</div>'
     style = "" if clue_id in fresh else ' style="animation:none"'
-    st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{esc(clue["text"])}</div></div>', unsafe_allow_html=True)
+    hunches = engine.hunches(game, clue_id)
+    body = esc(clue["text"])
+    for hunch in hunches:
+        if hunch["mark"] and hunch["mark"] in clue["text"]:
+            body = body.replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
+    st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{body}</div></div>', unsafe_allow_html=True)
+    if hunches:
+        st.markdown(hunch_html(hunches, clue["log"]), unsafe_allow_html=True)
     if clue["log"]:
         query = st.text_input("Search the log", key=f"search_{clue_id}", placeholder="A card number, a name, a time…")
         matches, total = search_log(clue["log"], query)
@@ -793,7 +846,7 @@ def panel_accuse(game):
     verdict = st.session_state.get("verdict")
     if verdict is not None:
         st.markdown(verdict_html(verdict), unsafe_allow_html=True)
-        st.caption("Wrong. Keep the ✓ parts and rethink the ✗ ones.")
+        st.caption(f"{len(verdict)} of 4 right. Keep the ✓ parts and rethink the ✗ ones.")
     for column in COLUMNS:
         out = set(crossed(column))
         st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()}", [o["id"] for o in case["accusation"][column]],
@@ -809,7 +862,6 @@ def panel_accuse(game):
             sound("thud" if result["status"] == "playing" else "stamp")
         if result and result["status"] == "playing":
             st.session_state.verdict = engine.right_parts(current_game())
-            st.session_state.toast = (f"{result['correct']} of 4 right. {result['strikes_left']} tries left.", ":material/balance:")
         st.rerun()
 
 
@@ -960,6 +1012,7 @@ with side_column:
             panel_accuse(game)
         else:
             panel_home(game)
+    next_step_button(game)
 
 # Called last, so the story and rules open over the game on a new case.
 if not st.session_state.get("intro_done", bool(game.history)):

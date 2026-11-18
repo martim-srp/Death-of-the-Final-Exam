@@ -285,7 +285,7 @@ def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=
             f'<text class="tag" y="58">{esc(place)}</text><circle r="56" fill="#000" fill-opacity="0"/></g>'
         )
     dx, dy = detective_spot(opened)
-    tx, ty = dx * width + 44 * s, dy * height - 40 * s
+    tx, ty = dx * width + 64 * s, dy * height - 52 * s  # beside the pin, never on it
     token = f'<image href="{avatar_uri}" x="-26" y="-26" width="52" height="65" clip-path="url(#detclip)" preserveAspectRatio="xMidYMin slice"/>' if avatar_uri else '<circle r="20" fill="#2a221e"/>'
     parts.append(
         f'<g class="det" data-x="{tx:.0f}" data-y="{ty:.0f}" transform="translate({tx:.0f} {ty:.0f}) scale({s:.3f})">'
@@ -514,7 +514,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @keyframes beckon { 0%,70%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); } 35% { box-shadow: 0 0 0 6px rgba(192,57,43,.35); } }
 @keyframes throb { 50% { opacity: .55; } }
 /* Map */
-.map { width: min(100%, calc((100vh - 350px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
+.map { width: min(100%, calc((100vh - 300px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
   border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .pin { cursor: pointer; }
 .pin .ring { fill: none; stroke-width: 6; }

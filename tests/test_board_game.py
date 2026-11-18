@@ -306,7 +306,7 @@ def test_a_wrong_accusation_shows_which_parts_are_right():
     assert at.session_state["game"]["strikes"] == 1
     assert at.session_state["verdict"] == ["how", "where", "why"]
     assert page(at).count('class="ok"') == 3 and page(at).count('class="no"') == 1
-    assert any("3 of 4 right" in t.value for t in at.toast)
+    assert any("3 of 4 right" in c.value for c in at.caption)  # under the verdict, not a pop-up that covers it
 
 
 def test_the_right_accusation_closes_the_case_with_the_reveal():
