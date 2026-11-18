@@ -492,7 +492,8 @@ export default function(component) {
 
 BOARD_CSS = """
 :host { --ink: #efe6d8; --red: #c0392b; --gold: #e8c27a; --bg: #14100e; --type: "Special Elite", "Courier New", monospace;
-  --serif: "Playfair Display", Georgia, serif; }
+  --serif: "Playfair Display", Georgia, serif; --prose: Georgia, "Times New Roman", serif;
+  --ui: "Source Sans Pro", "Source Sans 3", system-ui, sans-serif; }
 .phone-only { display: none; }
 .deck { color: var(--ink); font-family: var(--serif); font-variant-numeric: lining-nums; user-select: none; container-type: inline-size; }
 button { font: inherit; color: inherit; cursor: pointer; }
@@ -532,7 +533,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pin.picked .ring { stroke: var(--gold); stroke-width: 9; }
 .pin:hover .ring, .pin:focus .ring { stroke-width: 10; }
 .pin:focus { outline: none; }
-.pin .glyph { font: bold 34px Georgia, serif; text-anchor: middle; }
+.pin .glyph { font: bold 34px var(--prose); text-anchor: middle; }
 .pin .glyph.small { font-size: 26px; }
 .pin .tag { font: 700 19px var(--serif); text-anchor: middle; fill: var(--ink); paint-order: stroke; stroke: #14100e; stroke-width: 6px; }
 .pin.fresh { animation: pop .7s ease-out; }
@@ -555,7 +556,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .card .art.back.locked { background: repeating-linear-gradient(45deg, #2a221e 0 6px, #332924 6px 12px); font-size: 17px; }
 .card .lbl { display: flex; flex-direction: column; padding: 3px 6px 5px; min-width: 0; line-height: 1.2; }
 .card .lbl b { font: 400 10px var(--type); opacity: .75; }
-.card .lbl span { font: 600 11px Georgia, serif; height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
+.card .lbl span { font: 600 11px var(--prose); height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
   -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .card.locked { background: #2a221e; color: #8d7f72; border-color: #3a2e28; }
 .card.available { border-color: var(--red); animation: glow 1.8s infinite; }
@@ -586,15 +587,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: #e0645a; background: rgba(20,16,14,.7); padding: 1px 4px; font: 400 11px var(--type); white-space: nowrap; }
 /* First-play tour */
 .tour { position: fixed; z-index: 1000; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(360px, calc(100vw - 32px));
-  background: #efe6d8; color: #2a201b; border-radius: 14px; padding: 14px 16px 12px; box-shadow: 0 18px 50px rgba(0,0,0,.7);
+  background: #1c1613; color: var(--ink); border: 1px solid #3a2e28; border-left: 3px solid var(--gold); border-radius: 14px;
+  padding: 14px 16px 12px; box-shadow: 0 18px 50px rgba(0,0,0,.7);
   animation: rise .35s ease-out; }
 .tour .step { display: none; }
 .tour .step.on { display: block; }
 .tour .step b { font: 700 18px var(--serif); }
-.tour .step p { margin: 4px 0 10px; font: 15px/1.35 Georgia, serif; }
+.tour .step p { margin: 4px 0 10px; font: 15px/1.4 var(--prose); color: #cdbfa8; }
 .tour-nav { display: flex; align-items: center; justify-content: space-between; }
-.tour-nav .dots { font-size: 10px; letter-spacing: 2px; color: #8a2a1f; }
-.tour-nav button { border-radius: 8px; padding: 6px 14px; border: 1px solid #8a7a6a; background: transparent; color: #2a201b; font: 14px Georgia, serif; }
+.tour-nav .dots { font-size: 10px; letter-spacing: 2px; color: var(--gold); }
+.tour-nav button { border-radius: 8px; padding: 6px 14px; border: 1px solid #4a3a31; background: transparent; color: var(--ink); font: 500 14px var(--ui); }
 .tour-nav .next { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
 .tour-ring { position: fixed; z-index: 999; border: 3px solid var(--gold); border-radius: 14px; pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(8,6,5,.6); transition: all .35s ease; }
@@ -622,7 +624,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* Next step: one objective, always visible */
 .goal-bar { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 10px; padding: 8px 12px; text-align: left;
   border: 1px solid rgba(232,194,122,.55); border-radius: 12px; background: linear-gradient(90deg, rgba(232,194,122,.16), rgba(232,194,122,.04));
-  color: var(--ink); cursor: pointer; font: 15px/1.3 Georgia, serif; animation: rise-in .4s ease-out; }
+  color: var(--ink); cursor: pointer; font: 15px/1.3 var(--prose); animation: rise-in .4s ease-out; }
 .goal-bar:hover { border-color: var(--gold); background: linear-gradient(90deg, rgba(232,194,122,.26), rgba(232,194,122,.08)); }
 .goal-bar .gi { font-size: 22px; flex: 0 0 auto; }
 .goal-bar .gt { flex: 1 1 auto; min-width: 0; }

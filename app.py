@@ -331,19 +331,23 @@ def denouement(game):
 PAGE_CSS = """
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Special+Elite&display=swap");
+/* One look everywhere: Playfair for titles, a serif for in-world text, a typewriter for labels, the app font for controls. */
+:root { --display: "Playfair Display", Georgia, serif; --prose: Georgia, "Times New Roman", serif;
+  --label: "Special Elite", "Courier New", monospace; --ink: #efe6d8; --gold: #e8c27a; --red: #c0392b;
+  --paper: #1c1613; --line: #3a2e28; }
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
 [data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 1.5rem; max-width: 1480px; }
 .stApp { font-variant-numeric: lining-nums; }
 header[data-testid="stHeader"] { display: none; }
 .st-key-next_phone { display: none; }  /* the game is full screen; Streamlit's bar covered the status bar */
-.st-key-panel h3, .finale h1, [data-testid="stDialog"] h2 { font-family: "Playfair Display", Georgia, serif !important; }
+.st-key-panel h3, .finale .title, [data-testid="stDialog"] h2 { font-family: var(--display) !important; }
 .st-key-panel { background: #1c1613; border: 1px solid #3a2e28; border-radius: 14px; padding: 0.9rem 1rem 1rem; gap: 0.6rem; }
 .st-key-panel h3 { margin: 0 0 0.55rem !important; padding: 0.1rem 0 0.1rem; font-size: 1.35rem; line-height: 1.35; }
-.kicker { font: 600 0.72rem "Special Elite", "Courier New", monospace; letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
+.kicker { font: 600 0.72rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
 .who-head { padding-bottom: 0.9rem; display: flex; gap: 0.8rem; align-items: center; }
 .st-key-chat_log { margin-top: 0.5rem; }
 .who-head img { width: 64px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #c0392b; }
-.nerves { display: flex; align-items: center; gap: 0.4rem; font: 600 0.68rem "Special Elite", "Courier New", monospace; letter-spacing: 0.12em;
+.nerves { display: flex; align-items: center; gap: 0.4rem; font: 600 0.68rem var(--label); letter-spacing: 0.12em;
   text-transform: uppercase; opacity: 0.85; margin-top: 0.25rem; }
 .nerves i { width: 110px; height: 6px; background: #3a2e28; border-radius: 3px; overflow: hidden; display: inline-block; }
 .nerves b { display: block; height: 100%; background: linear-gradient(90deg, #e8c27a, #e0645a); transition: width 0.6s; }
@@ -351,37 +355,37 @@ header[data-testid="stHeader"] { display: none; }
 .chat { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.2rem 0.1rem; }
 .bubble { display: flex; gap: 0.5rem; align-items: flex-end; max-width: 92%; animation: rise 0.35s ease-out both; }
 .bubble img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; object-position: top; flex: none; }
-.bubble .say { padding: 0.5rem 0.75rem; border-radius: 16px; font-family: Georgia, serif; font-size: 0.95rem; line-height: 1.35; }
+.bubble .say { padding: 0.5rem 0.75rem; border-radius: 16px; font-family: var(--prose); font-size: 0.95rem; line-height: 1.35; }
 .bubble.them .say { background: #2b221d; border: 1px solid #3f322b; border-bottom-left-radius: 4px; }
 .bubble.you { margin-left: auto; flex-direction: row-reverse; }
 .bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
 .bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
-.bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: sans-serif; }
-.bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
+.bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: inherit; }
+.bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem var(--label); color: #e8c27a; }
 .caught { margin: 0.2rem auto 0.3rem; text-align: center; animation: slam 0.5s cubic-bezier(.2,1.6,.4,1) both; }
 .caught b { display: inline-block; border: 3px solid #e0645a; color: #e0645a; padding: 0.1rem 0.6rem; transform: rotate(-4deg);
-  font: 800 1.15rem "Special Elite", "Courier New", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+  font: 800 1.15rem var(--label); letter-spacing: 0.12em; text-transform: uppercase; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
 .evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
   background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45); animation: flip 0.55s ease-out both; }
 .evidence img { width: 100%; display: block; max-height: 260px; object-fit: cover; }
-.evidence .body { padding: 0.85rem 1rem 1rem; font-family: Georgia, serif; font-size: 0.95rem; line-height: 1.5;
+.evidence .body { padding: 0.85rem 1rem 1rem; font-family: var(--prose); font-size: 0.95rem; line-height: 1.5;
   overflow-wrap: anywhere; white-space: normal; border-left: 3px solid #8a2a1f; }
 .facedown { border-radius: 12px; height: 150px; display: flex; align-items: center; justify-content: center; font-size: 2.6rem;
   background: repeating-linear-gradient(45deg, #5a1d16 0 10px, #6e241b 10px 20px); color: #f4d9a0; }
 .facedown.locked { background: repeating-linear-gradient(45deg, #2a221e 0 10px, #332924 10px 20px); }
 .lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
-.lead b { font-family: "Special Elite", "Courier New", monospace; color: #e8c27a; }
+.lead b { font-family: var(--label); color: #e8c27a; }
 .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
 .tips div span { display: block; font-size: 1.6rem; }
 .lie { background: #2a1714; border: 1px solid #5a2a22; border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.88rem; }
 .lie b { color: #e0645a; }
 .verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; margin-bottom: 0.6rem; }
-.verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem "Special Elite", "Courier New", monospace; letter-spacing: 0.08em; }
+.verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem var(--label); letter-spacing: 0.08em; }
 .verdict .ok { background: #1f3a24; color: #8be09a; border: 2px solid #3d7a48; }
 .verdict .no { background: #3a1714; color: #ff8a7a; border: 2px solid #7a2c22; }
 .verdict span { display: block; font-size: 1.5rem; }
@@ -392,58 +396,61 @@ header[data-testid="stHeader"] { display: none; }
   text-decoration: line-through; text-decoration-color: #e0645a; text-decoration-thickness: 2px; opacity: 0.6;
   background: #2a1714 !important; border-color: #5a2a22 !important; color: #efe6d8 !important; }
 .st-key-case_summary [data-testid="stMetricValue"] { font-size: 1.4rem; }
-.st-key-accuse_go button { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.7rem; }
+.st-key-accuse_go button, .st-key-to_accuse button { padding: 0.7rem; }
+.st-key-to_accuse { margin-top: 0.6rem; }
+.st-key-accuse_go button p, .st-key-to_accuse button p { font: 700 1.05rem var(--label); letter-spacing: 0.08em; text-transform: uppercase; }
 /* The finale */
 .finale { text-align: center; padding: 0.5rem 0 0.2rem; }
 .finale .mug { position: relative; width: 220px; margin: 0 auto; }
 .finale .mug img { width: 220px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 14px; border: 3px solid #3a2e28;
   box-shadow: 0 16px 40px rgba(0,0,0,0.6); animation: rise 0.8s ease-out both; }
 .finale .slam { position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%) rotate(-14deg); border: 5px solid #e0645a;
-  color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem "Special Elite", "Courier New", monospace;
+  color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem var(--label);
   letter-spacing: 0.15em; animation: stamp 0.6s 0.6s cubic-bezier(.2,1.6,.4,1) both; white-space: nowrap; }
 .finale.cold .slam { border-color: #9aa7b3; color: #9aa7b3; }
-.finale h1 { font-size: 2.6rem; margin: 1.1rem 0 0.1rem; animation: rise 0.6s 1s ease-out both; }
+.finale .title { font-size: 2.6rem; font-weight: 700; line-height: 1.2; margin: 1.1rem 0 0.3rem; animation: rise 0.6s 1s ease-out both; }
 .finale .sub { opacity: 0.75; animation: rise 0.6s 1.1s ease-out both; }
-.facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; max-width: 900px; margin: 1.2rem auto 0.4rem; }
-.facts div { background: #efe6d8; color: #2a201b; border-radius: 10px; padding: 0.7rem 0.6rem; font-family: Georgia, serif;
+.facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin: 1.2rem 0 0.4rem; }
+.facts div { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-top: 3px solid #8a2a1f;
+  border-radius: 10px; padding: 0.7rem 0.6rem; font-family: var(--prose);
   font-size: 0.92rem; line-height: 1.3; animation: deal 0.5s ease-out both; }
 .facts div:nth-child(1) { animation-delay: 1.3s; } .facts div:nth-child(2) { animation-delay: 1.5s; }
 .facts div:nth-child(3) { animation-delay: 1.7s; } .facts div:nth-child(4) { animation-delay: 1.9s; }
-.facts small { display: block; font: 700 0.7rem "Special Elite", "Courier New", monospace; letter-spacing: 0.15em; color: #8a2a1f; margin-bottom: 0.2rem; }
+.facts small { display: block; font: 700 0.7rem var(--label); letter-spacing: 0.15em; color: var(--gold); margin-bottom: 0.25rem; }
 .medals { margin-top: 0.8rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
 .medals span { background: #2b221d; border: 1px solid #e8c27a; color: #e8c27a; border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.85rem; }
 .cover-art { width: 100%; aspect-ratio: 800 / 731; background-size: cover; background-position: center; border-radius: 14px;
   -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%);
   mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%); animation: rise 0.8s ease-out; }
-.story { font-family: "Playfair Display", Georgia, serif; font-size: 1.12rem; line-height: 1.5; margin: 0.2rem 0 0.9rem; color: #efe6d8; }
+.story { font-family: var(--display); font-size: 1.12rem; line-height: 1.5; margin: 0.2rem 0 0.9rem; color: #efe6d8; }
 .how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
 .how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
 .how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
 .how-to li span { flex: 1 1 auto; }
-.how-to li em { font: 0.75rem "Special Elite", "Courier New", monospace; font-style: normal; color: #a89a88; white-space: nowrap; }
+.how-to li em { font: 0.75rem var(--label); font-style: normal; color: #a89a88; white-space: nowrap; }
 .ic { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; }
 .evidence mark { background: rgba(232, 194, 122, 0.22); color: #ffe2a8; border-bottom: 2px solid #e8c27a; padding: 0 0.1em; border-radius: 2px; }
 .hunch { display: flex; gap: 0.7rem; align-items: flex-start; margin: 0 0 0.8rem; padding: 0.65rem 0.8rem; border-left: 3px solid #e8c27a;
   background: rgba(232, 194, 122, 0.07); border-radius: 0 10px 10px 0; animation: rise 0.5s ease-out both; animation-delay: 0.2s; }
 .hunch img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; border: 2px solid #e8c27a; flex: 0 0 auto; }
-.hunch p { margin: 0; font-family: "Playfair Display", Georgia, serif; font-style: italic; font-size: 0.98rem; line-height: 1.4; color: #efe6d8; }
+.hunch p { margin: 0; font-family: var(--display); font-style: italic; font-size: 0.98rem; line-height: 1.4; color: #efe6d8; }
 .hunch code { display: block; margin-top: 0.4rem; font-size: 0.75rem; background: #1c1613; color: #cdbfa8; padding: 0.3rem 0.45rem; border-radius: 6px; white-space: pre-wrap; }
 .hunch mark { background: rgba(232, 194, 122, 0.25); color: #ffe2a8; padding: 0 0.1em; border-radius: 3px; }
-.st-key-panel h4 { font: 600 0.72rem "Special Elite", "Courier New", monospace !important; letter-spacing: 0.16em; text-transform: uppercase;
+.st-key-panel h4 { font: 600 0.72rem var(--label) !important; letter-spacing: 0.16em; text-transform: uppercase;
   color: #e8c27a !important; margin: 0.6rem 0 0.2rem !important; padding: 0 !important; }
 .st-key-panel [class*="st-key-note_"] button { width: 100%; justify-content: flex-start; text-align: left; padding: 0.15rem 0; min-height: 0; }
 .st-key-panel [class*="st-key-note_"] button > div, .st-key-panel [class*="st-key-note_"] button [data-testid="stMarkdownContainer"] { justify-content: flex-start; text-align: left; width: 100%; }
 .st-key-panel [class*="st-key-note_"] button p { font-size: 0.88rem; }
-.st-key-panel [class*="st-key-note_"] button strong { font-family: "Special Elite", "Courier New", monospace; color: #e8c27a; margin-right: 0.3rem; }
+.st-key-panel [class*="st-key-note_"] button strong { font-family: var(--label); color: #e8c27a; margin-right: 0.3rem; }
 .story-note { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.45rem 0; border-bottom: 1px solid #3a2e28; font-size: 0.86rem; }
-.story-note b { font-family: "Playfair Display", Georgia, serif; font-size: 0.95rem; }
+.story-note b { font-family: var(--display); font-size: 0.95rem; }
 .story-note span { color: #cdbfa8; }
 .story-note .lie-note { color: #ff8a7a; font-size: 0.8rem; }
 .story-note .lie-note .ic { width: 12px; height: 12px; }
-.story-note em { font-style: normal; font: 0.72rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
+.story-note em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
 .proof { display: flex; flex-direction: column; gap: 0.15rem; margin: -0.4rem 0 0.7rem; font-size: 0.8rem; color: #a89a88; }
 .proof .ic { color: #e8c27a; width: 13px; height: 13px; }
-.proof em { font-style: normal; font: 0.72rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
+.proof em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
 .tips div span .ic { width: 26px; height: 26px; color: #e8c27a; }
 .facedown.locked .ic { width: 40px; height: 40px; }
 .medals span .ic { width: 15px; height: 15px; }
@@ -730,7 +737,7 @@ def panel_suspect(game, suspect):
         show_tip = tip.get("clue") if tip.get("do") == "show" else None
         st.pills(f"Show a card · {cost} min", opened, format_func=lambda i: card_label(i, shown, show_tip),
                  key="show_clue", on_change=show_evidence, help="Show them evidence. The right card breaks a lie.")
-    question = st.chat_input(f"Or type your own question ({cost} min)", max_chars=ai.MAX_QUESTION_LENGTH, key="typed")
+    question = st.chat_input(f"Or type your own question · {cost} min", max_chars=ai.MAX_QUESTION_LENGTH, key="typed")
     if question:
 
         def ask_and_note_fallback(game):
@@ -898,7 +905,7 @@ def panel_sheet():
                     ) + "</div>",
                     unsafe_allow_html=True,
                 )
-    if st.button("Ready? Accuse", type="primary", icon=":material/balance:", use_container_width=True, key="to_accuse"):
+    if st.button("Accuse", type="primary", icon=":material/balance:", use_container_width=True, key="to_accuse"):
         set_focus("accuse")
         st.rerun()
 
@@ -987,16 +994,16 @@ def finale(game):
            else f"It was {case['suspects'][culprit]['name']} all along.")
     facts = "".join(f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS)
     medals = "".join(f"<span>{board.icon('medal')} {esc(b['title'])}</span>" for b in engine.badge_list(game))
-    st.markdown(
+    _, middle, _ = st.columns([1, 3, 1])
+    middle.markdown(
         f'<div class="finale{"" if solved else " cold"}"><div class="mug"><img src="{uri}" alt=""><span class="slam">{stamp}</span></div>'
-        f'<h1>{heading}</h1><div class="sub">{esc(sub)}</div><div class="facts">{facts}</div>'
+        f'<div class="title">{heading}</div><div class="sub">{esc(sub)}</div><div class="facts">{facts}</div>'
         f'{f"<div class=medals>{medals}</div>" if medals else ""}</div>',
         unsafe_allow_html=True,
     )
     marker = pending_sound()
     if marker:
         deck(data=marker, key="finale_sound", height=1)
-    _, middle, _ = st.columns([1, 3, 1])
     with middle:
         case_summary(game)
         scene = denouement(game)
