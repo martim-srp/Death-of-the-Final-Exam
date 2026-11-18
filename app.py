@@ -350,6 +350,7 @@ PAGE_CSS = """
 [data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 1.5rem; max-width: 1480px; }
 .stApp { font-variant-numeric: lining-nums; }
 header[data-testid="stHeader"] { display: none; }
+[data-testid="stElementToolbar"] { display: none; }  /* chart download/fullscreen buttons floated over the detective's line */
 .st-key-next_phone { display: none; }  /* the game is full screen; Streamlit's bar covered the status bar */
 .st-key-panel h3, .finale .title, [data-testid="stDialog"] h2 { font-family: var(--display) !important; }
 .st-key-panel { background: #1c1613; border: 1px solid #3a2e28; border-radius: 14px; padding: 0.9rem 1rem 1rem; gap: 0.6rem; }
@@ -370,6 +371,10 @@ header[data-testid="stHeader"] { display: none; }
 .bubble.them .say { background: #2b221d; border: 1px solid #3f322b; border-bottom-left-radius: 4px; }
 .bubble.you { margin-left: auto; flex-direction: row-reverse; }
 .bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
+.bubble.think { margin-left: auto; flex-direction: row-reverse; max-width: 86%; }
+.bubble.think img { width: 24px; height: 24px; opacity: 0.85; }
+.bubble.think .say { background: transparent; border: 0; border-right: 2px solid var(--gold); border-radius: 0; padding: 0.15rem 0.6rem;
+  font: italic 0.88rem/1.35 var(--display); color: #cdbfa8; text-align: right; }
 .bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
 .bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: inherit; }
 .bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem var(--label); color: #e8c27a; }
@@ -537,7 +542,7 @@ def draw_board(game, clues, fresh):
             engine.clock_label(game), engine.time_left(game), case["clock"]["limit_minutes"],
             case["max_strikes"] - game.strikes, case["max_strikes"], len(game.contradictions), avatar, player_name(),
         )
-        + board.goal_html(step)
+        + board.goal_html(step, engine.thought(game, step))
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
@@ -623,6 +628,15 @@ def say(suspect, entry):
     st.session_state.setdefault("chats", {}).setdefault(suspect, []).append(entry)
 
 
+def think(suspect, line):
+    """The detective's own thought after an answer: a scripted line, no AI call.
+
+    Kept on the answer it reacts to, so the chat stays one question, one answer."""
+    log = st.session_state.get("chats", {}).get(suspect)
+    if line and log and log[-1]["who"] == "them":
+        log[-1]["think"] = line
+
+
 def ask_topic():
     """Tapping a question: ask it at once, then clear the pick so it can be tapped again."""
     topic = st.session_state.get("ask_topic")
@@ -636,6 +650,7 @@ def ask_topic():
         brief = engine.character_brief(current_game(), suspect)
         say(suspect, {"who": "you", "text": TOPICS[topic][1]})
         say(suspect, {"who": "them", "text": result["line"] or brief["cover"], "unlocked": result["unlocked"]})
+        think(suspect, engine.reaction(current_game(), topic=topic, unlocked=bool(result["unlocked"])))
 
 
 def show_evidence():
@@ -654,6 +669,8 @@ def show_evidence():
             "who": "them", "text": result["reveal"] or "They look at it and shrug.",
             "unlocked": result["unlocked"], "caught": result.get("contradictions", []),
         })
+        think(suspect, engine.reaction(current_game(), caught=bool(result.get("contradictions")),
+                                       unlocked=bool(result["unlocked"]), shown=True))
 
 
 def cloud_key():
@@ -687,6 +704,8 @@ def chat_html(log, suspect, titles):
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
                 f'{esc(item["clue"] or "Your clue")} says otherwise.</small></div>'
             )
+        if entry.get("think"):
+            rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
     return '<div class="chat">' + "".join(rows) + "</div>"
 
 
@@ -763,6 +782,8 @@ def panel_suspect(game, suspect):
             sound("tick")
             say(suspect, {"who": "you", "text": HIDDEN_QUESTION if answer.get("blocked") else question})
             say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback})
+            if not answer.get("blocked"):
+                think(suspect, engine.reaction(current_game(), unlocked=bool(answer["unlocked"])))
         st.rerun()
 
 
@@ -820,6 +841,10 @@ def panel_clue(game, clue_id, fresh):
     st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{body}</div></div>', unsafe_allow_html=True)
     if hunches:
         st.markdown(hunch_html(hunches, clue["log"]), unsafe_allow_html=True)
+    else:
+        musing = engine.musing(game, clue_id)
+        if musing:
+            st.markdown(hunch_html([{"line": musing, "mark": ""}], ""), unsafe_allow_html=True)
     if clue["log"]:
         query = st.text_input("Search the log", key=f"search_{clue_id}", placeholder="A card number, a name, a time…")
         matches, total = search_log(clue["log"], query)

@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 # Files whose change must rebuild the engine.
-SOURCES = ("game/case.py", "game/engine.py", "game/ai.py", "db.py", "data/case.json", "data/hunches.json")
+SOURCES = ("game/case.py", "game/engine.py", "game/ai.py", "db.py", "data/case.json", "data/hunches.json", "data/voice.json")
 
 # Reloaded in this order: each one imports from the ones before it.
 MODULES = ("game.case", "game.engine", "db", "game.ai")
