@@ -33,7 +33,7 @@
     "mark": "trying the handle"
   },
   "D1|companion.never_touched_laptop": {
-    "line": "No scan, no print band. Exported on an iPad that signs itself {alias_initials}. Whose initials are those?",
+    "line": "No scan, no print band. Exported on an iPad that signs itself {alias_initials} Whose initials are those?",
     "mark": "iPad ({alias_initials})"
   }
 }

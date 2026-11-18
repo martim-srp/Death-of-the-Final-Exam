@@ -70,11 +70,16 @@ def save_game(game_id, game):
 
 
 def load_game(game_id):
-    """The saved game, or None if the id is malformed or unknown."""
+    """The saved game, or None if the id is malformed or unknown, or the save is damaged."""
     if not valid_id(game_id):
         return None
     with _connect() as conn:
         row = conn.execute("SELECT state FROM games WHERE id = ?", (game_id,)).fetchone()
     if row is None:
         return None
-    return Game.from_dict(json.loads(row[0]))
+    try:
+        return Game.from_dict(json.loads(row[0]))
+    except (ValueError, TypeError, AttributeError):
+        # Not JSON, not an object, or missing a required field: treat it as not found,
+        # so the player gets a new case instead of an error page.
+        return None
