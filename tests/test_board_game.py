@@ -150,8 +150,8 @@ def test_the_detective_walks_to_the_last_place_searched():
 
 def test_tapping_a_ready_card_offers_to_open_it_and_opening_moves_the_clock():
     at = start(focus=("clue", "D1"))
-    assert "🔍 Open it · 30 min" in labels(at)
-    click(at, "🔍 Open it")
+    assert "Open it · 30 min" in labels(at)
+    click(at, "Open it")
     assert at.session_state["game"]["clock"] == CASE["clock"]["clue_cost"]
     assert "D1" in at.session_state["game"]["opened"]
     assert board_markup(at).count("00:30") == 1
@@ -159,13 +159,13 @@ def test_tapping_a_ready_card_offers_to_open_it_and_opening_moves_the_clock():
 
 def test_a_place_is_searched_not_opened():
     at = start(focus=("clue", "L4"))
-    assert "🔍 Search it · 30 min" in labels(at)
+    assert "Search it · 30 min" in labels(at)
 
 
 def test_a_locked_clue_cannot_be_opened_but_can_be_hinted():
     at = start(focus=("clue", "D2"))
-    assert not any(label.startswith("🔍") for label in labels(at))
-    click(at, "💡 Hint")
+    assert not any(label.startswith(("Open it", "Search it")) for label in labels(at))
+    click(at, "Hint")
     assert at.session_state["game"]["clock"] == Engine().hint_cost()
     assert any("Open D1" in i.value for i in at.info)
 
@@ -181,7 +181,7 @@ def test_an_opened_clue_shows_its_text_and_picture_in_the_panel():
 
 def test_opening_an_unlocking_clue_pops_up_a_toast():
     at = start(focus=("clue", "L4"))
-    click(at, "🔍 Search it")
+    click(at, "Search it")
     assert any("New clue unlocked" in t.value for t in at.toast)
 
 
@@ -191,7 +191,7 @@ def test_actions_are_saved():
     at.session_state["focus"] = ("clue", "D1")
     at.run()
     game_id = at.query_params["game"]
-    click(at, "🔍 Open it")
+    click(at, "Open it")
     assert db.load_game(game_id).clock == 30
 
 
@@ -243,7 +243,7 @@ def test_showing_the_breaking_card_stamps_caught_lying():
     assert not at.exception
     assert "Caught lying" in page(at)
     assert len(at.session_state["game"]["contradictions"]) == 1
-    assert "⚡1" in suspect_markup(at)
+    assert 'title="Caught lying">' in suspect_markup(at) and '</svg>1</span>' in suspect_markup(at)
 
 
 def test_suspect_cards_show_questioned_and_ruled_out():
@@ -294,7 +294,7 @@ def test_accusing_with_a_part_missing_is_refused_for_free():
     answer = solution()
     del answer["why"]
     pick(at, **answer)
-    click(at, "⚖️ Accuse")
+    click(at, "Accuse")
     assert any("Missing: why" in w.value for w in at.warning)
     assert at.session_state["game"]["strikes"] == 0
 
@@ -302,7 +302,7 @@ def test_accusing_with_a_part_missing_is_refused_for_free():
 def test_a_wrong_accusation_shows_which_parts_are_right():
     at = start(focus=("accuse", None))
     pick(at, **{**solution(), "who": "exchange"})
-    click(at, "⚖️ Accuse")
+    click(at, "Accuse")
     assert at.session_state["game"]["strikes"] == 1
     assert at.session_state["verdict"] == ["how", "where", "why"]
     assert page(at).count('class="ok"') == 3 and page(at).count('class="no"') == 1
@@ -312,12 +312,12 @@ def test_a_wrong_accusation_shows_which_parts_are_right():
 def test_the_right_accusation_closes_the_case_with_the_reveal():
     at = start(focus=("accuse", None))
     pick(at, **solution())
-    click(at, "⚖️ Accuse")
+    click(at, "Accuse")
     assert at.session_state["game"]["status"] == "solved"
     assert "GUILTY" in page(at) and "Case closed" in page(at)
     assert board.find_picture("suspects", solution()["who"]) in page(at)
     assert not any('class="hud' in m for m in markups(at))  # the board is gone
-    assert any(e.label.startswith("📜") for e in at.expander)
+    assert any(e.label.startswith("Half past seven") for e in at.expander)
 
 
 def test_a_cold_case_names_the_culprit():
@@ -332,7 +332,7 @@ def test_new_case_after_the_reveal_starts_over_and_clears_notes():
     game = Engine().new_game(seed=1, variant="A")
     game.status = "cold"
     at = start(game=game, sheet_who=["ta"])
-    click(at, "🔁 Play a new case")
+    click(at, "Play a new case")
     assert at.session_state["game"]["status"] == "playing"
     assert "sheet_who" not in at.session_state
 
@@ -342,13 +342,13 @@ def test_new_case_after_the_reveal_starts_over_and_clears_notes():
 
 def test_a_new_case_opens_with_the_story_rules_and_detectives():
     at = start(intro_done=None)
-    assert "🔍 Start the investigation" in labels(at)
+    assert "Start the investigation" in labels(at)
     assert "Semiconductor Valuation" in page(at)
     assert "Play as her" in labels(at) and "Play as him" in labels(at)
     click(at, "Play as him")
     assert at.session_state["player_avatar"] == "he"
-    click(at, "🔍 Start the investigation")
-    assert "🔍 Start the investigation" not in labels(at)
+    click(at, "Start the investigation")
+    assert "Start the investigation" not in labels(at)
 
 
 def test_a_resumed_game_skips_the_intro_and_keeps_its_clock():
@@ -359,7 +359,7 @@ def test_a_resumed_game_skips_the_intro_and_keeps_its_clock():
     at.query_params["game"] = game_id
     at.run()
     assert not at.exception
-    assert "🔍 Start the investigation" not in labels(at)
+    assert "Start the investigation" not in labels(at)
     assert "00:30" in board_markup(at)
 
 
@@ -375,7 +375,7 @@ def test_the_intro_names_the_game_and_can_be_opened_again():
     at = start(intro_done=None)
     assert CASE["title"] in page(at)
     at = start(intro_done=True)
-    assert "🔍 Start the investigation" not in labels(at)
+    assert "Start the investigation" not in labels(at)
     assert 'data-act="intro"' in board_markup(at)
 
 
@@ -397,7 +397,7 @@ def test_home_panel_shows_a_lead_after_the_print_log():
 
 def test_a_bought_hint_also_shows_in_the_home_panel():
     at = start(focus=("clue", "D3"))
-    click(at, "💡 Hint")
+    click(at, "Hint")
     at.session_state["focus"] = ("home", None)
     at.run()
     assert "Ask the Professor about the exam." in page(at)
@@ -405,7 +405,7 @@ def test_a_bought_hint_also_shows_in_the_home_panel():
 
 def test_no_hint_button_on_a_ready_clue():
     at = start(focus=("clue", "D1"))
-    assert not any(label.startswith("💡") for label in labels(at))
+    assert not any(label.startswith("Hint") for label in labels(at))
 
 
 # ---- Typed questions to the AI ----------------------------------------------------------------
@@ -467,7 +467,7 @@ def test_a_cold_case_also_offers_the_confrontation():
     game = Engine().new_game(seed=1, variant="C")
     game.status = "cold"
     at = start(game=game)
-    scene = next(e for e in at.expander if e.label.startswith("📜"))
+    scene = next(e for e in at.expander if e.label.startswith("Half past seven"))
     assert scene.markdown
 
 
@@ -493,7 +493,7 @@ def test_showing_the_same_card_again_does_not_catch_twice():
 def test_opening_a_clue_plays_one_flip_sound():
     at = start(focus=("clue", "D1"))
     assert 'class="sfx"' not in board_markup(at)
-    click(at, "🔍 Open it")
+    click(at, "Open it")
     assert 'data-sfx="flip"' in board_markup(at)
     at.run()
     assert 'class="sfx"' not in board_markup(at)  # played once, not on every redraw
@@ -502,7 +502,7 @@ def test_opening_a_clue_plays_one_flip_sound():
 def test_a_wrong_accusation_thuds_and_a_caught_lie_stamps():
     at = start(focus=("accuse", None))
     pick(at, **{**solution(), "who": "exchange"})
-    click(at, "⚖️ Accuse")
+    click(at, "Accuse")
     assert 'data-sfx="thud"' in board_markup(at)
     at = start(game=opened_game("L4"), focus=("suspect", "companion"), suspect="companion")
     at.pills(key="show_clue").set_value("L4").run()

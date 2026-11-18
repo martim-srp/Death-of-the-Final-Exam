@@ -29,7 +29,43 @@ MAP_SPOTS = {"chiado": (0.088, 0.663, "Chiado", "Off campus, across Lisbon. Noth
 # Where the detective's token stands before searching anywhere: the campus gate on the left.
 GATE = (0.20, 0.60)
 
-KIND_ICON = {"document": "📄", "location": "📍"}
+# Line icons drawn on a 24-pixel grid, stroked in the current text colour. Used instead of emoji.
+ICONS = {
+    "search": '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>',
+    "sheet": '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 2.5h6v3H9zM9 11h6M9 15h4"/>',
+    "book": '<path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3zM21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z"/>',
+    "sound": '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10"/>',
+    "mute": '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
+    "scale": '<path d="M12 4v16M8 20h8M5 7h14M12 4v3"/><path d="M5 7l-2.5 6a2.5 2.5 0 0 0 5 0zM19 7l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
+    "bolt": '<path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>',
+    "lock": '<rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    "unlock": '<rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.6-1.7"/>',
+    "ask": '<path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/>',
+    "card": '<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 7.5h6M9 11h6M9 14.5h3"/>',
+    "doc": '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+    "pin": '<path d="M12 21s-6.5-6-6.5-11.5a6.5 6.5 0 0 1 13 0C18.5 15 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/>',
+    "chart": '<path d="M4 4v16h16M8.5 16v-4M12.5 16V8M16.5 16v-6"/>',
+    "cup": '<path d="M4 9h12v4.5A5.5 5.5 0 0 1 10.5 19h-1A5.5 5.5 0 0 1 4 13.5z"/><path d="M16 10.5h1.5a2.5 2.5 0 0 1 0 5H16M8 3.5v2.5M12 3.5v2.5"/>',
+    "door": '<path d="M6 21V3.5h12V21M3 21h18"/><path d="M14.5 12h.01"/>',
+    "user": '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    "medal": '<circle cx="12" cy="15" r="5"/><path d="M8.5 3.5l3.5 6.5 3.5-6.5"/>',
+    "map": '<path d="M3 6.5l6-3 6 3 6-3v14l-6 3-6-3-6 3z"/><path d="M9 3.5v14M15 6.5v14"/>',
+    "check": '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+}
+
+
+def icon(name, cls="ic"):
+    """One line icon as inline SVG. Unknown names draw nothing."""
+    body = ICONS.get(name)
+    if not body:
+        return ""
+    return (
+        f'<svg class="{cls}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" '
+        f'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{body}</svg>'
+    )
+
+
+KIND_ICON = {"document": "doc", "location": "pin"}
 # Short names for the cards, so each fits on one line. The full title is in the panel.
 CARD_NAMES = {
     "D1": "Leaked PDF", "D2": "Print log", "D3": "Sealed exam", "D4": "Standings", "D5": "Anon number",
@@ -37,7 +73,7 @@ CARD_NAMES = {
     "L3": "Residence", "L4": "Faculty", "L5": "Beach café",
 }
 # A few clues have no picture. Their card shows a big icon instead.
-CARD_ICON = {"D4": "📊", "L2": "☕", "L4": "🚪"}
+CARD_ICON = {"D4": "chart", "L2": "cup", "L4": "door"}
 
 
 @lru_cache(maxsize=64)
@@ -73,6 +109,8 @@ def parse_act(act, suspects, clues):
     The browser sends plain strings, so every id is checked against the case file.
     """
     kind, _, value = str(act or "").partition(":")
+    if kind == "next" and not value.startswith("next"):
+        return parse_act(value, suspects, clues)  # the next-step strip: same targets, own name
     if kind == "suspect" and value in suspects:
         return ("suspect", value)
     if kind in ("clue", "place") and value in clues:
@@ -93,19 +131,19 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
     burnt = 100 * (1 - max(minutes_left, 0) / limit)
     urgent = " urgent" if minutes_left <= 120 else ""
     pips = "".join(f'<i class="pip{" on" if n < strikes_left else ""}"></i>' for n in range(max_strikes))
-    face = f'<img src="{avatar_uri}" alt="">' if avatar_uri else '<span class="noface">🕵️</span>'
+    face = f'<img src="{avatar_uri}" alt="">' if avatar_uri else f'<span class="noface">{icon("user")}</span>'
     return (
         f'<div class="hud{urgent}">'
         f'<div class="me" title="{esc(name)}">{face}</div>'
         f'<div class="clock"><b>{esc(clock)}</b><div class="fuse"><i style="width:{burnt:.1f}%"></i></div>'
         f'<small>{hours}h {minutes:02d}m left</small></div>'
-        f'<div class="stat" title="Accusations left">⚖️<span class="pips">{pips}</span></div>'
-        f'<div class="stat" title="Lies caught">⚡<b>{caught}</b></div>'
+        f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span></div>'
+        f'<div class="stat zapstat" title="Lies caught">{icon("bolt")}<b>{caught}</b></div>'
         '<div class="tools">'
-        '<button data-act="home" title="Leads">🔎</button>'
-        '<button data-act="sheet" title="Case sheet">📋</button>'
-        '<button data-act="intro" title="Story and rules">📖</button>'
-        '<button class="mute" type="button" title="Sound on or off">🔊</button>'
+        f'<button data-act="home" title="Leads">{icon("search")}</button>'
+        f'<button data-act="sheet" title="Case sheet">{icon("sheet")}</button>'
+        f'<button data-act="intro" title="Story and rules">{icon("book")}</button>'
+        f'<button class="mute" type="button" title="Sound on or off">{icon("sound", "ic on")}{icon("mute", "ic off")}</button>'
         '<button class="accuse" data-act="accuse">Accuse</button></div></div>'
     )
 
@@ -120,10 +158,10 @@ def sfx_html(sound, nonce):
 def tutorial_html():
     """The first-play tour: four short steps, each pointing at one part of the screen."""
     steps = [
-        ("map", "🗺️ The board", "Tap a red ? pin to search a place."),
-        ("hand", "🃏 Your evidence", "Tap a card to open it. Red cards are new."),
-        ("suspects", "🗣️ The suspects", "Tap a face to question them, or show them a card."),
-        ("accuse", "⚖️ Accuse", "Name who, how, where and why before 09:00."),
+        ("map", "The board", "Tap a red ? pin to search a place."),
+        ("hand", "Your evidence", "Tap a card to open it. Red cards are new."),
+        ("suspects", "The suspects", "Tap a face to question them, or show them a card."),
+        ("accuse", "Accuse", "Name who, how, where and why before 09:00."),
     ]
     items = "".join(
         f'<div class="step" data-target="{t}" data-i="{i}"><b>{esc(h)}</b><p>{esc(x)}</p></div>' for i, (t, h, x) in enumerate(steps)
@@ -131,7 +169,47 @@ def tutorial_html():
     return f'<div class="tour" hidden>{items}<div class="tour-nav"><button class="skip" type="button">Skip</button><span class="dots"></span><button class="next" type="button">Next</button></div></div>'
 
 
+# ---- Next step ---------------------------------------------------------------------
+
+GOAL_ICON = {"search": "search", "ask": "ask", "show": "card", "sheet": "sheet", "accuse": "scale"}
+
+
+def goal_act(step):
+    """What tapping the next step opens: the clue, the suspect, the case sheet or the accusation."""
+    if step["do"] == "search":
+        return f"clue:{step['clue']}"
+    if step["do"] in ("ask", "show"):
+        return f"suspect:{step['suspect']}"
+    return step["do"]
+
+
+def goal_target(step):
+    """The id to light up on the board for the next step: a clue, a suspect, or None."""
+    if not step:
+        return None
+    return step.get("clue") if step["do"] == "search" else step.get("suspect")
+
+
+def goal_html(step):
+    """The always-visible objective strip: one next step, tap it to go there."""
+    if not step:
+        return ""
+    return (
+        f'<button class="goal-bar" data-act="next:{goal_act(step)}"><span class="gi">{icon(GOAL_ICON[step["do"]])}</span>'
+        f'<span class="gt"><small>Next step</small>{esc(step["text"])}</span><span class="go">›</span></button>'
+    )
+
+
 # ---- The campus map ----------------------------------------------------------------
+
+NIGHT_DEFS = (
+    '<defs><radialGradient id="night" cx="50%" cy="50%" r="75%">'
+    '<stop offset="55%" stop-color="#0b1020" stop-opacity="0"/><stop offset="100%" stop-color="#05070f" stop-opacity=".55"/>'
+    '</radialGradient><radialGradient id="fog"><stop offset="0%" stop-color="#b9c2d6" stop-opacity=".42"/>'
+    '<stop offset="55%" stop-color="#b9c2d6" stop-opacity=".22"/><stop offset="100%" stop-color="#b9c2d6" stop-opacity="0"/>'
+    "</radialGradient></defs>"
+)
+
 
 
 def map_points(clues):
@@ -155,18 +233,26 @@ def detective_spot(opened):
 PIN_LABEL = {"locked": "locked", "available": "search here", "open": "searched"}
 
 
-def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=()):
-    """The campus picture as the board: pins for places, the detective's token, Chiado."""
+def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=(), goal=None):
+    """The campus picture as the board: pins for places, the detective's token, Chiado.
+
+    Locked places sit under fog that lifts when they open up. The goal pin (the next step) glows gold.
+    """
     width, height = size
     s = width / 1200  # every size below is for a 1200-pixel-wide picture
     parts = [
         f'<svg class="map" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
         f'aria-label="Campus map"><image href="{map_uri}" width="{width}" height="{height}"/>'
+        + NIGHT_DEFS
+        + f'<rect class="night" width="{width}" height="{height}" fill="url(#night)"/>'
+        + f'<g class="mist"><ellipse cx="{width * 0.3:.0f}" cy="{height * 0.35:.0f}" rx="{width * 0.35:.0f}" ry="{height * 0.12:.0f}"/>'
+        f'<ellipse cx="{width * 0.75:.0f}" cy="{height * 0.75:.0f}" rx="{width * 0.3:.0f}" ry="{height * 0.1:.0f}"/></g>'
     ]
     for p in points:
         x, y = p["x"] * width, p["y"] * height
         state = p["state"]
-        classes = f"pin {state}" + (" picked" if p["id"] == picked else "") + (" fresh" if p["id"] in fresh else "")
+        classes = (f"pin {state}" + (" picked" if p["id"] == picked else "") + (" fresh" if p["id"] in fresh else "")
+                   + (" goal" if p["id"] == goal else ""))
         label = esc(f"{p['place']}: {PIN_LABEL[state]}")
         thumb = find_picture("clues", p["id"]) if state == "open" else None
         if thumb:
@@ -180,11 +266,13 @@ def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=
         elif state == "available":
             face = '<circle r="34" fill="#c0392b"/><text class="glyph" y="11" fill="#fff">?</text>'
         else:
-            face = '<circle r="34" fill="#2a221e"/><text class="glyph small" y="9">🔒</text>'
+            face = '<circle r="34" fill="#2a221e"/><svg x="-15" y="-16" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#cdbfa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS["lock"] + "</svg>"
         parts.append(
             f'<g class="{classes}" data-act="place:{p["id"]}" transform="translate({x:.0f} {y:.0f}) scale({s:.3f})" '
             f'role="button" tabindex="0" aria-label="{label}"><title>{label}</title>'
-            '<circle class="halo" r="46"/>'
+            + (f'<circle class="fog" r="120" fill="url(#fog)"/>' if state == "locked" else "")
+            + (f'<circle class="lift" r="120" fill="url(#fog)"/>' if p["id"] in fresh and state != "locked" else "")
+            + '<circle class="halo" r="46"/><circle class="beacon" r="52"/>'
             f'{face}<circle class="ring" r="34"/>'
             f'<text class="tag" y="62">{esc(p["place"])}</text>'
             f'<circle r="60" fill="#000" fill-opacity="0"/></g>'
@@ -198,7 +286,7 @@ def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=
         )
     dx, dy = detective_spot(opened)
     tx, ty = dx * width + 44 * s, dy * height - 40 * s
-    token = f'<image href="{avatar_uri}" x="-26" y="-26" width="52" height="65" clip-path="url(#detclip)" preserveAspectRatio="xMidYMin slice"/>' if avatar_uri else '<text y="10" class="glyph">🕵️</text>'
+    token = f'<image href="{avatar_uri}" x="-26" y="-26" width="52" height="65" clip-path="url(#detclip)" preserveAspectRatio="xMidYMin slice"/>' if avatar_uri else '<circle r="20" fill="#2a221e"/>'
     parts.append(
         f'<g class="det" data-x="{tx:.0f}" data-y="{ty:.0f}" transform="translate({tx:.0f} {ty:.0f}) scale({s:.3f})">'
         '<clipPath id="detclip"><circle r="26"/></clipPath><circle r="30" fill="#14100e"/>'
@@ -211,11 +299,11 @@ def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=
 # ---- Evidence cards ----------------------------------------------------------------
 
 
-def card_html(item, picked=None, fresh=()):
+def card_html(item, picked=None, fresh=(), goal=None):
     """One evidence card. Face up with its picture once opened; face down otherwise."""
     state = item["state"]
     is_fresh = item["id"] in fresh
-    classes = f"card {state}" + (" picked" if item["id"] == picked else "")
+    classes = f"card {state}" + (" picked" if item["id"] == picked else "") + (" goal" if item["id"] == goal else "")
     if is_fresh:
         classes += " flip" if state == "open" else " fresh"
     name = esc(CARD_NAMES.get(item["id"], item["title"]))
@@ -223,19 +311,19 @@ def card_html(item, picked=None, fresh=()):
         uri = find_picture("clues", item["id"])
         art = (
             f'<div class="art" style="background-image:url({uri})"></div>' if uri
-            else f'<div class="art icon">{CARD_ICON.get(item["id"], KIND_ICON[item["kind"]])}</div>'
+            else f'<div class="art icon">{icon(CARD_ICON.get(item["id"], KIND_ICON[item["kind"]]))}</div>'
         )
     elif state == "available":
         art = '<div class="art back"><span>?</span><em class="new">NEW</em></div>'
     else:
-        art = '<div class="art back locked"><span>🔒</span></div>'
+        art = f'<div class="art back locked"><span>{icon("lock")}</span></div>'
     return (
         f'<button class="{classes}" data-act="clue:{item["id"]}" title="{item["id"]}. {esc(item["title"])}">'
         f'{art}<div class="lbl"><b>{item["id"]}</b><span>{name}</span></div></button>'
     )
 
 
-def hand_html(clues, picked=None, fresh=()):
+def hand_html(clues, picked=None, fresh=(), goal=None):
     """The cards in your hand: the documents, and any place that has no pin on the map.
 
     Places on the map are played from their pins. The count covers every clue.
@@ -244,27 +332,27 @@ def hand_html(clues, picked=None, fresh=()):
     cards = [c for c in clues if c["id"] not in MAP_PINS]
     return (
         f'<div class="handhead"><b>Evidence</b><span>{opened} of {len(clues)} found</span></div>'
-        f'<div class="hand" style="--n:{len(cards)}">' + "".join(card_html(c, picked, fresh) for c in cards) + "</div>"
+        f'<div class="hand" style="--n:{len(cards)}">' + "".join(card_html(c, picked, fresh, goal) for c in cards) + "</div>"
     )
 
 
 # ---- Suspects ----------------------------------------------------------------------
 
 
-def suspects_html(suspects, picked=None):
+def suspects_html(suspects, picked=None, goal=None):
     """The five suspects as big cards. Each item: id, name, questioned, caught, ruled_out."""
     cards = []
     for s in suspects:
         uri = find_picture("suspects", s["id"])
         name = esc(short_name(s["name"]))
-        classes = "sus" + (" picked" if s["id"] == picked else "") + (" out" if s["ruled_out"] else "")
+        classes = "sus" + (" picked" if s["id"] == picked else "") + (" out" if s["ruled_out"] else "") + (" goal" if s["id"] == goal else "")
         marks = ""
         if s["questioned"]:
             marks += '<span class="tick" title="Questioned">✓</span>'
         if s["caught"]:
-            marks += f'<span class="zap" title="Caught lying">⚡{s["caught"]}</span>'
+            marks += f'<span class="zap" title="Caught lying">{icon("bolt")}{s["caught"]}</span>'
         stamp = '<span class="stamp">RULED OUT</span>' if s["ruled_out"] else ""
-        picture = f'<img src="{uri}" alt="{esc(s["name"])}">' if uri else '<div class="noimg">👤</div>'
+        picture = f'<img src="{uri}" alt="{esc(s["name"])}">' if uri else f'<div class="noimg">{icon("user")}</div>'
         cards.append(
             f'<button class="{classes}" data-act="suspect:{s["id"]}" aria-label="Question {esc(s["name"])}">'
             f'{picture}<div class="marks">{marks}</div>{stamp}<div class="nm">{name}</div></button>'
@@ -374,7 +462,7 @@ export default function(component) {
     }
     const mute = root.querySelector(".mute");
     if (mute) {
-        const label = () => { mute.textContent = muted() ? "🔇" : "🔊"; };
+        const label = () => { mute.classList.toggle("muted", muted()); };
         label();
         mute.addEventListener("click", () => {
             try { localStorage.setItem("dfe-muted", muted() ? "0" : "1"); } catch (e) {}
@@ -426,7 +514,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @keyframes beckon { 0%,70%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); } 35% { box-shadow: 0 0 0 6px rgba(192,57,43,.35); } }
 @keyframes throb { 50% { opacity: .55; } }
 /* Map */
-.map { width: min(100%, calc((100vh - 300px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
+.map { width: min(100%, calc((100vh - 350px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
   border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .pin { cursor: pointer; }
 .pin .ring { fill: none; stroke-width: 6; }
@@ -526,4 +614,54 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .suspects { gap: 5px; }
   .pin .tag { font-size: 24px; }
 }
+/* Next step: one objective, always visible */
+.goal-bar { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 10px; padding: 8px 12px; text-align: left;
+  border: 1px solid rgba(232,194,122,.55); border-radius: 12px; background: linear-gradient(90deg, rgba(232,194,122,.16), rgba(232,194,122,.04));
+  color: var(--ink); cursor: pointer; font: 15px/1.3 Georgia, serif; animation: rise-in .4s ease-out; }
+.goal-bar:hover { border-color: var(--gold); background: linear-gradient(90deg, rgba(232,194,122,.26), rgba(232,194,122,.08)); }
+.goal-bar .gi { font-size: 22px; flex: 0 0 auto; }
+.goal-bar .gt { flex: 1 1 auto; min-width: 0; }
+.goal-bar small { display: block; font: 600 10px var(--type); letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
+.goal-bar .go { font-size: 26px; color: var(--gold); flex: 0 0 auto; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.card.goal, .sus.goal { border-color: var(--gold); animation: beacon-box 1.8s ease-in-out infinite; }
+@keyframes beacon-box { 50% { box-shadow: 0 0 0 4px rgba(232,194,122,.5), 0 0 18px rgba(232,194,122,.45); } }
+/* The living map: night vignette, drifting mist, fog over locked places */
+.night, .mist, .fog, .lift, .beacon { pointer-events: none; }
+.mist ellipse { fill: #c9d3e8; opacity: .07; filter: blur(28px); }
+.mist { animation: drift 38s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: translateX(-4%); } to { transform: translateX(5%); } }
+.fog { animation: breathe 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes breathe { 50% { transform: scale(1.08); opacity: .85; } }
+.lift { transform-box: fill-box; transform-origin: center; animation: lift 1.6s ease-out forwards; }
+@keyframes lift { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.8); } }
+.beacon { fill: none; stroke: none; }
+.pin.goal .beacon { stroke: var(--gold); stroke-width: 7; transform-box: fill-box; transform-origin: center; animation: ping 1.4s ease-out infinite; }
+.pin.goal .ring { stroke: var(--gold); stroke-width: 9; }
+.pin.available, .pin.open { transition: filter .2s; }
+.pin.available:hover, .pin.open:hover, .pin.goal { filter: drop-shadow(0 0 10px rgba(232,194,122,.8)); }
+@media (prefers-reduced-motion: reduce) {
+  .mist, .fog, .lift, .pin .halo, .pin.goal .beacon, .card.goal, .sus.goal, .goal-bar { animation: none !important; }
+  .lift { opacity: 0; }
+}
+@media (max-width: 640px) {
+  .goal-bar { font-size: 14px; padding: 7px 10px; }
+}
+/* Line icons */
+.ic { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; flex: 0 0 auto; }
+.tools button { color: #e8dccb; display: inline-flex; align-items: center; justify-content: center; }
+.tools button .ic { width: 19px; height: 19px; }
+.tools button:hover { color: var(--gold); }
+.mute .off, .mute.muted .on { display: none; }
+.mute.muted .off { display: inline-block; }
+.hud .stat .ic { width: 20px; height: 20px; color: #cdbfa8; }
+.hud .zapstat .ic { color: var(--gold); }
+.card .art.icon { color: #3a2e28; }
+.card .art.icon .ic { width: 30px; height: 30px; }
+.card .art.back.locked { color: #8a7a6a; }
+.card .art.back.locked .ic { width: 20px; height: 20px; }
+.sus .zap { display: inline-flex; align-items: center; gap: 1px; }
+.sus .zap .ic { width: 11px; height: 11px; }
+.sus .noimg .ic { width: 40px; height: 40px; color: #8a7a6a; }
+.goal-bar .gi .ic { width: 24px; height: 24px; color: var(--gold); display: block; }
 """

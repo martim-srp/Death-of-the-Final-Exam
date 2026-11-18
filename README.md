@@ -36,13 +36,16 @@ python -m pytest
 
 The screen is laid out like a board game. The campus map is the board, the clues are a hand of evidence
 cards, and the five suspects sit across the top. Tap anything to open it in the side panel. A new case
-starts with a four-step tour; 📖 shows the briefing again and 🔊 turns the sound effects on or off.
+starts with a four-step tour, and the **Next step** strip above the map always names one useful thing
+to do; tap it to go there. The book button shows the briefing again and the speaker button turns the
+sound effects on or off.
 
 It is midnight. Every action costs time: searching a place or opening a document costs 30 minutes, and
 each question to a suspect (or showing them a card) costs 10. Tap a red **?** card or pin to search it.
 Tap a face to interrogate: pick a question, show them a card, or type your own. Show a suspect the card
-that breaks their story and you catch them lying. Stuck on a locked card? A 💡 hint costs 15 minutes,
-and 🔎 shows your free leads. Cross off what it cannot be on the 📋 case sheet.
+that breaks their story and you catch them lying. Stuck on a locked card? A hint costs 15 minutes,
+and the magnifier shows your free leads. Cross off what it cannot be on the case sheet; the game
+crosses off what a wrong accusation has proved.
 
 When you are ready, press **Accuse** and pick who, how, where and why. You must accuse before 09:00,
 so you have 540 minutes. A wrong accusation shows which of the four parts are right. After three

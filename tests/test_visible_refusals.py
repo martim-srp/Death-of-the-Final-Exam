@@ -49,7 +49,7 @@ def test_opening_a_clue_without_enough_time_pops_up_a_warning():
     game = new_game()
     game.clock = 520  # 20 minutes left; a clue costs 30
     at = start(game)
-    next(b for b in at.button if b.label.startswith("🔍 Open it")).click().run()
+    next(b for b in at.button if b.label.startswith("Open it")).click().run()
     assert not at.exception
     assert any("Not enough time" in t for t in toasts(at))
     assert at.session_state["game"]["clock"] == 520
@@ -63,6 +63,6 @@ def test_the_question_box_stops_at_the_limit():
 
 def test_an_accepted_action_shows_no_warning():
     at = start(new_game())
-    next(b for b in at.button if b.label.startswith("🔍 Open it")).click().run()
+    next(b for b in at.button if b.label.startswith("Open it")).click().run()
     assert not any("⚠" in t or "Not enough" in t or "Type a question" in t for t in toasts(at))
     assert at.session_state["game"]["clock"] == 30
