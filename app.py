@@ -688,6 +688,25 @@ def verdict_html(right):
     ) + "</div>"
 
 
+@st.dialog("Tens a certeza?")
+def accusation_confirmation():
+    choice = st.session_state.get("pending_accusation")
+    if not choice:
+        return
+    strikes_left = case["max_strikes"] - current_game().strikes
+    st.write(f"Restam {strikes_left} acusações. Queres mesmo acusar?")
+    if st.button("Sim, acusar", type="primary", key="confirm_accuse"):
+        st.session_state.pop("pending_accusation", None)
+        result = run(engine.accuse, *(choice[c] for c in COLUMNS))
+        if result and result["status"] == "playing":
+            st.session_state.verdict = engine.right_parts(current_game())
+            st.session_state.toast = (f"{result['correct']} of 4 right. {result['strikes_left']} tries left.", "⚖️")
+        st.rerun()
+    if st.button("Voltar", key="cancel_accuse"):
+        st.session_state.pop("pending_accusation", None)
+        st.rerun()
+
+
 def panel_accuse(game):
     strikes_left = case["max_strikes"] - game.strikes
     st.markdown(f'<div class="kicker">The accusation · {strikes_left} {"try" if strikes_left == 1 else "tries"} left</div>'
@@ -706,11 +725,9 @@ def panel_accuse(game):
         if missing:
             st.warning(f"Pick one in each row first. Missing: {', '.join(missing)}.")
             return
-        result = run(engine.accuse, *(choice[c] for c in COLUMNS))
-        if result and result["status"] == "playing":
-            st.session_state.verdict = engine.right_parts(current_game())
-            st.session_state.toast = (f"{result['correct']} of 4 right. {result['strikes_left']} tries left.", "⚖️")
-        st.rerun()
+        st.session_state.pending_accusation = choice
+    if st.session_state.get("pending_accusation"):
+        accusation_confirmation()
 
 
 # ---- The finale ------------------------------------------------------------------------
