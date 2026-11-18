@@ -18,6 +18,7 @@ from game.case import load_case, option_ids, resolve_variant
 
 COLUMNS = ("who", "how", "where", "why")
 HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
+ACCUSE_NOW_MINUTES = 30  # with this little time left, the next step is to accuse
 # How a hint names a topic: "Ask the Professor about the exam."
 _HINT_TOPICS = {"alibi": "their alibi", "exam": "the exam", "report": "the report", "work": "their work"}
 
@@ -417,6 +418,37 @@ class Engine:
                 result.append({"clue": clue_id, "from": rule["clue"], "text": self._hint_text(game, clue_id)})
         return result
 
+    def next_step(self, game):
+        """The single most useful thing to do now, like a quest objective. Free.
+
+        Built only from the unlock rules, which are the same in every variant, so it
+        never points at the culprit. Returns {"do": search|ask|show|sheet|accuse,
+        "text": ..., and the ids it needs: "clue", "suspect", "topic"}, or None once
+        the case is closed. Order: search what is open to you, then show a card that
+        opens a lead, then ask the question that opens a locked clue, then accuse.
+        """
+        if game.status != "playing":
+            return None
+        clues = self._clues(game)
+        suspects = self._suspects(game)
+        left = self.time_left(game)
+        if left <= ACCUSE_NOW_MINUTES:
+            return {"do": "accuse", "text": "Time is nearly up. Make your accusation."}
+        if left >= self.clock_rules["clue_cost"]:
+            for clue_id, clue in clues.items():
+                if self.clue_state(game, clue_id) == "available":
+                    return {"do": "search", "clue": clue_id, "text": f"Search {clue_id}. {clue['title']}."}
+        for lead in self.leads(game):
+            rule = clues[lead["clue"]]["unlock"]["present"]
+            return {"do": "show", "clue": rule["clue"], "suspect": rule["suspect"], "text": lead["text"]}
+        for clue_id, clue in clues.items():
+            rule = clue["unlock"].get("topic")
+            if rule and self.clue_state(game, clue_id) == "locked":
+                return {"do": "ask", "suspect": rule["suspect"], "topic": rule["topic"], "text": self._hint_text(game, clue_id)}
+        if any(event["action"] == "accuse" for event in game.history):
+            return {"do": "accuse", "text": "Change the parts that were wrong and accuse again."}
+        return {"do": "sheet", "text": "You have every card. Cross off what can't be, then accuse."}
+
     def hint_list(self, game):
         """The hints bought so far for clues that are still locked, as {clue_id: text}."""
         return {
@@ -447,7 +479,7 @@ class Engine:
             game.strikes += 1
             if game.strikes >= self.case["max_strikes"]:
                 game.status = "cold"
-        game.history.append({"action": "accuse", "correct": correct, "right": right, "clock": game.clock})
+        game.history.append({"action": "accuse", "correct": correct, "right": right, "choice": choice, "clock": game.clock})
         return {
             "correct": correct,
             "status": game.status,
@@ -464,6 +496,34 @@ class Engine:
             if event["action"] == "accuse":
                 return list(event.get("right", []))
         return []
+
+    def eliminated(self, game):
+        """Options the evidence has already ruled out, for the case sheet and the accusation.
+
+        Two sources, both proven: an opened clue's "rules_out" list in the case file
+        ({column: [option ids]}, per variant), and the parts of a wrong accusation that
+        were wrong. The solution is never listed. Returns a list of
+        {"column", "option", "by"}, where "by" is a clue id or "accusation", oldest first.
+        """
+        solution = self._resolved[game.variant]["solution"]
+        clues = self._clues(game)
+        result, seen = [], set()
+
+        def add(column, option, by):
+            if column in COLUMNS and option != solution[column] and (column, option) not in seen:
+                seen.add((column, option))
+                result.append({"column": column, "option": option, "by": by})
+
+        for event in game.history:
+            if event["action"] == "open":
+                for column, options in clues[event["clue"]].get("rules_out", {}).items():
+                    for option in options:
+                        add(column, option, event["clue"])
+            elif event["action"] == "accuse" and "choice" in event:
+                for column in COLUMNS:
+                    if column not in event.get("right", []):
+                        add(column, event["choice"][column], "accusation")
+        return result
 
     def solution(self, game):
         """The answer. Only available once the game is over."""
