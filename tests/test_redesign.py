@@ -191,3 +191,30 @@ def test_tapping_chiado_shows_a_neutral_note():
     assert not at.exception
     assert "Nothing to search here tonight" in page(at)
     assert at.session_state["game"]["clock"] == 0
+
+
+# ---- Detective portraits -------------------------------------------------------------
+
+
+DETECTIVES = Path(__file__).resolve().parent.parent / "assets" / "detectives"
+
+
+def test_each_detective_has_a_small_portrait_shaped_picture():
+    from PIL import Image  # installed with streamlit
+
+    for avatar in ("she", "he"):
+        path = DETECTIVES / f"{avatar}.webp"
+        assert path.stat().st_size < 300_000
+        with Image.open(path) as picture:
+            width, height = picture.size
+        assert abs(width / height - 0.8) < 0.02
+
+
+def test_picking_a_detective_shows_them_in_the_status_bar():
+    at = start()
+    assert "Play as her" in labels(at) and "Play as him" in labels(at)
+    click(at, "Play as him")
+    assert at.session_state["player_avatar"] == "he"
+    click(at, "Start the investigation")
+    hud = next(m.value for m in at.markdown if 'class="hud"' in m.value)
+    assert 'class="hud-face"' in hud

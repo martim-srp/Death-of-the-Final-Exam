@@ -46,8 +46,10 @@ PORTRAIT_TYPES = {
 TITLE = load_case()["title"]  # the game's name lives in data/case.json
 
 # The detectives a player can be. Purely cosmetic: shown on their side of the chat.
-AVATARS = {"🕵️": "Inspector", "🕵️‍♀️": "Sleuth", "🦉": "Night owl", "🦊": "Fox", "🐈‍⬛": "Black cat", "🎩": "Gentleman thief"}
-DEFAULT_AVATAR = "🕵️"
+# The detectives a player can be: assets/detectives/<id>.webp, 4:5 like the suspects. Purely cosmetic.
+DETECTIVES = Path(__file__).resolve().parent / "assets" / "detectives"
+AVATARS = {"she": "Play as her", "he": "Play as him"}
+DEFAULT_AVATAR = "she"
 # A place drawn on the map with no clue behind it: (x, y) as fractions, like MAP_PINS.
 # The text stays neutral, because the restaurant is also an answer you can pick under "Where".
 MAP_SPOTS = {"chiado": (0.088, 0.663, "Restaurant in Chiado", "Off campus, across Lisbon. Nothing to search here tonight.")}
@@ -291,7 +293,11 @@ div:has(> .st-key-hud) { position: sticky !important; top: 3.75rem; z-index: 5; 
 .hud { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; align-items: baseline; font-size: 0.95rem; }
 .hud b { font-family: Georgia, serif; font-size: 1.25rem; }
 .hud .low { color: #e0645a; }
-.hud .muted { opacity: 0.7; font-size: 0.85rem; }
+.hud .muted { opacity: 0.85; font-size: 0.85rem; }
+.hud .hud-face { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; vertical-align: middle; }
+.detective-pick { width: 160px !important; height: 200px !important; max-width: 100%; object-fit: cover !important; display: block;
+  margin: 0 auto 0.4rem; border-radius: 10px; border: 3px solid transparent; }
+.detective-pick.picked { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
 .how-to { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; margin: 0.4rem 0 0.8rem; }
 .how-to div { border: 1px solid #3a2e28; border-radius: 10px; padding: 0.6rem 0.7rem; background: #1c1613; font-size: 0.9rem; }
 .how-to b { display: block; font-family: Georgia, serif; font-size: 1rem; margin-bottom: 0.15rem; }
@@ -303,6 +309,7 @@ div:has(> .st-key-hud) { position: sticky !important; top: 3.75rem; z-index: 5; 
 .st-key-chat_log [data-testid="stText"] { font-family: Georgia, serif; font-size: 1rem; }
 @media (max-width: 640px) {
   .st-key-cover { display: none; }
+  .detective-pick { width: 110px !important; height: 138px !important; }
   .st-key-header h1 { font-size: 1.9rem; }
   [data-baseweb="tab"] p, [data-baseweb="tab"] [data-testid="stMarkdownContainer"] p { font-size: 0.78rem !important; }
   [data-baseweb="tab-list"] { gap: 0.6rem; }
@@ -323,6 +330,27 @@ def portrait_uri(suspect):
         if path.exists():
             return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode("ascii")
     return None
+
+
+def player_avatar():
+    """The chosen detective's id, falling back to the first one."""
+    choice = st.session_state.get("player_avatar")
+    return choice if choice in AVATARS else DEFAULT_AVATAR
+
+
+@st.cache_data
+def detective_uri(avatar):
+    """The detective's portrait as a data URI, or None if the picture is missing."""
+    path = DETECTIVES / f"{avatar}.webp"
+    if not path.exists():
+        return None
+    return "data:image/webp;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+
+
+def detective_avatar(avatar):
+    """What st.chat_message shows for the player: their portrait, or a plain detective emoji."""
+    path = DETECTIVES / f"{avatar}.webp"
+    return str(path) if path.exists() else "🕵️"
 
 
 def suspect_status(game):
@@ -399,7 +427,8 @@ def hud(game):
     left = engine.time_left(game)
     hours, minutes = divmod(max(left, 0), 60)
     strikes = case["max_strikes"] - game.strikes
-    avatar = st.session_state.get("player_avatar") or DEFAULT_AVATAR
+    uri = detective_uri(player_avatar())
+    avatar = f'<img class="hud-face" src="{uri}" alt="">' if uri else "🕵️"
     name = html.escape(st.session_state.get("player_name") or "Detective")
     low = ' class="low"' if left <= 120 else ""
     with st.container(key="hud"):
@@ -662,6 +691,10 @@ HOW_TO_PLAY = f"""<div class="how-to">
 </div>"""
 
 
+def pick_detective(avatar):
+    st.session_state.player_avatar = avatar
+
+
 def finish_intro():
     st.session_state.intro_done = True
 
@@ -678,10 +711,16 @@ def intro_dialog():
     st.markdown(STORY)
     st.markdown("**How to play**")
     st.markdown(GAME_CSS + HOW_TO_PLAY, unsafe_allow_html=True)
-    st.pills(
-        "Choose your detective", list(AVATARS), key="player_avatar", default=DEFAULT_AVATAR, required=True,
-        format_func=lambda a: f"{a} {AVATARS[a]}",
-    )
+    st.markdown("**Choose your detective**")
+    chosen = player_avatar()
+    for column, (avatar, label) in zip(st.columns(len(AVATARS)), AVATARS.items()):
+        with column:
+            uri = detective_uri(avatar)
+            if uri:
+                ring = " picked" if avatar == chosen else ""
+                st.markdown(f'<img class="detective-pick{ring}" src="{uri}" alt="">', unsafe_allow_html=True)
+            st.button(label, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
+                      use_container_width=True, on_click=pick_detective, args=(avatar,))
     st.text_input("Your name", key="player_name", placeholder="Detective", max_chars=24)
     if st.button("Start the investigation", type="primary", use_container_width=True):
         finish_intro()
@@ -857,7 +896,7 @@ with question_tab:
         for number, entry in enumerate(log):
             if entry["who"] == "you":
                 with st.container(key=f"msg_you_{number}"):
-                    with st.chat_message("user", avatar=st.session_state.get("player_avatar") or DEFAULT_AVATAR):
+                    with st.chat_message("user", avatar=detective_avatar(player_avatar())):
                         st.markdown(entry["text"])
                 continue
             portrait = PORTRAITS / f"{suspect}.webp"
