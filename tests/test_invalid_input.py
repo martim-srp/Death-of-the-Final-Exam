@@ -310,3 +310,21 @@ def test_players_never_see_error_details():
 def test_secrets_files_are_ignored_by_git():
     ignored = (ROOT / ".gitignore").read_text(encoding="utf-8").split()
     assert ".env" in ignored and ".streamlit/secrets.toml" in ignored
+
+
+# ---- Small fixes found while play-testing -----------------------------------------------
+
+
+def test_editing_the_hunches_rebuilds_the_engine_on_the_live_site():
+    import reloading
+
+    assert "data/hunches.json" in reloading.SOURCES
+
+
+def test_no_hunch_ends_a_sentence_with_two_dots(engine):
+    """Initials such as I.A. already end with a dot."""
+    for variant in engine.case["variants"]:
+        game = engine.new_game(seed=1, variant=variant)
+        for line in engine.hunch_lines.values():
+            text = engine._fill(game, line["line"])
+            assert ".." not in text.replace("...", ""), text
