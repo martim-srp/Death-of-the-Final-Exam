@@ -14,6 +14,7 @@ details such as card numbers.
 
 - `data/case.json`: the story. Clues, suspects, unlock rules, accusation options and the three variants.
 - `data/hunches.json`: the detective's inner-voice line for each clue that breaks a suspect's story, and the detail it highlights. Tests check every line matches the case in every variant.
+- `data/voice.json`: the detective's other lines: a thought on every opened clue, a scripted reaction after each suspect answer (no AI call), and the next step told as a thought. Every line is the same in every variant and for every suspect, so none of it points at the culprit.
 - `game/case.py`: loads the case file and merges a variant's overrides.
 - `game/engine.py`: the rules. Clock, unlocks, questions, evidence, accusations, saving.
 - `db.py`: saved games in SQLite. All database code lives here.

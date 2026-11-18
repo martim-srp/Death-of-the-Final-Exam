@@ -1,0 +1,53 @@
+{
+  "_about": "The detective's voice, beyond the hunches. Every line here is the same in every variant and the same for every suspect, so none of it can point at the culprit. 'clues': a thought on an opened clue that breaks no story right now. 'search': a thought that nudges toward a clue not yet searched. 'replies': a short reaction after a suspect answers, picked by what just happened. 'next': the next step as a thought; {name} is the suspect the unlock rules point to (the same in every variant), {clue} and {title} the card, {topic} the question.",
+  "clues": {
+    "D1": "Files keep diaries. Read the properties, not just the pages.",
+    "D2": "One swipe releases a job. A card is a key, and keys get lent, lost or used by their owners.",
+    "D3": "So the leaked paper is not the exam. Then what was the point of stealing it?",
+    "D4": "Prize money, rankings and a rule about cancelled exams. Worth knowing who stands where.",
+    "D5": "A prepaid number, bought for cash. Someone wanted to be heard without being seen.",
+    "D6": "Drafts keep their timestamps. People forget that.",
+    "D7": "A name in a visitors' book is only as true as the hand that wrote it.",
+    "D8": "Old news has a way of explaining new faces.",
+    "L1": "The gate remembers every swipe. Better than people do.",
+    "L2": "The cashier sees every card that crosses the counter. And who is standing nearby.",
+    "L3": "A door log doesn't care what anyone says about their evening.",
+    "L4": "A locked office and a stranger at its door. Lost, or looking?",
+    "L5": "Six payments to one phone. Generous, or making sure to be remembered?"
+  },
+  "search": {
+    "D1": "The leaked file itself. Everyone has seen it. Has anyone really read it?",
+    "D2": "If it was printed, the printer will remember. Printers always do.",
+    "D3": "There is a real exam somewhere. I want to hold it next to the one that leaked.",
+    "D4": "Who gains if this exam goes away? The rules might say.",
+    "D5": "That anonymous number came from somewhere. Numbers leave trails.",
+    "D6": "The report to the Dean. I want to see how it was written, not just what it says.",
+    "D7": "Visitors sign a book. Ink is harder to argue with than memory.",
+    "D8": "Somebody in this case has been in the papers before.",
+    "L1": "The library gate counts every card. Let's see who it counted.",
+    "L2": "The cafeteria sees half the campus at lunch. Somebody there saw something.",
+    "L3": "A residence door keeps its own diary. I want to read it.",
+    "L4": "The faculty corridor after dark. Cleaners notice more than anyone thinks.",
+    "L5": "The beach café. A good place to be seen, if you want to be."
+  },
+  "replies": {
+    "alibi": ["Every alibi is a story with times in it. Times can be checked.", "Neat. Somewhere a log will agree, or it won't."],
+    "exam": ["Everyone has an opinion about that paper. Few have read it.", "Interesting, what people choose to tell me about the exam."],
+    "report": ["Reports are written for an audience. I wonder who this one was for.", "Worth remembering when it was written, not just what it says."],
+    "work": ["A job says where you should have been. Not always where you were.", "Cards, keys, access. A job decides which doors open."],
+    "teaching_assistant": ["Everyone has a view of the TA. Funny how the views differ.", "Noted. Stories about other people say a lot about the teller."],
+    "leak": ["Ask who leaked it and everyone points somewhere else. The direction is worth noting.", "Nobody admits to anything. They rarely do."],
+    "other": ["Small talk. Sometimes the useful part is what they left out.", "Noted. Not everything said tonight matters, but some of it will."],
+    "typed": ["I'll weigh that against the logs.", "Words are cheap. Timestamps aren't.", "Let's see if the evidence agrees."],
+    "caught": ["There it is. The story and the evidence don't match.", "That's one lie on the record."],
+    "shown": ["No flinch. Either it means nothing to them, or they're good.", "Nothing. Maybe the wrong card for this face."],
+    "unlocked": ["That gives me somewhere new to look.", "A new lead. Better follow it before it goes cold."]
+  },
+  "next": {
+    "show": "I want to watch {name_l}'s face when they see the {title_l}.",
+    "ask": "{name} has been quiet about {topic}. That's worth a question.",
+    "accuse_time": "The night is nearly gone. Time to name someone.",
+    "accuse_retry": "Not all wrong. Keep what held and rethink the rest.",
+    "sheet": "Every card is on the table. Now cross off what can't be."
+  }
+}

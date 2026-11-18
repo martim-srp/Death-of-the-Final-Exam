@@ -350,6 +350,7 @@ PAGE_CSS = """
 [data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 1.5rem; max-width: 1480px; }
 .stApp { font-variant-numeric: lining-nums; }
 header[data-testid="stHeader"] { display: none; }
+[data-testid="stElementToolbar"] { display: none; }  /* chart download/fullscreen buttons floated over the detective's line */
 .st-key-next_phone { display: none; }  /* the game is full screen; Streamlit's bar covered the status bar */
 .st-key-panel h3, .finale .title, [data-testid="stDialog"] h2 { font-family: var(--display) !important; }
 .st-key-panel { background: #1c1613; border: 1px solid #3a2e28; border-radius: 14px; padding: 0.9rem 1rem 1rem; gap: 0.6rem; }
@@ -370,6 +371,10 @@ header[data-testid="stHeader"] { display: none; }
 .bubble.them .say { background: #2b221d; border: 1px solid #3f322b; border-bottom-left-radius: 4px; }
 .bubble.you { margin-left: auto; flex-direction: row-reverse; }
 .bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
+.bubble.think { margin-left: auto; flex-direction: row-reverse; max-width: 86%; }
+.bubble.think img { width: 24px; height: 24px; opacity: 0.85; }
+.bubble.think .say { background: transparent; border: 0; border-right: 2px solid var(--gold); border-radius: 0; padding: 0.15rem 0.6rem;
+  font: italic 0.88rem/1.35 var(--display); color: #cdbfa8; text-align: right; }
 .bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
 .bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: inherit; }
 .bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem var(--label); color: #e8c27a; }
@@ -384,9 +389,10 @@ header[data-testid="stHeader"] { display: none; }
 .evidence img { width: 100%; display: block; max-height: 260px; object-fit: cover; }
 .evidence .body { padding: 0.85rem 1rem 1rem; font-family: var(--prose); font-size: 0.95rem; line-height: 1.5;
   overflow-wrap: anywhere; white-space: normal; border-left: 3px solid #8a2a1f; }
-.facedown { border-radius: 12px; height: 150px; display: flex; align-items: center; justify-content: center; font-size: 2.6rem;
+.facedown { box-sizing: border-box; border-radius: 12px; height: 150px; display: flex; align-items: center; justify-content: center;
+  font: 700 2.6rem var(--display); border: 1px solid #7a2c22; margin-bottom: 0.9rem;  /* room before the button under it */
   background: repeating-linear-gradient(45deg, #5a1d16 0 10px, #6e241b 10px 20px); color: #f4d9a0; }
-.facedown.locked { background: repeating-linear-gradient(45deg, #2a221e 0 10px, #332924 10px 20px); }
+.facedown.locked { background: repeating-linear-gradient(45deg, #2a221e 0 10px, #332924 10px 20px); border-color: var(--line); color: #8a7a6a; }
 .lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
 .lead b { font-family: var(--label); color: #e8c27a; }
@@ -434,6 +440,10 @@ header[data-testid="stHeader"] { display: none; }
   -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%);
   mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%); animation: rise 0.8s ease-out; }
 .story { font-family: var(--display); font-size: 1.12rem; line-height: 1.5; margin: 0.2rem 0 0.9rem; color: #efe6d8; }
+.whos-who { list-style: none; margin: 0.3rem 0 0.9rem; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.45rem 0.9rem; }
+.whos-who li { display: flex; align-items: center; gap: 0.55rem; margin: 0; font-size: 0.8rem; line-height: 1.25; color: #cdbfa8; }
+.whos-who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; flex: 0 0 auto; border: 1px solid #3a2e28; }
+.whos-who b { display: block; font-family: var(--display); font-size: 0.9rem; color: #efe6d8; }
 .how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
 .how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
 .how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
@@ -466,13 +476,19 @@ header[data-testid="stHeader"] { display: none; }
 .facedown.locked .ic { width: 40px; height: 40px; }
 .medals span .ic { width: 15px; height: 15px; }
 .chat .unlock .ic, .chat .caught b .ic { width: 14px; height: 14px; }
-.pick-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; justify-items: center; margin: 0.7rem 0 0.6rem; }
-.pick-row > div { width: 100%; display: flex; justify-content: center; padding: 4px; }
+/* Detective pick: the portraits are the buttons. The chosen one wears the red ring, the other waits dimmed. */
+.st-key-pick_buttons { margin: 0.7rem 0 0.6rem; }
 .st-key-pick_buttons [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 1rem; }
-.st-key-pick_buttons [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important; }
-.detective-pick { width: 120px !important; height: 150px !important; max-width: 100%; object-fit: cover !important; display: block;
-  margin: 0 auto 0.4rem; border-radius: 10px; border: 3px solid transparent; }
-.detective-pick.picked { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
+.st-key-pick_buttons [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important;
+  display: flex; justify-content: center; }
+.st-key-pick_buttons [data-testid="stColumn"] > div { align-items: center; }
+.st-key-pick_buttons button { width: 120px; height: 150px; min-height: 0; padding: 0; border-radius: 12px;
+  border: 3px solid transparent; background-color: #241c18; background-size: cover; background-position: center top;
+  filter: grayscale(0.55) brightness(0.7); transition: filter .2s, border-color .2s, box-shadow .2s, transform .2s; }
+.st-key-pick_buttons button:hover { filter: none; border-color: var(--gold); transform: translateY(-2px); }
+.st-key-pick_buttons button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.st-key-pick_buttons button[kind="primary"] { filter: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
+.st-key-pick_buttons button p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes slam { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: scale(1); } }
 @keyframes stamp { from { opacity: 0; transform: translate(-50%, -50%) rotate(-14deg) scale(3); } to { opacity: 1; transform: translate(-50%, -50%) rotate(-14deg) scale(1); } }
@@ -493,7 +509,7 @@ header[data-testid="stHeader"] { display: none; }
   .facts { grid-template-columns: repeat(2, 1fr); }
   .finale .mug, .finale .mug img { width: 160px; }
   .finale h1 { font-size: 2rem; }
-  .detective-pick { width: 110px !important; height: 138px !important; }
+  .st-key-pick_buttons button { width: 110px; height: 138px; }
 }
 </style>
 """
@@ -536,7 +552,7 @@ def draw_board(game, clues, fresh):
             engine.clock_label(game), engine.time_left(game), case["clock"]["limit_minutes"],
             case["max_strikes"] - game.strikes, case["max_strikes"], len(game.contradictions), avatar, player_name(),
         )
-        + board.goal_html(step)
+        + board.goal_html(step, engine.thought(game, step))
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
@@ -622,6 +638,15 @@ def say(suspect, entry):
     st.session_state.setdefault("chats", {}).setdefault(suspect, []).append(entry)
 
 
+def think(suspect, line):
+    """The detective's own thought after an answer: a scripted line, no AI call.
+
+    Kept on the answer it reacts to, so the chat stays one question, one answer."""
+    log = st.session_state.get("chats", {}).get(suspect)
+    if line and log and log[-1]["who"] == "them":
+        log[-1]["think"] = line
+
+
 def ask_topic():
     """Tapping a question: ask it at once, then clear the pick so it can be tapped again."""
     topic = st.session_state.get("ask_topic")
@@ -635,6 +660,7 @@ def ask_topic():
         brief = engine.character_brief(current_game(), suspect)
         say(suspect, {"who": "you", "text": TOPICS[topic][1]})
         say(suspect, {"who": "them", "text": result["line"] or brief["cover"], "unlocked": result["unlocked"]})
+        think(suspect, engine.reaction(current_game(), topic=topic, unlocked=bool(result["unlocked"])))
 
 
 def show_evidence():
@@ -653,6 +679,8 @@ def show_evidence():
             "who": "them", "text": result["reveal"] or "They look at it and shrug.",
             "unlocked": result["unlocked"], "caught": result.get("contradictions", []),
         })
+        think(suspect, engine.reaction(current_game(), caught=bool(result.get("contradictions")),
+                                       unlocked=bool(result["unlocked"]), shown=True))
 
 
 def cloud_key():
@@ -686,6 +714,8 @@ def chat_html(log, suspect, titles):
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
                 f'{esc(item["clue"] or "Your clue")} says otherwise.</small></div>'
             )
+        if entry.get("think"):
+            rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
     return '<div class="chat">' + "".join(rows) + "</div>"
 
 
@@ -762,6 +792,8 @@ def panel_suspect(game, suspect):
             sound("tick")
             say(suspect, {"who": "you", "text": HIDDEN_QUESTION if answer.get("blocked") else question})
             say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback})
+            if not answer.get("blocked"):
+                think(suspect, engine.reaction(current_game(), unlocked=bool(answer["unlocked"])))
         st.rerun()
 
 
@@ -819,6 +851,10 @@ def panel_clue(game, clue_id, fresh):
     st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{body}</div></div>', unsafe_allow_html=True)
     if hunches:
         st.markdown(hunch_html(hunches, clue["log"]), unsafe_allow_html=True)
+    else:
+        musing = engine.musing(game, clue_id)
+        if musing:
+            st.markdown(hunch_html([{"line": musing, "mark": ""}], ""), unsafe_allow_html=True)
     if clue["log"]:
         query = st.text_input("Search the log", key=f"search_{clue_id}", placeholder="A card number, a name, a time…")
         matches, total = search_log(clue["log"], query)
@@ -1038,9 +1074,19 @@ def finale(game):
 # ---- The start screen ------------------------------------------------------------------
 
 STORY_HTML = (
-    "Thursday, 23:47, a storm over Carcavelos. Tomorrow's <b>Semiconductor Valuation</b> final has just leaked "
-    "to all 212 students. The Dean wants a name <b>before 09:00</b>."
+    "Thursday, 23:47, a storm over Carcavelos. An anonymous number posts tomorrow's <b>Semiconductor Valuation</b> "
+    "final in the class group chat, to all 212 students. The exam is at <b>09:00</b>. Find out who leaked it before then."
 )
+
+
+def whos_who_html():
+    """The five suspects, one short line each, so a new player knows who is who."""
+    return '<div class="kicker">Who\'s who</div><ul class="whos-who">' + "".join(
+        f'<li><img src="{board.find_picture("suspects", sid) or ""}" alt="">'
+        f'<span><b>{esc(board.short_name(s["name"]))}</b>{esc(s.get("role", ""))}</span></li>'
+        for sid, s in case["suspects"].items()
+    ) + "</ul>"
+
 
 HOW_TO_PLAY = (
     '<ol class="how-to">'
@@ -1073,24 +1119,19 @@ def intro_dialog():
         brief = st.container()
     with brief:
         st.markdown(f'<div class="kicker">{esc(TITLE)}</div>', unsafe_allow_html=True)
-        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + HOW_TO_PLAY, unsafe_allow_html=True)
+        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + whos_who_html() + HOW_TO_PLAY, unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
-        # The portraits are one two-cell grid and the buttons one two-column row below it,
-        # so each portrait sits centred over its own button at every width.
-        st.markdown(
-            '<div class="pick-row">' + "".join(
-                f'<div><img class="detective-pick{" picked" if avatar == chosen else ""}" '
-                f'src="{board.find_picture("detectives", avatar) or ""}" alt=""></div>'
-                for avatar in AVATARS
-            ) + "</div>",
-            unsafe_allow_html=True,
-        )
+        # Each portrait is its own button (keyboard and screen readers get "Play as her/him").
+        st.markdown("<style>" + "".join(
+            f'.st-key-pick_{avatar} button {{ background-image: url("{board.find_picture("detectives", avatar) or ""}"); }}'
+            for avatar in AVATARS
+        ) + "</style>", unsafe_allow_html=True)
         with st.container(key="pick_buttons"):
             for column, (avatar, text) in zip(st.columns(len(AVATARS)), AVATARS.items()):
                 with column:
                     st.button(text, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
-                              use_container_width=True, on_click=pick_detective, args=(avatar,))
+                              help=None, on_click=pick_detective, args=(avatar,))
         st.text_input("Your name", key="player_name", placeholder="Detective", max_chars=24)
         if st.button("Start the investigation", type="primary", icon=":material/search:", use_container_width=True):
             finish_intro()
