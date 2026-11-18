@@ -45,7 +45,8 @@ each question to a suspect (or showing them a card) costs 10. Tap a red **?** ca
 Tap a face to interrogate: pick a question, show them a card, or type your own. Show a suspect the card
 that breaks their story and you catch them lying. Stuck on a locked card? A hint costs 15 minutes,
 and the magnifier shows your free leads. Cross off what it cannot be on the case sheet; the game
-crosses off what a wrong accusation has proved.
+crosses off what a wrong accusation has proved. When a card breaks someone's story, your detective notices: the odd detail is
+highlighted and a short thought hints at who to show it to.
 
 When you are ready, press **Accuse** and pick who, how, where and why. You must accuse before 09:00,
 so you have 540 minutes. A wrong accusation shows which of the four parts are right. After three

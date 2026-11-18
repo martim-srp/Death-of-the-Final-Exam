@@ -1,0 +1,39 @@
+{
+  "_about": "The detective's inner voice when a clue breaks a suspect's story. Keyed 'CLUE|suspect.claim'. Shown only in a variant whose claims list that clue in broken_by, and only until that lie is caught. 'mark' is the exact detail to highlight in the clue's text or log; {placeholders} are the case's random variables. Lines hint, they never name the liar.",
+  "D2|ta.proofread_on_screen": {
+    "line": "Strange. A paper exam, printed from a staff card. I thought this one only ever lived on a screen.",
+    "mark": "owner=STAFF-{ta_card}"
+  },
+  "L1|ta.proofread_on_screen": {
+    "line": "A staff card at the gate, just before the job came out. Somebody's screen wasn't enough tonight.",
+    "mark": "card=STAFF-{ta_card}"
+  },
+  "L1|class_rep.home_all_evening": {
+    "line": "Card {rep_card}: in at 18:31, out at 19:05. Who carries that card, and where did they say they were?",
+    "mark": "card=STU-{rep_card}"
+  },
+  "L3|class_rep.home_all_evening": {
+    "line": "This door had a busier evening than its owner lets on.",
+    "mark": "OUT  card=STU-{rep_card}"
+  },
+  "D6|class_rep.reported_at_once": {
+    "line": "A first draft at 21:15, hours before anyone could have seen the leak. Interesting timing.",
+    "mark": "21:15"
+  },
+  "L2|ta.card_lost_at_lunch": {
+    "line": "Straight back in the wallet, the Cashier says. Then how does a card go missing at lunch?",
+    "mark": "put it straight back in the wallet"
+  },
+  "D8|professor.faculty_dinner": {
+    "line": "So that is who shared the dinner table. Not exactly faculty.",
+    "mark": "The photo shows the Companion."
+  },
+  "L4|companion.never_went_to_office_door": {
+    "line": "A well-dressed woman at a locked door at 19:40. Lost, she said. I wonder who else will say that.",
+    "mark": "trying the handle"
+  },
+  "D1|companion.never_touched_laptop": {
+    "line": "No scan, no print band. Exported on an iPad that signs itself {alias_initials}. Whose initials are those?",
+    "mark": "iPad ({alias_initials})"
+  }
+}

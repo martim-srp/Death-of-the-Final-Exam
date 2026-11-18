@@ -190,3 +190,116 @@ def test_the_case_sheet_crosses_off_what_a_wrong_accusation_proved():
     assert wrong_who() in at.pills(key="sheet_who").value
     assert "ruled out by your accusation" in page(at)
     assert 'class="sus out' in suspect_markup(at)
+
+
+# ---- The detective's hunches ---------------------------------------------------------------
+
+from game.case import load_hunches  # noqa: E402
+
+HUNCHES = load_hunches()
+
+
+def broken_pairs():
+    """(variant, clue, 'suspect.claim') for every clue that breaks a story in each variant."""
+    engine = Engine()
+    for variant in CASE["variants"]:
+        for suspect, data in engine._resolved[variant]["suspects"].items():
+            for claim in data.get("claims", []):
+                for clue_id in claim["broken_by"]:
+                    yield variant, clue_id, f"{suspect}.{claim['id']}"
+
+
+def test_every_clue_that_breaks_a_story_has_a_hunch_and_every_hunch_is_used():
+    keys = {f"{clue}|{claim}" for _variant, clue, claim in broken_pairs()}
+    assert keys == set(HUNCHES)
+
+
+@pytest.mark.parametrize("variant,clue_id,claim", sorted(set(broken_pairs())))
+def test_each_hunch_highlights_a_detail_that_is_really_in_that_clue(variant, clue_id, claim):
+    engine = Engine()
+    game = engine.new_game(seed=3, variant=variant)
+    clue = engine._resolved[variant]["clues"][clue_id]
+    shown = engine._fill(game, clue.get("text", "")) + "\n" + engine._fill(game, clue.get("log") or "")
+    mark = engine._fill(game, HUNCHES[f"{clue_id}|{claim}"]["mark"])
+    assert mark and mark in shown
+
+
+def test_a_hunch_never_names_a_suspect():
+    names = {word for s in CASE["suspects"].values() for word in s["name"].replace("The ", "").split()}
+    names -= {"Student"}  # "student card" is a thing on the cards, not the Exchange Student
+    for key, hunch in HUNCHES.items():
+        assert not any(name in hunch["line"] for name in names), key
+
+
+def test_a_hunch_shows_on_an_opened_clue_until_that_lie_is_caught():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.hunches(game, "L4") == []  # not opened yet
+    engine.open_clue(game, "L4")
+    assert [h["mark"] for h in engine.hunches(game, "L4")] == ["trying the handle"]
+    engine.present(game, "companion", "L4")
+    assert engine.hunches(game, "L4") == []
+
+
+def test_a_clue_that_breaks_no_story_has_no_hunch():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    engine.open_clue(game, "D4")
+    assert engine.hunches(game, "D4") == []
+
+
+def test_the_panel_shows_the_hunch_and_highlights_the_detail():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    engine.open_clue(game, "L4")
+    at = start(game=game, focus=("clue", "L4"))
+    assert 'class="hunch"' in page(at)
+    assert "<mark>trying the handle</mark>" in page(at)
+    engine.open_clue(game, "D1")
+    engine.open_clue(game, "D2")
+    at = start(game=game, focus=("clue", "D2"))
+    assert "<mark>owner=STAFF-" in page(at)  # quoted from the log
+
+
+# ---- The automatic notebook ------------------------------------------------------------------
+
+
+def test_the_notebook_starts_empty_and_says_it_fills_itself():
+    at = start(focus=("sheet", None))
+    assert any("written down here by itself" in c.value for c in at.caption)
+    assert not any(b.key and b.key.startswith("note_") for b in at.button)
+
+
+def test_the_notebook_lists_each_card_found_with_its_key_detail_and_reopens_it():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    for clue_id in ("D1", "D2"):
+        engine.open_clue(game, clue_id)
+    at = start(game=game, focus=("sheet", None))
+    notes = {b.key: b.label for b in at.button if b.key and b.key.startswith("note_")}
+    assert list(notes) == ["note_D1", "note_D2"]
+    assert "owner=STAFF-" in notes["note_D2"]  # the detail that stood out
+    at.button(key="note_D2").click().run()
+    assert at.session_state["focus"] == ("clue", "D2")
+
+
+def test_the_notebook_keeps_each_suspects_story_and_the_lies_caught():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    engine.open_clue(game, "L4")
+    engine.ask(game, "professor", "alibi")
+    engine.present(game, "companion", "L4")
+    at = start(game=game, focus=("sheet", None))
+    text = page(at)
+    assert text.count('class="story-note"') == 2
+    assert "Their stories · 2" in text
+    assert 'class="lie-note"' in text and "broken by L4" in text
+
+
+def test_the_notebook_lists_what_has_been_ruled_out():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    answer = CASE["variants"]["A"]["solution"]
+    engine.accuse(game, wrong_who(), answer["how"], answer["where"], answer["why"])
+    at = start(game=game, focus=("sheet", None))
+    assert "Ruled out · 1" in page(at)

@@ -209,6 +209,21 @@ def set_focus(kind, value=None):
         st.session_state.suspect = value
 
 
+def go_next():
+    """The phone's next-step button: open what the next step points at."""
+    step = engine.next_step(current_game())
+    parsed = board.parse_act(board.goal_act(step), case["suspects"], case["clues"]) if step else None
+    if parsed:
+        set_focus(*parsed)
+
+
+def next_step_button(game):
+    """On phones the strip above the map scrolls out of sight, so the panel ends with the next step too."""
+    step = engine.next_step(game)
+    if step:
+        st.button(step["text"], key="next_phone", icon=":material/arrow_forward:", on_click=go_next, use_container_width=True)
+
+
 def on_act(key):
     """A tap on the board: open what was tapped in the side panel. Free; it never changes the game."""
     state = st.session_state.get(key) or {}
@@ -317,18 +332,23 @@ def denouement(game):
 PAGE_CSS = """
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Special+Elite&display=swap");
+/* One look everywhere: Playfair for titles, a serif for in-world text, a typewriter for labels, the app font for controls. */
+:root { --display: "Playfair Display", Georgia, serif; --prose: Georgia, "Times New Roman", serif;
+  --label: "Special Elite", "Courier New", monospace; --ink: #efe6d8; --gold: #e8c27a; --red: #c0392b;
+  --paper: #1c1613; --line: #3a2e28; }
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
-[data-testid="stMainBlockContainer"] { padding: 3.4rem 1.2rem 1.5rem; max-width: 1480px; }
+[data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 1.5rem; max-width: 1480px; }
 .stApp { font-variant-numeric: lining-nums; }
-header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-filter: blur(6px); }
-.st-key-panel h3, .finale h1, [data-testid="stDialog"] h2 { font-family: "Playfair Display", Georgia, serif !important; }
+header[data-testid="stHeader"] { display: none; }
+.st-key-next_phone { display: none; }  /* the game is full screen; Streamlit's bar covered the status bar */
+.st-key-panel h3, .finale .title, [data-testid="stDialog"] h2 { font-family: var(--display) !important; }
 .st-key-panel { background: #1c1613; border: 1px solid #3a2e28; border-radius: 14px; padding: 0.9rem 1rem 1rem; gap: 0.6rem; }
 .st-key-panel h3 { margin: 0 0 0.55rem !important; padding: 0.1rem 0 0.1rem; font-size: 1.35rem; line-height: 1.35; }
-.kicker { font: 600 0.72rem "Special Elite", "Courier New", monospace; letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
+.kicker { font: 600 0.72rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
 .who-head { padding-bottom: 0.9rem; display: flex; gap: 0.8rem; align-items: center; }
 .st-key-chat_log { margin-top: 0.5rem; }
 .who-head img { width: 64px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #c0392b; }
-.nerves { display: flex; align-items: center; gap: 0.4rem; font: 600 0.68rem "Special Elite", "Courier New", monospace; letter-spacing: 0.12em;
+.nerves { display: flex; align-items: center; gap: 0.4rem; font: 600 0.68rem var(--label); letter-spacing: 0.12em;
   text-transform: uppercase; opacity: 0.85; margin-top: 0.25rem; }
 .nerves i { width: 110px; height: 6px; background: #3a2e28; border-radius: 3px; overflow: hidden; display: inline-block; }
 .nerves b { display: block; height: 100%; background: linear-gradient(90deg, #e8c27a, #e0645a); transition: width 0.6s; }
@@ -336,36 +356,37 @@ header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-fi
 .chat { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.2rem 0.1rem; }
 .bubble { display: flex; gap: 0.5rem; align-items: flex-end; max-width: 92%; animation: rise 0.35s ease-out both; }
 .bubble img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; object-position: top; flex: none; }
-.bubble .say { padding: 0.5rem 0.75rem; border-radius: 16px; font-family: Georgia, serif; font-size: 0.95rem; line-height: 1.35; }
+.bubble .say { padding: 0.5rem 0.75rem; border-radius: 16px; font-family: var(--prose); font-size: 0.95rem; line-height: 1.35; }
 .bubble.them .say { background: #2b221d; border: 1px solid #3f322b; border-bottom-left-radius: 4px; }
 .bubble.you { margin-left: auto; flex-direction: row-reverse; }
 .bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
 .bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
-.bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: sans-serif; }
-.bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
+.bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: inherit; }
+.bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem var(--label); color: #e8c27a; }
 .caught { margin: 0.2rem auto 0.3rem; text-align: center; animation: slam 0.5s cubic-bezier(.2,1.6,.4,1) both; }
 .caught b { display: inline-block; border: 3px solid #e0645a; color: #e0645a; padding: 0.1rem 0.6rem; transform: rotate(-4deg);
-  font: 800 1.15rem "Special Elite", "Courier New", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+  font: 800 1.15rem var(--label); letter-spacing: 0.12em; text-transform: uppercase; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
-.evidence { position: relative; border-radius: 12px; overflow: hidden; background: #efe6d8; color: #2a201b;
+.evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
+  background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45); animation: flip 0.55s ease-out both; }
 .evidence img { width: 100%; display: block; max-height: 260px; object-fit: cover; }
-.evidence .icon { font-size: 2.6rem; text-align: center; padding: 0.8rem 0 0; }
-.evidence .body { padding: 0.7rem 0.9rem 0.9rem; font-family: Georgia, serif; font-size: 0.95rem; line-height: 1.45; }
+.evidence .body { padding: 0.85rem 1rem 1rem; font-family: var(--prose); font-size: 0.95rem; line-height: 1.5;
+  overflow-wrap: anywhere; white-space: normal; border-left: 3px solid #8a2a1f; }
 .facedown { border-radius: 12px; height: 150px; display: flex; align-items: center; justify-content: center; font-size: 2.6rem;
   background: repeating-linear-gradient(45deg, #5a1d16 0 10px, #6e241b 10px 20px); color: #f4d9a0; }
 .facedown.locked { background: repeating-linear-gradient(45deg, #2a221e 0 10px, #332924 10px 20px); }
 .lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
-.lead b { font-family: "Special Elite", "Courier New", monospace; color: #e8c27a; }
+.lead b { font-family: var(--label); color: #e8c27a; }
 .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
 .tips div span { display: block; font-size: 1.6rem; }
 .lie { background: #2a1714; border: 1px solid #5a2a22; border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.88rem; }
 .lie b { color: #e0645a; }
-.verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; }
-.verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem "Special Elite", "Courier New", monospace; letter-spacing: 0.08em; }
+.verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; margin-bottom: 0.6rem; }
+.verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem var(--label); letter-spacing: 0.08em; }
 .verdict .ok { background: #1f3a24; color: #8be09a; border: 2px solid #3d7a48; }
 .verdict .no { background: #3a1714; color: #ff8a7a; border: 2px solid #7a2c22; }
 .verdict span { display: block; font-size: 1.5rem; }
@@ -376,44 +397,69 @@ header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-fi
   text-decoration: line-through; text-decoration-color: #e0645a; text-decoration-thickness: 2px; opacity: 0.6;
   background: #2a1714 !important; border-color: #5a2a22 !important; color: #efe6d8 !important; }
 .st-key-case_summary [data-testid="stMetricValue"] { font-size: 1.4rem; }
-.st-key-accuse_go button { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.7rem; }
+.st-key-accuse_go button, .st-key-to_accuse button { padding: 0.7rem; }
+.st-key-to_accuse { margin-top: 0.6rem; }
+.st-key-accuse_go button p, .st-key-to_accuse button p { font: 700 1.05rem var(--label); letter-spacing: 0.08em; text-transform: uppercase; }
 /* The finale */
 .finale { text-align: center; padding: 0.5rem 0 0.2rem; }
 .finale .mug { position: relative; width: 220px; margin: 0 auto; }
 .finale .mug img { width: 220px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 14px; border: 3px solid #3a2e28;
   box-shadow: 0 16px 40px rgba(0,0,0,0.6); animation: rise 0.8s ease-out both; }
 .finale .slam { position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%) rotate(-14deg); border: 5px solid #e0645a;
-  color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem "Special Elite", "Courier New", monospace;
+  color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem var(--label);
   letter-spacing: 0.15em; animation: stamp 0.6s 0.6s cubic-bezier(.2,1.6,.4,1) both; white-space: nowrap; }
 .finale.cold .slam { border-color: #9aa7b3; color: #9aa7b3; }
-.finale h1 { font-size: 2.6rem; margin: 1.1rem 0 0.1rem; animation: rise 0.6s 1s ease-out both; }
+.finale .title { font-size: 2.6rem; font-weight: 700; line-height: 1.2; margin: 1.1rem 0 0.3rem; animation: rise 0.6s 1s ease-out both; }
 .finale .sub { opacity: 0.75; animation: rise 0.6s 1.1s ease-out both; }
-.facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; max-width: 900px; margin: 1.2rem auto 0.4rem; }
-.facts div { background: #efe6d8; color: #2a201b; border-radius: 10px; padding: 0.7rem 0.6rem; font-family: Georgia, serif;
+.facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin: 1.2rem 0 0.4rem; }
+.facts div { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-top: 3px solid #8a2a1f;
+  border-radius: 10px; padding: 0.7rem 0.6rem; font-family: var(--prose);
   font-size: 0.92rem; line-height: 1.3; animation: deal 0.5s ease-out both; }
 .facts div:nth-child(1) { animation-delay: 1.3s; } .facts div:nth-child(2) { animation-delay: 1.5s; }
 .facts div:nth-child(3) { animation-delay: 1.7s; } .facts div:nth-child(4) { animation-delay: 1.9s; }
-.facts small { display: block; font: 700 0.7rem "Special Elite", "Courier New", monospace; letter-spacing: 0.15em; color: #8a2a1f; margin-bottom: 0.2rem; }
+.facts small { display: block; font: 700 0.7rem var(--label); letter-spacing: 0.15em; color: var(--gold); margin-bottom: 0.25rem; }
 .medals { margin-top: 0.8rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
 .medals span { background: #2b221d; border: 1px solid #e8c27a; color: #e8c27a; border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.85rem; }
 .cover-art { width: 100%; aspect-ratio: 800 / 731; background-size: cover; background-position: center; border-radius: 14px;
   -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%);
   mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%); animation: rise 0.8s ease-out; }
-.story { font-family: "Playfair Display", Georgia, serif; font-size: 1.12rem; line-height: 1.5; margin: 0.2rem 0 0.9rem; color: #efe6d8; }
+.story { font-family: var(--display); font-size: 1.12rem; line-height: 1.5; margin: 0.2rem 0 0.9rem; color: #efe6d8; }
 .how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
 .how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
 .how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
 .how-to li span { flex: 1 1 auto; }
-.how-to li em { font: 0.75rem "Special Elite", "Courier New", monospace; font-style: normal; color: #a89a88; white-space: nowrap; }
+.how-to li em { font: 0.75rem var(--label); font-style: normal; color: #a89a88; white-space: nowrap; }
 .ic { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; }
+.evidence mark { background: rgba(232, 194, 122, 0.22); color: #ffe2a8; border-bottom: 2px solid #e8c27a; padding: 0 0.1em; border-radius: 2px; }
+.hunch { display: flex; gap: 0.7rem; align-items: flex-start; margin: 0 0 0.8rem; padding: 0.65rem 0.8rem; border-left: 3px solid #e8c27a;
+  background: rgba(232, 194, 122, 0.07); border-radius: 0 10px 10px 0; animation: rise 0.5s ease-out both; animation-delay: 0.2s; }
+.hunch img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; border: 2px solid #e8c27a; flex: 0 0 auto; }
+.hunch p { margin: 0; font-family: var(--display); font-style: italic; font-size: 0.98rem; line-height: 1.4; color: #efe6d8; }
+.hunch code { display: block; margin-top: 0.4rem; font-size: 0.75rem; background: #1c1613; color: #cdbfa8; padding: 0.3rem 0.45rem; border-radius: 6px; white-space: pre-wrap; }
+.hunch mark { background: rgba(232, 194, 122, 0.25); color: #ffe2a8; padding: 0 0.1em; border-radius: 3px; }
+.st-key-panel h4 { font: 600 0.72rem var(--label) !important; letter-spacing: 0.16em; text-transform: uppercase;
+  color: #e8c27a !important; margin: 0.6rem 0 0.2rem !important; padding: 0 !important; }
+.st-key-panel [class*="st-key-note_"] button { width: 100%; justify-content: flex-start; text-align: left; padding: 0.15rem 0; min-height: 0; }
+.st-key-panel [class*="st-key-note_"] button > div, .st-key-panel [class*="st-key-note_"] button [data-testid="stMarkdownContainer"] { justify-content: flex-start; text-align: left; width: 100%; }
+.st-key-panel [class*="st-key-note_"] button p { font-size: 0.88rem; }
+.st-key-panel [class*="st-key-note_"] button strong { font-family: var(--label); color: #e8c27a; margin-right: 0.3rem; }
+.story-note { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.45rem 0; border-bottom: 1px solid #3a2e28; font-size: 0.86rem; }
+.story-note b { font-family: var(--display); font-size: 0.95rem; }
+.story-note span { color: #cdbfa8; }
+.story-note .lie-note { color: #ff8a7a; font-size: 0.8rem; }
+.story-note .lie-note .ic { width: 12px; height: 12px; }
+.story-note em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
 .proof { display: flex; flex-direction: column; gap: 0.15rem; margin: -0.4rem 0 0.7rem; font-size: 0.8rem; color: #a89a88; }
 .proof .ic { color: #e8c27a; width: 13px; height: 13px; }
-.proof em { font-style: normal; font: 0.72rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
+.proof em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
 .tips div span .ic { width: 26px; height: 26px; color: #e8c27a; }
-.evidence .icon .ic { width: 56px; height: 56px; color: #3a2e28; }
 .facedown.locked .ic { width: 40px; height: 40px; }
 .medals span .ic { width: 15px; height: 15px; }
 .chat .unlock .ic, .chat .caught b .ic { width: 14px; height: 14px; }
+.pick-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; justify-items: center; margin: 0.7rem 0 0.6rem; }
+.pick-row > div { width: 100%; display: flex; justify-content: center; padding: 4px; }
+.st-key-pick_buttons [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 1rem; }
+.st-key-pick_buttons [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important; }
 .detective-pick { width: 120px !important; height: 150px !important; max-width: 100%; object-fit: cover !important; display: block;
   margin: 0 auto 0.4rem; border-radius: 10px; border: 3px solid transparent; }
 .detective-pick.picked { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
@@ -424,12 +470,15 @@ header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-fi
 @keyframes deal { from { opacity: 0; transform: translateY(-30px) rotate(-6deg); } to { opacity: 1; transform: none; } }
 @keyframes shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
 @media (max-width: 640px) {
-  [data-testid="stMainBlockContainer"] { padding: 3rem 0.6rem 1rem; }
+  [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1rem; }
+  .evidence img { max-height: 170px; }
+  .st-key-next_phone { display: block; margin-top: 0.4rem; }
+  .st-key-case_summary [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.4rem 0.8rem; }
+  .st-key-case_summary [data-testid="stColumn"] { min-width: 28% !important; width: 28% !important; flex: 1 1 28% !important; }
+  .st-key-next_phone button { border-color: #e8c27a; color: #e8c27a; }
   .tips { grid-template-columns: 1fr; }
   .st-key-suspect_row { display: none; }
   [data-testid="stDialog"] [data-testid="stColumn"]:has(.cover-art) { display: none; }
-  [data-testid="stDialog"] [data-testid="stHorizontalBlock"]:has(.detective-pick) { flex-wrap: nowrap !important; gap: 0.6rem; }
-  [data-testid="stDialog"] [data-testid="stHorizontalBlock"]:has(.detective-pick) > [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important; }
   .story { font-size: 1rem; }
   .facts { grid-template-columns: repeat(2, 1fr); }
   .finale .mug, .finale .mug img { width: 160px; }
@@ -518,6 +567,10 @@ def panel_home(game):
             "".join(f'<div class="lead"><b>{esc(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
             unsafe_allow_html=True,
         )
+    elif game.history:
+        step = engine.next_step(game)
+        if step:
+            st.markdown(f"### {step['text']}")  # the next step, once the first move is made
     else:
         st.markdown("### Where to start")
         st.markdown(
@@ -685,7 +738,7 @@ def panel_suspect(game, suspect):
         show_tip = tip.get("clue") if tip.get("do") == "show" else None
         st.pills(f"Show a card · {cost} min", opened, format_func=lambda i: card_label(i, shown, show_tip),
                  key="show_clue", on_change=show_evidence, help="Show them evidence. The right card breaks a lie.")
-    question = st.chat_input(f"Or type your own question ({cost} min)", max_chars=ai.MAX_QUESTION_LENGTH, key="typed")
+    question = st.chat_input(f"Or type your own question · {cost} min", max_chars=ai.MAX_QUESTION_LENGTH, key="typed")
     if question:
 
         def ask_and_note_fallback(game):
@@ -703,6 +756,20 @@ def panel_suspect(game, suspect):
 
 
 # ---- Panel: one clue ------------------------------------------------------------------
+
+
+def hunch_html(hunches, log):
+    """The detective's inner voice: a line per broken story, quoting the log line that caught their eye."""
+    face = board.find_picture("detectives", player_avatar()) or ""
+    rows = []
+    for hunch in hunches:
+        quote = ""
+        line = next((x for x in (log or "").splitlines() if hunch["mark"] and hunch["mark"] in x), None)
+        if line:
+            marked = esc(line.strip()).replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
+            quote = f"<code>{marked}</code>"
+        rows.append(f'<div class="hunch"><img src="{face}" alt=""><div><p>{esc(hunch["line"])}</p>{quote}</div></div>')
+    return "".join(rows)
 
 
 def panel_clue(game, clue_id, fresh):
@@ -732,9 +799,16 @@ def panel_clue(game, clue_id, fresh):
         return
     clue = engine.read_clue(game, clue_id)
     picture = board.find_picture("clues", clue_id)
-    art = f'<img src="{picture}" alt="">' if picture else f'<div class="icon">{board.icon(board.CARD_ICON.get(clue_id, "doc"))}</div>'
+    art = f'<img src="{picture}" alt="">' if picture else ""  # no placeholder: the words are the evidence
     style = "" if clue_id in fresh else ' style="animation:none"'
-    st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{esc(clue["text"])}</div></div>', unsafe_allow_html=True)
+    hunches = engine.hunches(game, clue_id)
+    body = esc(clue["text"])
+    for hunch in hunches:
+        if hunch["mark"] and hunch["mark"] in clue["text"]:
+            body = body.replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
+    st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{body}</div></div>', unsafe_allow_html=True)
+    if hunches:
+        st.markdown(hunch_html(hunches, clue["log"]), unsafe_allow_html=True)
     if clue["log"]:
         query = st.text_input("Search the log", key=f"search_{clue_id}", placeholder="A card number, a name, a time…")
         matches, total = search_log(clue["log"], query)
@@ -753,25 +827,86 @@ def panel_clue(game, clue_id, fresh):
 # ---- Panel: case sheet and accusation ----------------------------------------------------
 
 
-def panel_sheet():
-    st.markdown('<div class="kicker">Case sheet</div><h3>Cross off what it can’t be</h3>', unsafe_allow_html=True)
-    st.caption("Cross off what can't be. The game crosses off what the evidence proves. What is left is your accusation.")
-    for column in COLUMNS:
-        options = case["accusation"][column]
-        proven = proven_out(column)
-        st.session_state[f"sheet_{column}"] = crossed(column)  # proven ones stay crossed off
-        left = len(options) - len(crossed(column))
-        st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()} · {left} left", [o["id"] for o in options],
-                 format_func=lambda o, c=column: label(c, o), selection_mode="multi", key=f"sheet_{column}")
-        if proven:
-            st.markdown(
-                '<div class="proof">' + "".join(
-                    f"<span>{board.icon('check')} {esc(label(column, o))} <em>ruled out by {esc(proof_name(by))}</em></span>"
-                    for o, by in proven.items()
-                ) + "</div>",
-                unsafe_allow_html=True,
+def clue_fact(game, clue_id):
+    """One line to remember a clue by: the detail that stood out, or the clue's first sentence."""
+    for hunch in engine.hunches(game, clue_id, include_caught=True):
+        if hunch["mark"]:
+            return hunch["mark"]
+    text = engine.read_clue(game, clue_id)["text"].strip()
+    first = re.split(r"(?<=[a-z0-9)\"'][.!?])\s", text, maxsplit=1)[0]
+    return first if len(first) <= 90 else first[:87].rstrip() + "…"
+
+
+def first_sentences(text, count=2):
+    return " ".join(re.split(r"(?<=[a-z0-9)\"'][.!?])\s", text.strip())[:count])
+
+
+def notebook_notes(game):
+    """The automatic half of the notebook: every card found, every story told, every lie and proof."""
+    opened = [e["clue"] for e in game.history if e.get("action") == "open"]
+    if not opened and not game.history:
+        st.caption("Empty for now. Everything you find and hear is written down here by itself.")
+        return
+    st.markdown(f"#### Evidence · {len(opened)}")
+    for clue_id in opened:
+        name = board.CARD_NAMES.get(clue_id, case["clues"][clue_id]["title"])
+        st.button(f"**{clue_id}** {plain(name)} · {plain(clue_fact(game, clue_id))}", key=f"note_{clue_id}", type="tertiary",
+                  on_click=set_focus, args=("clue", clue_id), use_container_width=True)
+    questioned = []
+    for event in game.history:
+        if event.get("suspect") in case["suspects"] and event["suspect"] not in questioned:
+            questioned.append(event["suspect"])
+    if questioned:
+        caught = {}
+        for item in engine.contradiction_list(game):
+            caught.setdefault(item["suspect"], []).append(item)
+        st.markdown(f"#### Their stories · {len(questioned)}")
+        rows = []
+        for suspect in questioned:
+            brief = engine.character_brief(game, suspect)
+            lies = "".join(
+                f'<span class="lie-note">{board.icon("bolt")} “{esc(item["text"].rstrip("."))}” <em>broken by {esc(item["clue"] or "a clue")}</em></span>'
+                for item in caught.get(suspect, [])
             )
-    if st.button("Ready? Accuse", type="primary", icon=":material/balance:", use_container_width=True, key="to_accuse"):
+            rows.append(f'<div class="story-note"><b>{esc(board.short_name(brief["name"]))}</b>'
+                        f'<span>“{esc(first_sentences(brief["cover"]))}”</span>{lies}</div>')
+        st.markdown("".join(rows), unsafe_allow_html=True)
+    proven = engine.eliminated(game)
+    if proven:
+        st.markdown(f"#### Ruled out · {len(proven)}")
+        st.markdown(
+            '<div class="proof">' + "".join(
+                f"<span>{board.icon('check')} {esc(label(e['column'], e['option']))} <em>ruled out by {esc(proof_name(e['by']))}</em></span>"
+                for e in proven
+            ) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def panel_sheet():
+    game = current_game()
+    st.markdown('<div class="kicker">Notebook</div><h3>Everything you have found</h3>', unsafe_allow_html=True)
+    notes, sheet = st.tabs(["Notes", "Cross off"])
+    with notes:
+        notebook_notes(game)
+    with sheet:
+        st.caption("Cross off what can't be. Proven ones are crossed off for you. What is left is your accusation.")
+        for column in COLUMNS:
+            options = case["accusation"][column]
+            proven = proven_out(column)
+            st.session_state[f"sheet_{column}"] = crossed(column)  # proven ones stay crossed off
+            left = len(options) - len(crossed(column))
+            st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()} · {left} left", [o["id"] for o in options],
+                     format_func=lambda o, c=column: label(c, o), selection_mode="multi", key=f"sheet_{column}")
+            if proven:
+                st.markdown(
+                    '<div class="proof">' + "".join(
+                        f"<span>{board.icon('check')} {esc(label(column, o))} <em>ruled out by {esc(proof_name(by))}</em></span>"
+                        for o, by in proven.items()
+                    ) + "</div>",
+                    unsafe_allow_html=True,
+                )
+    if st.button("Accuse", type="primary", icon=":material/balance:", use_container_width=True, key="to_accuse"):
         set_focus("accuse")
         st.rerun()
 
@@ -802,7 +937,6 @@ def accusation_confirmation():
             sound("thud" if result["status"] == "playing" else "stamp")
         if result and result["status"] == "playing":
             st.session_state.verdict = engine.right_parts(current_game())
-            st.session_state.toast = (f"{result['correct']} of 4 right. {result['strikes_left']} tries left.", ":material/balance:")
         st.rerun()
     if st.button("Back", key="cancel_accuse", icon=":material/arrow_back:"):
         st.session_state.pop("pending_accusation", None)
@@ -816,7 +950,7 @@ def panel_accuse(game):
     verdict = st.session_state.get("verdict")
     if verdict is not None:
         st.markdown(verdict_html(verdict), unsafe_allow_html=True)
-        st.caption("Wrong. Keep the ✓ parts and rethink the ✗ ones.")
+        st.caption(f"{len(verdict)} of 4 right. Keep the ✓ parts and rethink the ✗ ones.")
     for column in COLUMNS:
         out = set(crossed(column))
         st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()}", [o["id"] for o in case["accusation"][column]],
@@ -861,16 +995,16 @@ def finale(game):
            else f"It was {case['suspects'][culprit]['name']} all along.")
     facts = "".join(f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS)
     medals = "".join(f"<span>{board.icon('medal')} {esc(b['title'])}</span>" for b in engine.badge_list(game))
-    st.markdown(
+    _, middle, _ = st.columns([1, 3, 1])
+    middle.markdown(
         f'<div class="finale{"" if solved else " cold"}"><div class="mug"><img src="{uri}" alt=""><span class="slam">{stamp}</span></div>'
-        f'<h1>{heading}</h1><div class="sub">{esc(sub)}</div><div class="facts">{facts}</div>'
+        f'<div class="title">{heading}</div><div class="sub">{esc(sub)}</div><div class="facts">{facts}</div>'
         f'{f"<div class=medals>{medals}</div>" if medals else ""}</div>',
         unsafe_allow_html=True,
     )
     marker = pending_sound()
     if marker:
         deck(data=marker, key="finale_sound", height=1)
-    _, middle, _ = st.columns([1, 3, 1])
     with middle:
         case_summary(game)
         st.download_button(
@@ -932,14 +1066,21 @@ def intro_dialog():
         st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + HOW_TO_PLAY, unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
-        for column, (avatar, text) in zip(st.columns(len(AVATARS)), AVATARS.items()):
-            with column:
-                uri = board.find_picture("detectives", avatar)
-                if uri:
-                    ring = " picked" if avatar == chosen else ""
-                    st.markdown(f'<img class="detective-pick{ring}" src="{uri}" alt="">', unsafe_allow_html=True)
-                st.button(text, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
-                          use_container_width=True, on_click=pick_detective, args=(avatar,))
+        # The portraits are one two-cell grid and the buttons one two-column row below it,
+        # so each portrait sits centred over its own button at every width.
+        st.markdown(
+            '<div class="pick-row">' + "".join(
+                f'<div><img class="detective-pick{" picked" if avatar == chosen else ""}" '
+                f'src="{board.find_picture("detectives", avatar) or ""}" alt=""></div>'
+                for avatar in AVATARS
+            ) + "</div>",
+            unsafe_allow_html=True,
+        )
+        with st.container(key="pick_buttons"):
+            for column, (avatar, text) in zip(st.columns(len(AVATARS)), AVATARS.items()):
+                with column:
+                    st.button(text, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
+                              use_container_width=True, on_click=pick_detective, args=(avatar,))
         st.text_input("Your name", key="player_name", placeholder="Detective", max_chars=24)
         if st.button("Start the investigation", type="primary", icon=":material/search:", use_container_width=True):
             finish_intro()
@@ -987,6 +1128,7 @@ with side_column:
             panel_accuse(game)
         else:
             panel_home(game)
+    next_step_button(game)
 
 # Called last, so the story and rules open over the game on a new case.
 if not st.session_state.get("intro_done", bool(game.history)):

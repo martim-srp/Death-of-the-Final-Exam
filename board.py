@@ -141,7 +141,7 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'<div class="stat zapstat" title="Lies caught">{icon("bolt")}<b>{caught}</b></div>'
         '<div class="tools">'
         f'<button data-act="home" title="Leads">{icon("search")}</button>'
-        f'<button data-act="sheet" title="Case sheet">{icon("sheet")}</button>'
+        f'<button data-act="sheet" title="Notebook">{icon("sheet")}</button>'
         f'<button data-act="intro" title="Story and rules">{icon("book")}</button>'
         f'<button class="mute" type="button" title="Sound on or off">{icon("sound", "ic on")}{icon("mute", "ic off")}</button>'
         '<button class="accuse" data-act="accuse">Accuse</button></div></div>'
@@ -285,7 +285,7 @@ def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=
             f'<text class="tag" y="58">{esc(place)}</text><circle r="56" fill="#000" fill-opacity="0"/></g>'
         )
     dx, dy = detective_spot(opened)
-    tx, ty = dx * width + 44 * s, dy * height - 40 * s
+    tx, ty = dx * width + 64 * s, dy * height - 52 * s  # beside the pin, never on it
     token = f'<image href="{avatar_uri}" x="-26" y="-26" width="52" height="65" clip-path="url(#detclip)" preserveAspectRatio="xMidYMin slice"/>' if avatar_uri else '<circle r="20" fill="#2a221e"/>'
     parts.append(
         f'<g class="det" data-x="{tx:.0f}" data-y="{ty:.0f}" transform="translate({tx:.0f} {ty:.0f}) scale({s:.3f})">'
@@ -339,12 +339,17 @@ def hand_html(clues, picked=None, fresh=(), goal=None):
 # ---- Suspects ----------------------------------------------------------------------
 
 
+# Names that fit under a small portrait when the suspect row is narrow.
+TINY_NAME = {"class_rep": "Class Rep", "ta": "TA", "exchange": "Exchange", "professor": "Professor", "companion": "Companion"}
+
+
 def suspects_html(suspects, picked=None, goal=None):
     """The five suspects as big cards. Each item: id, name, questioned, caught, ruled_out."""
     cards = []
     for s in suspects:
         uri = find_picture("suspects", s["id"])
-        name = esc(short_name(s["name"]))
+        name = (f'<span class="long">{esc(short_name(s["name"]))}</span>'
+                f'<span class="short">{esc(TINY_NAME.get(s["id"], short_name(s["name"])))}</span>')
         classes = "sus" + (" picked" if s["id"] == picked else "") + (" out" if s["ruled_out"] else "") + (" goal" if s["id"] == goal else "")
         marks = ""
         if s["questioned"]:
@@ -487,9 +492,10 @@ export default function(component) {
 
 BOARD_CSS = """
 :host { --ink: #efe6d8; --red: #c0392b; --gold: #e8c27a; --bg: #14100e; --type: "Special Elite", "Courier New", monospace;
-  --serif: "Playfair Display", Georgia, serif; }
+  --serif: "Playfair Display", Georgia, serif; --prose: Georgia, "Times New Roman", serif;
+  --ui: "Source Sans Pro", "Source Sans 3", system-ui, sans-serif; }
 .phone-only { display: none; }
-.deck { color: var(--ink); font-family: var(--serif); font-variant-numeric: lining-nums; user-select: none; }
+.deck { color: var(--ink); font-family: var(--serif); font-variant-numeric: lining-nums; user-select: none; container-type: inline-size; }
 button { font: inherit; color: inherit; cursor: pointer; }
 /* Status bar */
 .hud { display: flex; align-items: center; gap: 14px; padding: 8px 10px; background: linear-gradient(#241c18, #1a1411);
@@ -514,7 +520,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @keyframes beckon { 0%,70%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); } 35% { box-shadow: 0 0 0 6px rgba(192,57,43,.35); } }
 @keyframes throb { 50% { opacity: .55; } }
 /* Map */
-.map { width: min(100%, calc((100vh - 350px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
+.map { width: min(100%, calc((100vh - 300px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
   border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .pin { cursor: pointer; }
 .pin .ring { fill: none; stroke-width: 6; }
@@ -527,7 +533,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pin.picked .ring { stroke: var(--gold); stroke-width: 9; }
 .pin:hover .ring, .pin:focus .ring { stroke-width: 10; }
 .pin:focus { outline: none; }
-.pin .glyph { font: bold 34px Georgia, serif; text-anchor: middle; }
+.pin .glyph { font: bold 34px var(--prose); text-anchor: middle; }
 .pin .glyph.small { font-size: 26px; }
 .pin .tag { font: 700 19px var(--serif); text-anchor: middle; fill: var(--ink); paint-order: stroke; stroke: #14100e; stroke-width: 6px; }
 .pin.fresh { animation: pop .7s ease-out; }
@@ -550,7 +556,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .card .art.back.locked { background: repeating-linear-gradient(45deg, #2a221e 0 6px, #332924 6px 12px); font-size: 17px; }
 .card .lbl { display: flex; flex-direction: column; padding: 3px 6px 5px; min-width: 0; line-height: 1.2; }
 .card .lbl b { font: 400 10px var(--type); opacity: .75; }
-.card .lbl span { font: 600 11px Georgia, serif; height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
+.card .lbl span { font: 600 11px var(--prose); height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
   -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .card.locked { background: #2a221e; color: #8d7f72; border-color: #3a2e28; }
 .card.available { border-color: var(--red); animation: glow 1.8s infinite; }
@@ -581,15 +587,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: #e0645a; background: rgba(20,16,14,.7); padding: 1px 4px; font: 400 11px var(--type); white-space: nowrap; }
 /* First-play tour */
 .tour { position: fixed; z-index: 1000; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(360px, calc(100vw - 32px));
-  background: #efe6d8; color: #2a201b; border-radius: 14px; padding: 14px 16px 12px; box-shadow: 0 18px 50px rgba(0,0,0,.7);
+  background: #1c1613; color: var(--ink); border: 1px solid #3a2e28; border-left: 3px solid var(--gold); border-radius: 14px;
+  padding: 14px 16px 12px; box-shadow: 0 18px 50px rgba(0,0,0,.7);
   animation: rise .35s ease-out; }
 .tour .step { display: none; }
 .tour .step.on { display: block; }
 .tour .step b { font: 700 18px var(--serif); }
-.tour .step p { margin: 4px 0 10px; font: 15px/1.35 Georgia, serif; }
+.tour .step p { margin: 4px 0 10px; font: 15px/1.4 var(--prose); color: #cdbfa8; }
 .tour-nav { display: flex; align-items: center; justify-content: space-between; }
-.tour-nav .dots { font-size: 10px; letter-spacing: 2px; color: #8a2a1f; }
-.tour-nav button { border-radius: 8px; padding: 6px 14px; border: 1px solid #8a7a6a; background: transparent; color: #2a201b; font: 14px Georgia, serif; }
+.tour-nav .dots { font-size: 10px; letter-spacing: 2px; color: var(--gold); }
+.tour-nav button { border-radius: 8px; padding: 6px 14px; border: 1px solid #4a3a31; background: transparent; color: var(--ink); font: 500 14px var(--ui); }
 .tour-nav .next { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
 .tour-ring { position: fixed; z-index: 999; border: 3px solid var(--gold); border-radius: 14px; pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(8,6,5,.6); transition: all .35s ease; }
@@ -617,7 +624,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* Next step: one objective, always visible */
 .goal-bar { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 10px; padding: 8px 12px; text-align: left;
   border: 1px solid rgba(232,194,122,.55); border-radius: 12px; background: linear-gradient(90deg, rgba(232,194,122,.16), rgba(232,194,122,.04));
-  color: var(--ink); cursor: pointer; font: 15px/1.3 Georgia, serif; animation: rise-in .4s ease-out; }
+  color: var(--ink); cursor: pointer; font: 15px/1.3 var(--prose); animation: rise-in .4s ease-out; }
 .goal-bar:hover { border-color: var(--gold); background: linear-gradient(90deg, rgba(232,194,122,.26), rgba(232,194,122,.08)); }
 .goal-bar .gi { font-size: 22px; flex: 0 0 auto; }
 .goal-bar .gt { flex: 1 1 auto; min-width: 0; }
@@ -664,4 +671,31 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .zap .ic { width: 11px; height: 11px; }
 .sus .noimg .ic { width: 40px; height: 40px; color: #8a7a6a; }
 .goal-bar .gi .ic { width: 24px; height: 24px; color: var(--gold); display: block; }
+/* Narrow boards (a small laptop window, a tablet): lay out by the board's own width, not the screen's */
+@container (max-width: 700px) {
+  .hud { flex-wrap: wrap; gap: 8px 10px; padding: 8px; }
+  .hud .clock { order: 1; flex: 1 1 auto; min-width: 0; }
+  .hud .me { order: 0; }
+  .hud .me img { width: 34px; height: 34px; }
+  .hud .clock b { font-size: 22px; }
+  .hud .clock small { display: none; }
+  .hud .stat { order: 2; font-size: 14px; }
+  .tools { order: 3; flex: 1 1 100%; }
+  .tools button { flex: 0 0 38px; }
+  .tools .accuse { flex: 1 1 auto; }
+  .hand { gap: 5px; }
+  .card .lbl { padding: 2px 4px 4px; }
+  .card .lbl span { font-size: 10px; }
+}
+@container (max-width: 520px) {
+  .hand { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+}
+@container (max-width: 560px) {
+  .suspects { gap: 5px; }
+  .sus .nm { font-size: 10px; padding: 12px 2px 4px; }
+  .sus .nm .long { display: none; }
+  .sus .nm .short { display: inline; }
+  .sus .marks { top: 3px; right: 3px; }
+}
+.sus .nm .short { display: none; }
 """
