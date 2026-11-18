@@ -23,6 +23,7 @@ import streamlit as st
 import board
 import db
 import reloading
+import report
 from game.case import load_case
 
 ROOT = Path(__file__).resolve().parent
@@ -872,6 +873,14 @@ def finale(game):
     _, middle, _ = st.columns([1, 3, 1])
     with middle:
         case_summary(game)
+        st.download_button(
+            "Download the honour council report",
+            data=report.build(engine, game, st.session_state.get("player_name") or "Detective"),
+            file_name="honour-council-report.md",
+            mime="text/markdown",
+            icon=":material/description:",
+            use_container_width=True,
+        )
         scene = denouement(game)
         if scene:
             with st.expander("Half past seven, the boardroom: read the confrontation", icon=":material/history_edu:"):
