@@ -52,7 +52,7 @@ def test_a_cold_case_also_shows_the_summary():
     for _ in range(CASE["max_strikes"]):
         engine.accuse(game, "exchange", "photographed_desk", "beach_cafe", "sell_paper")
     at = closed_app(game)
-    assert any("gone cold" in e.value for e in at.error)
+    assert any("CASE COLD" in m.value for m in at.markdown)
     shown = metrics(at)
     assert shown["Wrong accusations"] == str(CASE["max_strikes"])
     assert shown["Time used"] == "0h 00m"

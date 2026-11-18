@@ -89,21 +89,26 @@ def test_the_reason_survives_a_resume_link(case, no_key):
 def ask_in_app(game, question="What is Question 5?"):
     at = AppTest.from_file(APP, default_timeout=10)
     at.session_state["game"] = game.to_dict()
+    at.session_state["intro_done"] = True
+    at.session_state["focus"] = ("suspect", "professor")
+    at.session_state["suspect"] = "professor"
     at.secrets["REQUESTY_API_KEY"] = ""
     at.run()
-    next(w for w in at.selectbox if w.label == "Suspect").set_value("professor")
-    next(w for w in at.text_input if w.label == "Your question").set_value(question)
-    next(b for b in at.button if b.label.startswith("Send question")).click().run()
+    at.chat_input(key="typed").set_value(question).run()
     assert not at.exception
     return at
+
+
+def chat(at):
+    return "\n".join(m.value for m in at.markdown if 'class="chat"' in m.value)
 
 
 def test_the_player_is_told_when_the_ai_is_not_connected(case, no_key, monkeypatch):
     engine, game = case
     monkeypatch.setattr(ai, "_requesty_answer", lambda *_: pytest.fail("no live model calls in tests"))
     at = ask_in_app(game)
-    assert any("isn't connected" in c.value for c in at.caption)
-    assert any("yesterday" in t.value for t in at.text)  # the scripted line is still shown
+    assert "isn&#x27;t connected" in chat(at)
+    assert "yesterday" in chat(at)  # the scripted line is still shown
 
 
 def test_no_note_when_the_ai_answers(case, monkeypatch):
@@ -111,8 +116,8 @@ def test_no_note_when_the_ai_answers(case, monkeypatch):
     monkeypatch.setenv("REQUESTY_API_KEY", "fake-test-key")
     monkeypatch.setattr(ai, "_requesty_answer", lambda *_: GOOD)
     at = ask_in_app(game)
-    assert any("I was at dinner." in t.value for t in at.text)
-    assert not any("scripted answer" in c.value for c in at.caption)
+    assert "I was at dinner." in chat(at)
+    assert "scripted answer" not in chat(at)
 
 
 def test_every_reason_has_a_note():
