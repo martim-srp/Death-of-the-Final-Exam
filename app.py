@@ -786,6 +786,28 @@ def verdict_html(right):
     ) + "</div>"
 
 
+@st.dialog("Are you sure?")
+def accusation_confirmation():
+    choice = st.session_state.get("pending_accusation")
+    if not choice:
+        return
+    strikes_left = case["max_strikes"] - current_game().strikes
+    tries = "try" if strikes_left == 1 else "tries"
+    st.write(f"{strikes_left} {tries} left. A wrong accusation costs one. Accuse?")
+    if st.button("Yes, accuse", type="primary", key="confirm_accuse", icon=":material/gavel:"):
+        st.session_state.pop("pending_accusation", None)
+        result = run(engine.accuse, *(choice[c] for c in COLUMNS))
+        if result:
+            sound("thud" if result["status"] == "playing" else "stamp")
+        if result and result["status"] == "playing":
+            st.session_state.verdict = engine.right_parts(current_game())
+            st.session_state.toast = (f"{result['correct']} of 4 right. {result['strikes_left']} tries left.", ":material/balance:")
+        st.rerun()
+    if st.button("Back", key="cancel_accuse", icon=":material/arrow_back:"):
+        st.session_state.pop("pending_accusation", None)
+        st.rerun()
+
+
 def panel_accuse(game):
     strikes_left = case["max_strikes"] - game.strikes
     st.markdown(f'<div class="kicker">The accusation · {strikes_left} {"try" if strikes_left == 1 else "tries"} left</div>'
@@ -804,13 +826,9 @@ def panel_accuse(game):
         if missing:
             st.warning(f"Pick one in each row first. Missing: {', '.join(missing)}.")
             return
-        result = run(engine.accuse, *(choice[c] for c in COLUMNS))
-        if result:
-            sound("thud" if result["status"] == "playing" else "stamp")
-        if result and result["status"] == "playing":
-            st.session_state.verdict = engine.right_parts(current_game())
-            st.session_state.toast = (f"{result['correct']} of 4 right. {result['strikes_left']} tries left.", ":material/balance:")
-        st.rerun()
+        st.session_state.pending_accusation = choice
+    if st.session_state.get("pending_accusation"):
+        accusation_confirmation()
 
 
 # ---- The finale ------------------------------------------------------------------------
