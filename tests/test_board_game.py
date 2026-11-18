@@ -434,3 +434,53 @@ def test_a_typed_question_works_without_a_key(monkeypatch, tmp_path):
     assert chat[0]["text"] == "What is Question 5?"
     assert "yesterday" in chat[1]["text"]
     assert "Unlocked: D3" in page(at)
+
+
+# ---- Evidence details -----------------------------------------------------------------------
+
+
+def opened_game(*clue_ids, variant="A"):
+    game = Engine().new_game(seed=1, variant=variant)
+    for clue_id in clue_ids:
+        Engine().open_clue(game, clue_id)
+    return game
+
+
+def test_log_search_shows_only_matching_lines_for_free():
+    game = opened_game("D1", "D2")
+    log = Engine().read_clue(game, "D2")["log"].splitlines()
+    word = log[0].split()[0]
+    at = start(game=game, focus=("clue", "D2"))
+    at.text_input(key="search_D2").set_value(word.upper()).run()
+    shown = at.code[0].value.splitlines()
+    assert shown == [line for line in log if word.lower() in line.lower()]
+    assert at.session_state["game"]["clock"] == game.clock
+
+
+def test_d4_shows_the_payoff_chart():
+    at = start(game=opened_game("D4"), focus=("clue", "D4"))
+    assert len(at.get("vega_lite_chart")) == 1
+
+
+def test_a_cold_case_also_offers_the_confrontation():
+    game = Engine().new_game(seed=1, variant="C")
+    game.status = "cold"
+    at = start(game=game)
+    scene = next(e for e in at.expander if e.label.startswith("📜"))
+    assert scene.markdown
+
+
+def test_an_irrelevant_card_catches_no_one():
+    at = start(game=opened_game("D1"), focus=("suspect", "exchange"), suspect="exchange")
+    at.pills(key="show_clue").set_value("D1").run()
+    assert "Caught lying" not in page(at)
+    assert at.session_state["game"]["contradictions"] == []
+
+
+def test_showing_the_same_card_again_does_not_catch_twice():
+    at = start(game=opened_game("L4"), focus=("suspect", "companion"), suspect="companion")
+    at.pills(key="show_clue").set_value("L4").run()
+    at.pills(key="show_clue").set_value("L4").run()
+    assert not at.exception
+    assert page(at).count("Caught lying") == 1
+    assert len(at.session_state["game"]["contradictions"]) == 1
