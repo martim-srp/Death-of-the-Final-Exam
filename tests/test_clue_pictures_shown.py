@@ -29,10 +29,10 @@ def pictures(at):
 BASELINE_IMAGES = 1  # the Nova SBE logo in the header
 
 
-def test_every_clue_has_a_picture_except_the_faculty_corridor():
+def test_every_clue_has_a_picture_except_the_chart_and_the_corridor():
     ids = {c["id"] if isinstance(c, dict) else c for c in load_case()["clues"]}
     with_picture = {p.stem for p in (ROOT / "assets" / "clues").glob("*.webp")}
     assert with_picture <= ids
-    assert ids - with_picture == {"L4"}
+    assert ids - with_picture == {"D4", "L4"}
 
 
