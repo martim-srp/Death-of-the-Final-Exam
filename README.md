@@ -86,8 +86,8 @@ game keeps working. The suspect answers with scripted lines from `case.json`, an
 picked from keywords in the question.
 
 - **Limit:** the free Requesty plan allows 200 requests per day, shared by the whole account.
-- **Per game:** each game makes at most 25 AI calls (`MAX_AI_CALLS`). After that, the suspects
-  use the scripted lines.
+- **Per game:** each game makes at most 12 AI calls (`MAX_AI_CALLS`), so about 16 games a day fit in the
+  free plan. After that, the suspects use the scripted lines.
 
 ### Where the data is stored
 

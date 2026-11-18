@@ -180,13 +180,13 @@ def test_call_cap_survives_resume(case):
         calls += 1
         return '{"reply": "I was at dinner.", "topic": "alibi"}'
 
-    for _ in range(25):
+    for _ in range(ai.MAX_AI_CALLS):
         ai.ask(engine, game, "professor", "Where were you?", complete=complete)
     resumed = Game.from_dict(game.to_dict())
     result = ai.ask(engine, resumed, "professor", "What is Question 5?", complete=complete)
 
-    assert calls == 25
-    assert resumed.clock == 260
+    assert calls == ai.MAX_AI_CALLS
+    assert resumed.clock == (ai.MAX_AI_CALLS + 1) * 10
     assert result["unlocked"] == ["D3"]
     assert result["reply"] == engine.character_brief(resumed, "professor")["topic_lines"]["exam"]
 
