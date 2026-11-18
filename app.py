@@ -472,13 +472,19 @@ header[data-testid="stHeader"] { display: none; }
 .facedown.locked .ic { width: 40px; height: 40px; }
 .medals span .ic { width: 15px; height: 15px; }
 .chat .unlock .ic, .chat .caught b .ic { width: 14px; height: 14px; }
-.pick-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; justify-items: center; margin: 0.7rem 0 0.6rem; }
-.pick-row > div { width: 100%; display: flex; justify-content: center; padding: 4px; }
+/* Detective pick: the portraits are the buttons. The chosen one wears the red ring, the other waits dimmed. */
+.st-key-pick_buttons { margin: 0.7rem 0 0.6rem; }
 .st-key-pick_buttons [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 1rem; }
-.st-key-pick_buttons [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important; }
-.detective-pick { width: 120px !important; height: 150px !important; max-width: 100%; object-fit: cover !important; display: block;
-  margin: 0 auto 0.4rem; border-radius: 10px; border: 3px solid transparent; }
-.detective-pick.picked { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
+.st-key-pick_buttons [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important;
+  display: flex; justify-content: center; }
+.st-key-pick_buttons [data-testid="stColumn"] > div { align-items: center; }
+.st-key-pick_buttons button { width: 120px; height: 150px; min-height: 0; padding: 0; border-radius: 12px;
+  border: 3px solid transparent; background-color: #241c18; background-size: cover; background-position: center top;
+  filter: grayscale(0.55) brightness(0.7); transition: filter .2s, border-color .2s, box-shadow .2s, transform .2s; }
+.st-key-pick_buttons button:hover { filter: none; border-color: var(--gold); transform: translateY(-2px); }
+.st-key-pick_buttons button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.st-key-pick_buttons button[kind="primary"] { filter: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
+.st-key-pick_buttons button p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes slam { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: scale(1); } }
 @keyframes stamp { from { opacity: 0; transform: translate(-50%, -50%) rotate(-14deg) scale(3); } to { opacity: 1; transform: translate(-50%, -50%) rotate(-14deg) scale(1); } }
@@ -499,7 +505,7 @@ header[data-testid="stHeader"] { display: none; }
   .facts { grid-template-columns: repeat(2, 1fr); }
   .finale .mug, .finale .mug img { width: 160px; }
   .finale h1 { font-size: 2rem; }
-  .detective-pick { width: 110px !important; height: 138px !important; }
+  .st-key-pick_buttons button { width: 110px; height: 138px; }
 }
 </style>
 """
@@ -1102,21 +1108,16 @@ def intro_dialog():
         st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + HOW_TO_PLAY, unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
-        # The portraits are one two-cell grid and the buttons one two-column row below it,
-        # so each portrait sits centred over its own button at every width.
-        st.markdown(
-            '<div class="pick-row">' + "".join(
-                f'<div><img class="detective-pick{" picked" if avatar == chosen else ""}" '
-                f'src="{board.find_picture("detectives", avatar) or ""}" alt=""></div>'
-                for avatar in AVATARS
-            ) + "</div>",
-            unsafe_allow_html=True,
-        )
+        # Each portrait is its own button (keyboard and screen readers get "Play as her/him").
+        st.markdown("<style>" + "".join(
+            f'.st-key-pick_{avatar} button {{ background-image: url("{board.find_picture("detectives", avatar) or ""}"); }}'
+            for avatar in AVATARS
+        ) + "</style>", unsafe_allow_html=True)
         with st.container(key="pick_buttons"):
             for column, (avatar, text) in zip(st.columns(len(AVATARS)), AVATARS.items()):
                 with column:
                     st.button(text, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
-                              use_container_width=True, on_click=pick_detective, args=(avatar,))
+                              help=None, on_click=pick_detective, args=(avatar,))
         st.text_input("Your name", key="player_name", placeholder="Detective", max_chars=24)
         if st.button("Start the investigation", type="primary", icon=":material/search:", use_container_width=True):
             finish_intro()
