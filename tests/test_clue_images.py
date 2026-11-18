@@ -1,0 +1,46 @@
+"""Tests for the clue evidence pictures in assets/clues/."""
+
+from game.case import load_case
+from game.clue_images import CLUE_IMAGES_DIR, clue_image_path
+
+MAX_BYTES = 100_000
+
+
+def _pictures():
+    return sorted(CLUE_IMAGES_DIR.glob("*"))
+
+
+def test_there_are_clue_pictures():
+    assert _pictures(), "assets/clues/ should hold at least one picture"
+
+
+def test_every_picture_belongs_to_a_clue():
+    clues = load_case()["clues"]
+    for path in _pictures():
+        assert path.suffix == ".webp", f"{path.name} should be a .webp file"
+        assert path.stem in clues, f"{path.name} does not match any clue id"
+
+
+def test_pictures_are_real_small_webp_files():
+    for path in _pictures():
+        data = path.read_bytes()
+        assert data[:4] == b"RIFF" and data[8:12] == b"WEBP", f"{path.name} is not a WebP image"
+        assert len(data) <= MAX_BYTES, f"{path.name} is {len(data)} bytes, over {MAX_BYTES}"
+
+
+def test_lookup_finds_an_existing_picture():
+    first = _pictures()[0]
+    assert clue_image_path(first.stem) == first
+
+
+def test_lookup_returns_none_for_a_clue_without_a_picture(tmp_path):
+    assert clue_image_path("D1", folder=tmp_path) is None
+
+
+def test_lookup_returns_none_for_an_unknown_clue():
+    assert clue_image_path("Z9") is None
+
+
+def test_lookup_rejects_ids_that_are_not_clue_ids():
+    for bad in ["../cover", "D1/../../app", "", "d1", "D1.webp", None, 5]:
+        assert clue_image_path(bad) is None
