@@ -243,9 +243,7 @@ def on_act(key):
         return
     kind, value = parsed
     if kind == "intro":
-        st.session_state.intro_done = False
-    elif kind == "tour_done":
-        st.session_state.tour_done = True
+        st.session_state.guide_open = True
     else:
         set_focus(kind, value)
 
@@ -396,9 +394,9 @@ header[data-testid="stHeader"] { display: none; }
 .lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
 .lead b { font-family: var(--label); color: #e8c27a; }
-.tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
-.tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
-.tips div span { display: block; font-size: 1.6rem; }
+.coach-hint { margin: 0.45rem 0 0.8rem; padding: 0.6rem 0.75rem; border-left: 3px solid #e8c27a;
+  border-radius: 0 9px 9px 0; background: #241c18; color: #cdbfa8; font-size: 0.86rem; line-height: 1.4; }
+.coach-hint b { color: #e8c27a; }
 .lie { background: #2a1714; border: 1px solid #5a2a22; border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.88rem; }
 .lie b { color: #e0645a; }
 .verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; margin-bottom: 0.6rem; }
@@ -444,6 +442,7 @@ header[data-testid="stHeader"] { display: none; }
 .whos-who li { display: flex; align-items: center; gap: 0.55rem; margin: 0; font-size: 0.8rem; line-height: 1.25; color: #cdbfa8; }
 .whos-who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; flex: 0 0 auto; border: 1px solid #3a2e28; }
 .whos-who b { display: block; font-family: var(--display); font-size: 0.9rem; color: #efe6d8; }
+.guide-nudge { margin: 0.4rem 0 0.8rem; color: #cdbfa8; font-size: 0.9rem; }
 .how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
 .how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
 .how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
@@ -472,7 +471,6 @@ header[data-testid="stHeader"] { display: none; }
 .proof { display: flex; flex-direction: column; gap: 0.15rem; margin: -0.4rem 0 0.7rem; font-size: 0.8rem; color: #a89a88; }
 .proof .ic { color: #e8c27a; width: 13px; height: 13px; }
 .proof em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
-.tips div span .ic { width: 26px; height: 26px; color: #e8c27a; }
 .facedown.locked .ic { width: 40px; height: 40px; }
 .medals span .ic { width: 15px; height: 15px; }
 .chat .unlock .ic, .chat .caught b .ic { width: 14px; height: 14px; }
@@ -502,7 +500,6 @@ header[data-testid="stHeader"] { display: none; }
   .st-key-case_summary [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.4rem 0.8rem; }
   .st-key-case_summary [data-testid="stColumn"] { min-width: 28% !important; width: 28% !important; flex: 1 1 28% !important; }
   .st-key-next_phone button { border-color: #e8c27a; color: #e8c27a; }
-  .tips { grid-template-columns: 1fr; }
   .st-key-suspect_row { display: none; }
   [data-testid="stDialog"] [data-testid="stColumn"]:has(.cover-art) { display: none; }
   .story { font-size: 1rem; }
@@ -557,7 +554,6 @@ def draw_board(game, clues, fresh):
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
         + pending_sound()
-        + (board.tutorial_html() if show_tour(game) else "")
     )
     deck(data=markup, key="board", on_act_change=functools.partial(on_act, "board"))
 
@@ -566,11 +562,6 @@ def pending_sound():
     """The sound asked for by the last action, once."""
     name = st.session_state.pop("sfx", None)
     return board.sfx_html(name, st.session_state.get("sfx_n", 0)) if name else ""
-
-
-def show_tour(game):
-    """The first-play tour: once, after the intro, before the first move."""
-    return bool(st.session_state.get("intro_done")) and not st.session_state.get("tour_done") and not game.history
 
 
 def draw_suspects(game):
@@ -598,13 +589,17 @@ def panel_home(game):
         if step:
             st.markdown(f"### {step['text']}")  # the next step, once the first move is made
     else:
-        st.markdown("### Where to start")
-        st.markdown(
-            f'<div class="tips"><div><span>{board.icon("search")}</span>Tap a red card or pin to search it</div>'
-            f'<div><span>{board.icon("ask")}</span>Tap a face to interrogate</div>'
-            f'<div><span>{board.icon("bolt")}</span>Show a suspect the clue that breaks their story</div></div>',
-            unsafe_allow_html=True,
-        )
+        step = engine.next_step(game)
+        if step and step["do"] == "search":
+            clue_id = step["clue"]
+            is_place = clue_id in board.MAP_PINS
+            control = "map pin" if is_place else "card in Evidence"
+            action = "search" if is_place else "open"
+            title = case["clues"][clue_id]["title"]
+            st.markdown(f"### Start with the glowing {control}")
+            st.markdown(f'<div class="coach-hint">Tap the highlighted <b>?</b> {control} to {action} '
+                        f'<b>{esc(clue_id)}. {esc(title)}</b>. It costs {case["clock"]["clue_cost"]} minutes.</div>',
+                        unsafe_allow_html=True)
     caught = engine.contradiction_list(game)
     if caught:
         st.markdown(f"### Lies caught · {len(caught)}")
@@ -769,6 +764,15 @@ def panel_suspect(game, suspect):
     cost = case["clock"]["question_cost"]
     step = engine.next_step(game) or {}
     tip = step if step.get("suspect") == suspect else {}
+    if tip.get("do") == "show":
+        st.markdown('<div class="coach-hint">Choose the arrow-marked card below to test this suspect’s story. '
+                    f'Showing a card costs {cost} minutes.</div>', unsafe_allow_html=True)
+    elif tip.get("do") == "ask":
+        st.markdown('<div class="coach-hint">Choose the suggested question below to follow this lead. '
+                    f'Asking costs {cost} minutes.</div>', unsafe_allow_html=True)
+    elif not any(e.get("action") in ("ask", "present") and e.get("suspect") == suspect for e in game.history):
+        st.markdown('<div class="coach-hint">Choose a suggested question below, or show an opened clue to test this suspect’s story. '
+                    f'Each question costs {cost} minutes.</div>', unsafe_allow_html=True)
     asked = {e["topic"] for e in game.history if e.get("action") == "ask" and e.get("suspect") == suspect}
     st.pills(f"Ask · {cost} min", list(TOPICS), format_func=lambda t: topic_label(t, asked, tip.get("topic")),
              key="ask_topic", on_change=ask_topic)
@@ -832,6 +836,8 @@ def panel_clue(game, clue_id, fresh):
         return
     if item["state"] == "available":
         st.markdown('<div class="facedown">?</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="coach-hint">Tap the button to reveal this clue. It costs {case["clock"]["clue_cost"]} minutes.</div>',
+                    unsafe_allow_html=True)
         if st.button(f"{verb} · {case['clock']['clue_cost']} min", key=f"open_{clue_id}", type="primary", icon=":material/search:",
                      use_container_width=True):
             if run(engine.open_clue, clue_id):
@@ -867,7 +873,8 @@ def panel_clue(game, clue_id, fresh):
         st.caption("All or nothing: the flat line is what the Class Rep gets if the exam is annulled.")
     if clue["hidden_text"] and st.toggle("Look closer", key=f"hidden_{clue_id}"):
         st.warning(clue["hidden_text"])
-    st.caption("Tap a suspect's face, then show them this card.")
+    st.markdown('<div class="coach-hint">When you are ready, tap a suspect’s portrait and choose this card under '
+                '<b>Show a card</b> to test their story.</div>', unsafe_allow_html=True)
 
 
 # ---- Panel: case sheet and accusation ----------------------------------------------------
@@ -993,6 +1000,8 @@ def panel_accuse(game):
     strikes_left = case["max_strikes"] - game.strikes
     st.markdown(f'<div class="kicker">The accusation · {strikes_left} {"try" if strikes_left == 1 else "tries"} left</div>'
                 "<h3>Who did it, how, where and why?</h3>", unsafe_allow_html=True)
+    st.markdown('<div class="coach-hint">Choose one answer in each row. A wrong accusation uses one try.</div>',
+                unsafe_allow_html=True)
     verdict = st.session_state.get("verdict")
     if verdict is not None:
         st.markdown(verdict_html(verdict), unsafe_allow_html=True)
@@ -1107,9 +1116,23 @@ def finish_intro():
     st.session_state.intro_done = True
 
 
+def close_guide():
+    st.session_state.guide_open = False
+
+
+@st.dialog("Quick guide", width="small", on_dismiss=close_guide)
+def quick_guide():
+    """The full explanation, available from the book button whenever it is needed."""
+    st.markdown("Find who leaked the exam, how it happened, where and why—before 09:00.")
+    st.markdown(HOW_TO_PLAY, unsafe_allow_html=True)
+    if st.button("Back to the case", type="primary", use_container_width=True, key="close_guide"):
+        close_guide()
+        st.rerun()
+
+
 @st.dialog("The exam has leaked", width="large", on_dismiss=finish_intro)
 def intro_dialog():
-    """The story and the rules in one glance, and who you are, before the first move."""
+    """A short case briefing and detective choice before the first move."""
     cover = board.data_uri(str(COVER)) if SHOW_COVER else None
     if cover:
         art, brief = st.columns([5, 6], gap="large")
@@ -1119,7 +1142,9 @@ def intro_dialog():
         brief = st.container()
     with brief:
         st.markdown(f'<div class="kicker">{esc(TITLE)}</div>', unsafe_allow_html=True)
-        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + whos_who_html() + HOW_TO_PLAY, unsafe_allow_html=True)
+        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + whos_who_html()
+                    + '<p class="guide-nudge">You’ll get short hints as you play. Open the book anytime for the quick guide.</p>',
+                    unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
         # Each portrait is its own button (keyboard and screen readers get "Play as her/him").
@@ -1184,3 +1209,5 @@ with side_column:
 # Called last, so the story and rules open over the game on a new case.
 if not st.session_state.get("intro_done", bool(game.history)):
     intro_dialog()
+elif st.session_state.get("guide_open"):
+    quick_guide()

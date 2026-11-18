@@ -520,13 +520,11 @@ def test_only_known_sounds_are_drawn():
     assert board.sfx_html("<script>", 1) == ""
 
 
-def test_the_tour_shows_once_on_a_new_case_after_the_intro():
+def test_a_new_case_shows_inline_guidance_instead_of_a_blocking_tour():
     at = start()
-    assert 'class="tour"' in board_markup(at)
-    assert board_markup(at).count('class="step"') == 4
-    at.session_state["tour_done"] = True
-    at.run()
     assert 'class="tour"' not in board_markup(at)
+    assert "Start with the glowing card in Evidence" in page(at)
+    assert "D1. The leaked PDF" in page(at)
 
 
 def test_no_tour_on_a_resumed_game_or_before_the_intro():
