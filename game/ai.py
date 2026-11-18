@@ -13,7 +13,7 @@ from openai import OpenAI
 from game.engine import GameError
 
 MAX_QUESTION_LENGTH = 300
-MAX_AI_CALLS = 25
+MAX_AI_CALLS = 12  # per game; the free Requesty plan allows 200 requests a day for the whole team
 MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
@@ -118,6 +118,9 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
     attempted = False
     topic = fallback_topic
     reply = None
+    # Why the suspect gave a scripted answer instead of the model's, if they did.
+    # Recorded in the game's history so the interface can tell the player.
+    fallback = "limit"
 
     if ai_calls < MAX_AI_CALLS:
         if complete is None:
@@ -131,11 +134,13 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
 
         if complete is None:
             logging.warning("AI: no REQUESTY_API_KEY found, using scripted replies")
+            fallback = "no_key"
         else:
             attempted = True
             try:
                 answer = _parse_answer(complete(system_prompt(brief, topics), text), topics)
             except Exception as error:
+                fallback = "failed"
                 status = getattr(error, "status_code", None)
                 if isinstance(status, int) and 100 <= status <= 599:
                     logging.warning("AI: model call failed (%s %d)", type(error).__name__, status)
@@ -143,6 +148,7 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
                     logging.warning("AI: model call failed (%s)", type(error).__name__)
             else:
                 if answer is None:
+                    fallback = "unreadable"
                     logging.warning("AI: could not parse model reply")
                 else:
                     reply, topic = answer
@@ -151,6 +157,8 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
     if attempted:
         # History is already serialized by the engine and survives a resume link.
         game.history[-1]["ai_call"] = True
+    if reply is None:
+        game.history[-1]["fallback"] = fallback
     if reply is None:
         reply = brief["topic_lines"].get(topic) or brief["cover"]
     return {"reply": reply, "unlocked": result["unlocked"]}

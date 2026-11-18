@@ -35,6 +35,14 @@ AVATARS = {"she": "Play as her", "he": "Play as him"}
 DEFAULT_AVATAR = "she"
 COLUMNS = ("who", "how", "where", "why")
 COLUMN_ICONS = {"who": "👤", "how": "🔧", "where": "📍", "why": "💭"}
+# Shown under a free-text answer when the suspect gave a scripted line instead of the AI's.
+# Keys are the reasons game/ai.py records in the game's history.
+FALLBACK_NOTES = {
+    "no_key": "🤖 The AI isn't connected, so this is the suspect's scripted answer.",
+    "failed": "🤖 The AI didn't answer this time, so this is the suspect's scripted answer.",
+    "unreadable": "🤖 The AI's answer couldn't be read, so this is the suspect's scripted answer.",
+    "limit": "🤖 This case has used up its AI questions. Suspects now give their scripted answers.",
+}
 # The questions a player can tap, by topic: (button label, what the detective says).
 TOPICS = {
     "alibi": ("📍 Last night?", "Where were you last night?"),
@@ -105,7 +113,8 @@ def run(action, *args):
     try:
         result = action(game, *args)
     except GameError as error:
-        st.session_state.flash = ("error", str(error))
+        # A pop-up, so the player sees it wherever they are on the page.
+        st.session_state.refusal = str(error)
         return None
     save(game)
     unlocked = [c for c in engine.clue_list(game) if c["id"] in locked and c["state"] != "locked"]
@@ -310,6 +319,7 @@ header[data-testid="stHeader"] { background: transparent; }
 .bubble.you { margin-left: auto; flex-direction: row-reverse; }
 .bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
 .bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
+.bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: sans-serif; }
 .bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem "Courier New", monospace; color: #e8c27a; }
 .caught { margin: 0.2rem auto 0.3rem; text-align: center; animation: slam 0.5s cubic-bezier(.2,1.6,.4,1) both; }
 .caught b { display: inline-block; border: 3px solid #e0645a; color: #e0645a; padding: 0.1rem 0.6rem; transform: rotate(-4deg);
@@ -341,6 +351,7 @@ header[data-testid="stHeader"] { background: transparent; }
 [class*="st-key-sheet_"] button[kind="pillsActive"] {
   text-decoration: line-through; text-decoration-color: #e0645a; text-decoration-thickness: 2px; opacity: 0.6;
   background: #2a1714 !important; border-color: #5a2a22 !important; color: #efe6d8 !important; }
+.st-key-case_summary [data-testid="stMetricValue"] { font-size: 1.4rem; }
 .st-key-accuse_go button { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.7rem; }
 /* The finale */
 .finale { text-align: center; padding: 0.5rem 0 0.2rem; }
@@ -543,7 +554,9 @@ def chat_html(log, suspect, titles):
         unlock = ""
         if entry.get("unlocked"):
             unlock = '<span class="unlock">🔓 Unlocked: ' + esc(", ".join(f"{i}. {titles.get(i, '')}" for i in entry["unlocked"])) + "</span>"
-        rows.append(f'<div class="bubble them"{style}><img src="{them}" alt=""><div class="say">{esc(entry["text"])}{unlock}</div></div>')
+        note = FALLBACK_NOTES.get(entry.get("fallback"))
+        note = f'<span class="note">{esc(note)}</span>' if note else ""
+        rows.append(f'<div class="bubble them"{style}><img src="{them}" alt=""><div class="say">{esc(entry["text"])}{unlock}{note}</div></div>')
         for item in entry.get("caught", []):
             rows.append(
                 f'<div class="caught"{style}><b>⚡ Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
@@ -592,11 +605,17 @@ def panel_suspect(game, suspect):
                  help="Show them evidence. The right card breaks a lie.")
     question = st.chat_input(f"Or type your own question ({cost} min)", max_chars=ai.MAX_QUESTION_LENGTH, key="typed")
     if question:
+
+        def ask_and_note_fallback(game):
+            answer = ai.ask(engine, game, suspect, question, cloud_key=cloud_key)
+            return answer, game.history[-1].get("fallback")
+
         with st.spinner(f"{brief['name']} is thinking…"):
-            result = run(lambda game: ai.ask(engine, game, suspect, question, cloud_key=cloud_key))
+            result = run(ask_and_note_fallback)
         if result:
+            answer, fallback = result
             say(suspect, {"who": "you", "text": question})
-            say(suspect, {"who": "them", "text": result["reply"], "unlocked": result["unlocked"]})
+            say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback})
         st.rerun()
 
 
@@ -697,6 +716,22 @@ def panel_accuse(game):
 # ---- The finale ------------------------------------------------------------------------
 
 
+def case_summary(game):
+    """How the player did: time, clues, questions, lies caught and wrong accusations."""
+    clues = engine.clue_list(game)
+    opened = sum(1 for c in clues if c["state"] == "open")
+    questions = sum(1 for event in game.history if event.get("action") in ("ask", "present"))
+    limit = case["clock"]["limit_minutes"]
+    hours, minutes = divmod(game.clock, 60)
+    with st.container(border=True, key="case_summary"):
+        time_col, clue_col, question_col, caught_col, wrong_col = st.columns(5)
+        time_col.metric("Time used", f"{hours}h {minutes:02d}m", help=f"Out of {limit // 60} hours, before 09:00.")
+        clue_col.metric("Clues opened", f"{opened} of {len(clues)}")
+        question_col.metric("Questions asked", questions)
+        caught_col.metric("Lies caught", len(game.contradictions))
+        wrong_col.metric("Wrong accusations", game.strikes)
+
+
 def finale(game):
     solution = engine.solution(game)
     culprit = solution["who"]
@@ -715,6 +750,7 @@ def finale(game):
     )
     _, middle, _ = st.columns([1, 3, 1])
     with middle:
+        case_summary(game)
         scene = denouement(game)
         if scene:
             with st.expander("📜 Half past seven, the boardroom: read the confrontation"):
@@ -786,6 +822,9 @@ if flash:
 toast = st.session_state.pop("toast", None)
 if toast:
     st.toast(toast[0], icon=toast[1])
+refusal = st.session_state.pop("refusal", None)
+if refusal:
+    st.toast(refusal, icon="⚠️")
 fresh = st.session_state.pop("fresh", [])
 
 if game.status != "playing":
