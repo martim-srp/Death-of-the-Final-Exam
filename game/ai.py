@@ -13,7 +13,7 @@ from openai import OpenAI
 from game.engine import GameError
 
 MAX_QUESTION_LENGTH = 300
-MAX_AI_CALLS = 25
+MAX_AI_CALLS = 12  # per game; the free Requesty plan allows 200 requests a day for the whole team
 MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
