@@ -125,9 +125,9 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
   `.gitignore`.
 - **Logs:** when the AI call fails, the app logs only the error's type and HTTP status. It never
   logs the key, the prompt, the player's question or the model's reply.
-- **Error pages:** players see only the type of an unexpected error, never its message or
-  traceback (`showErrorDetails = "type"` in `.streamlit/config.toml`). The full error goes to the
-  server log.
+- **Error pages:** players see a generic message for an unexpected error, never its type,
+  message or traceback (`showErrorDetails = "none"` in `.streamlit/config.toml`). The full
+  error goes to the server log.
 - **Input:** questions are limited to 300 characters, and empty or blank questions are rejected
   before they cost any time. Typed text is shown as plain text, never as HTML. A model reply
   longer than 600 characters is cut.

@@ -304,7 +304,7 @@ def test_a_reply_of_the_wrong_shape_gives_the_scripted_answer(engine, raw):
 
 def test_players_never_see_error_details():
     config = tomllib.loads((ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
-    assert config["client"]["showErrorDetails"] == "type"
+    assert config["client"]["showErrorDetails"] == "none"
 
 
 def test_secrets_files_are_ignored_by_git():
