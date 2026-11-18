@@ -302,6 +302,9 @@ def test_a_wrong_accusation_shows_which_parts_are_right():
     at = start(focus=("accuse", None))
     pick(at, **{**solution(), "who": "exchange"})
     click(at, "⚖️ Accuse")
+    assert at.session_state["game"]["strikes"] == 0
+    assert at.session_state.get("verdict") is None
+    click(at, "Sim, acusar")
     assert at.session_state["game"]["strikes"] == 1
     assert at.session_state["verdict"] == ["how", "where", "why"]
     assert page(at).count('class="ok"') == 3 and page(at).count('class="no"') == 1
@@ -312,6 +315,8 @@ def test_the_right_accusation_closes_the_case_with_the_reveal():
     at = start(focus=("accuse", None))
     pick(at, **solution())
     click(at, "⚖️ Accuse")
+    assert at.session_state["game"]["status"] == "playing"
+    click(at, "Sim, acusar")
     assert at.session_state["game"]["status"] == "solved"
     assert "GUILTY" in page(at) and "Case closed" in page(at)
     assert board.find_picture("suspects", solution()["who"]) in page(at)
