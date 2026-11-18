@@ -434,6 +434,10 @@ header[data-testid="stHeader"] { display: none; }
   -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%);
   mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%); animation: rise 0.8s ease-out; }
 .story { font-family: var(--display); font-size: 1.12rem; line-height: 1.5; margin: 0.2rem 0 0.9rem; color: #efe6d8; }
+.whos-who { list-style: none; margin: 0.3rem 0 0.9rem; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.45rem 0.9rem; }
+.whos-who li { display: flex; align-items: center; gap: 0.55rem; margin: 0; font-size: 0.8rem; line-height: 1.25; color: #cdbfa8; }
+.whos-who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; flex: 0 0 auto; border: 1px solid #3a2e28; }
+.whos-who b { display: block; font-family: var(--display); font-size: 0.9rem; color: #efe6d8; }
 .how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
 .how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
 .how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
@@ -1038,9 +1042,19 @@ def finale(game):
 # ---- The start screen ------------------------------------------------------------------
 
 STORY_HTML = (
-    "Thursday, 23:47, a storm over Carcavelos. Tomorrow's <b>Semiconductor Valuation</b> final has just leaked "
-    "to all 212 students. The Dean wants a name <b>before 09:00</b>."
+    "Thursday, 23:47, a storm over Carcavelos. An anonymous number posts tomorrow's <b>Semiconductor Valuation</b> "
+    "final in the class group chat, to all 212 students. The exam is at <b>09:00</b>. Find out who leaked it before then."
 )
+
+
+def whos_who_html():
+    """The five suspects, one short line each, so a new player knows who is who."""
+    return '<div class="kicker">Who\'s who</div><ul class="whos-who">' + "".join(
+        f'<li><img src="{board.find_picture("suspects", sid) or ""}" alt="">'
+        f'<span><b>{esc(board.short_name(s["name"]))}</b>{esc(s.get("role", ""))}</span></li>'
+        for sid, s in case["suspects"].items()
+    ) + "</ul>"
+
 
 HOW_TO_PLAY = (
     '<ol class="how-to">'
@@ -1073,7 +1087,7 @@ def intro_dialog():
         brief = st.container()
     with brief:
         st.markdown(f'<div class="kicker">{esc(TITLE)}</div>', unsafe_allow_html=True)
-        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + HOW_TO_PLAY, unsafe_allow_html=True)
+        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + whos_who_html() + HOW_TO_PLAY, unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
         # The portraits are one two-cell grid and the buttons one two-column row below it,
