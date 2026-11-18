@@ -760,12 +760,33 @@ with st.container(key="header"):
 
 # ---- Case closed ----------------------------------------------------------------
 
+def case_summary(game):
+    """How the player did: time, clues, questions, contradictions, wrong accusations and badges."""
+    clues = engine.clue_list(game)
+    opened = sum(1 for c in clues if c["state"] == "open")
+    questions = sum(1 for event in game.history if event.get("action") in ("ask", "present"))
+    limit = case["clock"]["limit_minutes"]
+    hours, minutes = divmod(game.clock, 60)
+    with st.container(border=True, key="case_summary"):
+        st.markdown("**Your case**")
+        time_col, clue_col, question_col, caught_col, wrong_col = st.columns(5)
+        time_col.metric("Time used", f"{hours}h {minutes:02d}m", help=f"Out of {limit // 60} hours, before 09:00.")
+        clue_col.metric("Clues opened", f"{opened} of {len(clues)}")
+        question_col.metric("Questions asked", questions)
+        caught_col.metric("Lies caught", len(game.contradictions))
+        wrong_col.metric("Wrong accusations", game.strikes)
+        badges = engine.badge_list(game)
+        if badges:
+            st.markdown("🏅 " + " · ".join(f"**{plain(b['title'])}**" for b in badges))
+
+
 if game.status != "playing":
     solution = engine.solution(game)
     if game.status == "solved":
         st.success(f"Case solved at {engine.clock_label(game)}.")
     else:
         st.error("The case has gone cold.")
+    case_summary(game)
     scene = denouement(game)
     if scene:
         with st.container(border=True):
