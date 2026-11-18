@@ -5,3 +5,4 @@ primaryColor = "#c0392b"
 backgroundColor = "#14100e"
 secondaryBackgroundColor = "#241c18"
 textColor = "#efe6d8"
+headingFont = "serif"  # a noir, typewriter-era feel for titles

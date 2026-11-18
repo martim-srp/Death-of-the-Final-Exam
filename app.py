@@ -31,6 +31,8 @@ MAP_PINS = {
     "L4": (0.537, 0.550, "Faculty corridor"),  # the graduation cap pin, Professor's office
     "L5": (0.672, 0.115, "Beach café"),  # the coffee cup pin
 }
+# Optional evidence pictures, one <clue id>.<png|jpg|webp> each (D1.webp, L4.png…), shown inside an opened clue.
+CLUE_PICTURES = Path(__file__).resolve().parent / "assets" / "clues"
 PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.<png|jpg|webp|svg> each
 # File types a portrait may have, in order of preference: a picture someone supplies
 # (PNG, JPG or WebP) wins over the drawn SVG of the same suspect.
@@ -43,7 +45,28 @@ PORTRAIT_TYPES = {
 }
 TITLE = load_case()["title"]  # the game's name lives in data/case.json
 
-st.set_page_config(page_title=TITLE, page_icon="🕵️", layout="wide")
+# The detectives a player can be. Purely cosmetic: shown on their side of the chat.
+# The detectives a player can be: assets/detectives/<id>.webp, 4:5 like the suspects. Purely cosmetic.
+DETECTIVES = Path(__file__).resolve().parent / "assets" / "detectives"
+AVATARS = {"she": "Play as her", "he": "Play as him"}
+DEFAULT_AVATAR = "she"
+# A place drawn on the map with no clue behind it: (x, y) as fractions, like MAP_PINS.
+# The text stays neutral, because the restaurant is also an answer you can pick under "Where".
+MAP_SPOTS = {"chiado": (0.088, 0.663, "Restaurant in Chiado", "Off campus, across Lisbon. Nothing to search here tonight.")}
+# The tabs. Their labels are also the tab widget's values, so a portrait can switch to questioning.
+MAP_TAB, CASE_TAB, QUESTION_TAB, ACCUSE_TAB = "🗺️ Campus map", "📁 Case file", "🗣️ Question suspects", "⚖️ Accuse"
+# What the detective says when they pick a topic instead of typing.
+TOPIC_QUESTIONS = {
+    "alibi": "Where were you last night?",
+    "exam": "What do you know about tomorrow's exam?",
+    "report": "Tell me about the report.",
+    "work": "What is your job here?",
+    "teaching_assistant": "What can you tell me about the Teaching Assistant?",
+    "leak": "Who leaked the paper?",
+    "other": "Is there anything else I should know?",
+}
+
+st.set_page_config(page_title=TITLE, page_icon="🕵️", layout="wide", initial_sidebar_state="collapsed")
 
 
 @st.cache_resource(max_entries=1)
@@ -219,22 +242,82 @@ def contradiction_board(game, clue_titles):
 
 NOIR_CSS = """
 <style>
-.suspect-row { display: flex; gap: 0.75rem; overflow-x: auto; padding: 0.25rem 0 0.5rem; }
-.suspect-card { flex: 1 0 104px; max-width: 160px; text-align: center; position: relative; }
-.suspect-card img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; border-radius: 10px; }
+:root { --card-w: 132px; --img-h: 165px; --card-gap: 12px; }
+@media (max-width: 640px) {
+  :root { --card-w: calc((100vw - 2rem - 4 * 6px) / 5); --img-h: calc(var(--card-w) * 1.25); --card-gap: 6px; }
+}
+.suspect-row { display: flex; gap: var(--card-gap); padding: 0 0 0.25rem; }
+.suspect-card { flex: 0 0 var(--card-w); width: var(--card-w); text-align: center; position: relative; }
+.suspect-card img { width: 100%; height: var(--img-h); object-fit: cover; display: block; border-radius: 10px;
+  border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
+.suspect-card.active img { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
 .suspect-card.ruled-out img { filter: grayscale(1) brightness(0.55); }
 .suspect-card .name { font-family: Georgia, serif; font-size: 0.85rem; margin-top: 0.3rem; line-height: 1.2; }
 .suspect-card .status { font-size: 0.75rem; opacity: 0.75; }
 .suspect-card .caught { color: #e0645a; font-weight: 600; }
-.suspect-card .stamp { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%) rotate(-14deg);
+.suspect-card .stamp { position: absolute; top: calc(var(--img-h) * 0.45); left: 50%; transform: translate(-50%, -50%) rotate(-14deg);
   border: 2px solid #c0392b; color: #c0392b; background: rgba(20, 16, 14, 0.75); padding: 0 0.35rem;
   font: 700 0.8rem "Courier New", monospace; letter-spacing: 0.08em; white-space: nowrap; }
 @media (max-width: 640px) {
-  .suspect-card { flex-basis: 70px; }
-  .suspect-card .name { font-size: 0.75rem; }
-  .suspect-card .status { font-size: 0.65rem; }
+  .suspect-card .name { font-size: 0.68rem; }
+  .suspect-card .status { font-size: 0.6rem; }
+  .suspect-card .stamp { font-size: 0.55rem; }
 }
-.suspect-portrait { width: 140px; max-width: 40vw; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; }
+.suspect-portrait { width: 96px; max-width: 30vw; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; }
+</style>
+"""
+
+# Invisible buttons laid over the portraits, so tapping a face opens the questioning.
+GAME_CSS = """
+<style>
+.st-key-talk_row { display: flex; flex-flow: row nowrap; gap: var(--card-gap); position: relative; z-index: 3;
+  height: var(--img-h); margin-bottom: calc(-1 * var(--img-h) - 1rem); }
+.st-key-talk_row > div { flex: 0 0 var(--card-w) !important; width: var(--card-w) !important; min-width: 0 !important; }
+.st-key-talk_row button { width: 100%; height: var(--img-h); opacity: 0; cursor: pointer; padding: 0; }
+div:has(> .st-key-hud) { position: sticky !important; top: 3.75rem; z-index: 5; background: #14100e !important; }
+.st-key-hud { padding: 0.35rem 0 0.2rem; background: #14100e; gap: 0.2rem; }
+.st-key-hud [data-testid="stProgress"] > div { height: 4px; }
+.st-key-map_pick [role="radiogroup"] { flex-wrap: wrap; }
+.st-key-case_board { gap: 0.1rem; background: #f1e7d6; color: #2a201b; border-radius: 10px; }
+.st-key-case_board p, .st-key-case_board label, .st-key-case_board span { color: #2a201b !important; }
+.st-key-case_board [data-testid="stCaptionContainer"] p { color: #6b5a4e !important; }
+.st-key-case_board .board-head { margin-top: 0.5rem; padding: 0.15rem 0.5rem; background: #2a201b; color: #f1e7d6;
+  border-radius: 4px; font: 600 0.8rem Georgia, serif; letter-spacing: 0.06em; text-transform: uppercase;
+  display: flex; justify-content: space-between; }
+.st-key-case_board .board-head span { color: #e8b4a8 !important; text-transform: none; letter-spacing: 0; }
+.st-key-case_board [data-testid="stCheckbox"] { min-height: 0; }
+.st-key-case_board [data-testid="stMarkdownContainer"]:has(.board-head) { margin-bottom: 0.45rem; }
+.st-key-case_board [data-testid="stCheckbox"] label { font-size: 0.85rem; line-height: 1.25; padding: 0.1rem 0; }
+.st-key-case_board [data-testid="stCheckbox"]:has(input:checked) p { text-decoration: line-through;
+  text-decoration-color: #c0392b; text-decoration-thickness: 2px; opacity: 0.55; }
+.hud { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; align-items: baseline; font-size: 0.95rem; }
+.hud b { font-family: Georgia, serif; font-size: 1.25rem; }
+.hud .low { color: #e0645a; }
+.hud .muted { opacity: 0.85; font-size: 0.85rem; }
+.hud .hud-face { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; vertical-align: middle; }
+.detective-pick { width: 160px !important; height: 200px !important; max-width: 100%; object-fit: cover !important; display: block;
+  margin: 0 auto 0.4rem; border-radius: 10px; border: 3px solid transparent; }
+.detective-pick.picked { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
+.how-to { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; margin: 0.4rem 0 0.8rem; }
+.how-to div { border: 1px solid #3a2e28; border-radius: 10px; padding: 0.6rem 0.7rem; background: #1c1613; font-size: 0.9rem; }
+.how-to b { display: block; font-family: Georgia, serif; font-size: 1rem; margin-bottom: 0.15rem; }
+.st-key-chat_log [data-testid="stChatMessage"] { border-radius: 16px; padding: 0.6rem 0.8rem; width: 86%; }
+[class*="st-key-msg_them"] [data-testid="stChatMessage"] { background: #241c18; border: 1px solid #3a2e28;
+  border-top-left-radius: 4px; }
+[class*="st-key-msg_you"] [data-testid="stChatMessage"] { margin-left: auto; background: #3a1d18;
+  border: 1px solid #6b2a21; border-top-right-radius: 4px; flex-direction: row-reverse; text-align: right; }
+.st-key-chat_log [data-testid="stText"] { font-family: Georgia, serif; font-size: 1rem; }
+@media (max-width: 640px) {
+  .st-key-cover { display: none; }
+  .detective-pick { width: 110px !important; height: 138px !important; }
+  .st-key-header h1 { font-size: 1.9rem; }
+  [data-baseweb="tab"] p, [data-baseweb="tab"] [data-testid="stMarkdownContainer"] p { font-size: 0.78rem !important; }
+  [data-baseweb="tab-list"] { gap: 0.6rem; }
+  div:has(> .st-key-hud) { top: 3.4rem; }
+  .hud { font-size: 0.8rem; gap: 0.2rem 0.7rem; }
+  .hud .long { display: none; }
+  .hud b { font-size: 1.1rem; }
+}
 </style>
 """
 
@@ -249,6 +332,27 @@ def portrait_uri(suspect):
     return None
 
 
+def player_avatar():
+    """The chosen detective's id, falling back to the first one."""
+    choice = st.session_state.get("player_avatar")
+    return choice if choice in AVATARS else DEFAULT_AVATAR
+
+
+@st.cache_data
+def detective_uri(avatar):
+    """The detective's portrait as a data URI, or None if the picture is missing."""
+    path = DETECTIVES / f"{avatar}.webp"
+    if not path.exists():
+        return None
+    return "data:image/webp;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+
+
+def detective_avatar(avatar):
+    """What st.chat_message shows for the player: their portrait, or a plain detective emoji."""
+    path = DETECTIVES / f"{avatar}.webp"
+    return str(path) if path.exists() else "🕵️"
+
+
 def suspect_status(game):
     """For each suspect: whether you have questioned them, and how many contradictions you caught."""
     questioned = {event["suspect"] for event in game.history if "suspect" in event}
@@ -259,12 +363,46 @@ def suspect_status(game):
 
 
 def ruled_out(suspect):
-    """Whether the player has ticked this suspect off in their notebook."""
-    return bool(st.session_state.get(f"note_suspect_{suspect}"))
+    """Whether the player has ticked this suspect off in their notebook or crossed them off the case board."""
+    return bool(st.session_state.get(f"note_suspect_{suspect}") or st.session_state.get(f"board_who_{suspect}"))
+
+
+BOARD_HEADINGS = {"who": "👤 Who", "how": "🔧 How", "where": "📍 Where", "why": "💭 Why"}
+
+
+def case_board():
+    """A deduction grid, like a board game's detective sheet: cross off what it cannot be.
+
+    The player's own notes, kept in this browser session. It never changes the game.
+    """
+    with st.container(key="case_board", border=True):
+        st.markdown("**📋 Case board**")
+        st.caption("Cross off what it cannot be. What is left is your accusation.")
+        for column, heading in BOARD_HEADINGS.items():
+            options = case["accusation"][column]
+            crossed = sum(bool(st.session_state.get(f"board_{column}_{o['id']}")) for o in options)
+            st.markdown(f'<div class="board-head">{heading} <span>{len(options) - crossed} left</span></div>',
+                        unsafe_allow_html=True)
+            for option in options:
+                st.checkbox(option["label"], key=f"board_{column}_{option['id']}")
+
+
+def talk_to(suspect):
+    """Tapping a portrait: pick that suspect and go to the questioning tab."""
+    st.session_state.suspect = suspect
+    st.session_state.view = QUESTION_TAB
 
 
 def suspect_cards(game):
-    """A row of portrait cards: who you have questioned, who you caught out, who you ruled out."""
+    """A row of portrait cards: who you have questioned, who you caught out, who you ruled out.
+
+    An invisible button sits on each portrait, so tapping a face opens the questioning.
+    """
+    st.markdown(GAME_CSS, unsafe_allow_html=True)
+    with st.container(key="talk_row"):
+        for suspect, details in case["suspects"].items():
+            st.button(f"Talk to {details['name']}", key=f"talk_{suspect}", on_click=talk_to, args=(suspect,))
+    picked = st.session_state.get("suspect")
     cards = []
     for suspect, status in suspect_status(game).items():
         name = html.escape(case["suspects"][suspect]["name"].removeprefix("The "))
@@ -275,11 +413,34 @@ def suspect_cards(game):
             line += f' · <span class="caught">⚡ {status["caught"]} caught</span>'
         out = ruled_out(suspect)
         stamp = '<div class="stamp">RULED OUT</div>' if out else ""
+        classes = "suspect-card" + (" ruled-out" if out else "") + (" active" if suspect == picked else "")
         cards.append(
-            f'<div class="suspect-card{" ruled-out" if out else ""}">{picture}{stamp}'
+            f'<div class="{classes}">{picture}{stamp}'
             f'<div class="name">{name}</div><div class="status">{line}</div></div>'
         )
     st.markdown(NOIR_CSS + '<div class="suspect-row">' + "".join(cards) + "</div>", unsafe_allow_html=True)
+    st.caption("Tap a portrait to question that suspect.")
+
+
+def hud(game):
+    """The status bar above the game: the time, what is left, and who you are."""
+    left = engine.time_left(game)
+    hours, minutes = divmod(max(left, 0), 60)
+    strikes = case["max_strikes"] - game.strikes
+    uri = detective_uri(player_avatar())
+    avatar = f'<img class="hud-face" src="{uri}" alt="">' if uri else "🕵️"
+    name = html.escape(st.session_state.get("player_name") or "Detective")
+    low = ' class="low"' if left <= 120 else ""
+    with st.container(key="hud"):
+        st.markdown(
+            f'<div class="hud"><span>⏱ <b>{engine.clock_label(game)}</b> '
+            f"<span{low}>{hours}h {minutes:02d}m<span class=\"long\"> to 09:00</span></span></span>"
+            f"<span>⚖️ {strikes}<span class=\"long\"> accusation{'s' if strikes != 1 else ''}</span> left</span>"
+            f"<span>⚡ {len(game.contradictions)} caught</span>"
+            f'<span class="muted long">{avatar} {name}</span></div>',
+            unsafe_allow_html=True,
+        )
+        st.progress(min(game.clock / case["clock"]["limit_minutes"], 1.0))
 
 
 def notebook(game):
@@ -302,7 +463,7 @@ def notebook(game):
 
 
 def clear_notebook():
-    for key in [k for k in st.session_state if str(k).startswith("note_")]:
+    for key in [k for k in st.session_state if str(k).startswith(("note_", "board_"))]:
         del st.session_state[key]
 
 
@@ -335,8 +496,8 @@ export default function(component) {
         parentElement.appendChild(holder);
     }
     holder.innerHTML = data;
-    holder.querySelectorAll("[data-place]").forEach((pin) => {
-        const go = () => setTriggerValue("place", pin.getAttribute("data-place"));
+    holder.querySelectorAll("[data-place], [data-spot]").forEach((pin) => {
+        const go = () => setTriggerValue("place", pin.getAttribute("data-place") || pin.getAttribute("data-spot"));
         pin.addEventListener("click", go);
         pin.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
     });
@@ -344,10 +505,11 @@ export default function(component) {
 """
 
 MAP_CSS = """
-.campus-map svg { width: 100%; max-width: 560px; height: auto; display: block; border-radius: 10px; }
-.campus-map [data-place] { cursor: pointer; }
-.campus-map [data-place]:hover circle.pin, .campus-map [data-place]:focus circle.pin { stroke-width: 9; }
-.campus-map [data-place]:focus { outline: none; }
+.campus-map svg { width: 100%; height: auto; display: block; border-radius: 10px; }
+.campus-map [data-place], .campus-map [data-spot] { cursor: pointer; }
+.campus-map [data-place]:hover circle.pin, .campus-map [data-place]:focus circle.pin,
+.campus-map [data-spot]:hover circle.pin, .campus-map [data-spot]:focus circle.pin { stroke-width: 9; }
+.campus-map [data-place]:focus, .campus-map [data-spot]:focus { outline: none; }
 """
 
 map_component = st.components.v2.component("campus_map", js=MAP_JS, css=MAP_CSS)
@@ -393,6 +555,14 @@ def campus_svg(points, picked=None):
             f'<text y="4.5" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" '
             f'fill="{text_color}">{p["id"]}</text></g></g>'
         )
+    for spot, (sx, sy, place, _note) in MAP_SPOTS.items():
+        label = html.escape(f"{place}: nothing to search")
+        pins.append(
+            f'<g data-spot="{spot}" transform="translate({sx * width:.0f} {sy * height:.0f}) scale({scale:.3f})" '
+            f'role="button" tabindex="0" aria-label="{label}"><title>{label}</title>'
+            '<circle class="pin" r="29" fill="none" stroke="#5a5048" stroke-width="4" stroke-dasharray="5 5"/>'
+            '<circle r="55" fill="#000" fill-opacity="0"/></g>'
+        )
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
         f'aria-label="Map of the campus"><image href="{uri}" width="{width}" height="{height}"/>'
@@ -407,13 +577,17 @@ def picked_on_map():
     place = state.get("place") if hasattr(state, "get") else getattr(state, "place", None)
     if place in MAP_PINS:
         st.session_state.map_pick = place
+        st.session_state.pop("map_spot", None)
+    elif place in MAP_SPOTS:
+        st.session_state.map_pick = None
+        st.session_state.map_spot = place
 
 
 def campus_map(game):
     """The map tab: tap a pin (or a name below the map) to go there."""
     points = map_points(game)
     by_id = {p["id"]: p for p in points}
-    map_column, place_column = st.columns([3, 2], gap="large")
+    map_column, place_column = st.container(), st.container()
     with map_column:
         map_component(
             data=campus_svg(points, st.session_state.get("map_pick")), key="campus_map",
@@ -422,11 +596,16 @@ def campus_map(game):
         st.caption("🔴 not searched yet · ⚪ searched · ⚫ locked")
     with place_column:
         place = st.pills(
-            "Go to", list(by_id), key="map_pick", format_func=lambda i: by_id[i]["place"]
+            "Go to", list(by_id), key="map_pick", format_func=lambda i: by_id[i]["place"], width="stretch"
         )
         if place is None:
+            spot = st.session_state.get("map_spot")
+            if spot in MAP_SPOTS:
+                st.markdown(f"#### 📍 {MAP_SPOTS[spot][2]}")
+                st.markdown(MAP_SPOTS[spot][3])
             st.caption("Tap a pin on the map, or a place above, to go there.")
             return
+        st.session_state.pop("map_spot", None)
         point = by_id[place]
         st.markdown(f"#### 📍 {plain(point['title'])}")
         if point["state"] == "locked":
@@ -445,12 +624,17 @@ def campus_map(game):
 def run(action, *args):
     """Run an engine action, save the game, and turn rule errors into messages."""
     game = current_game()
+    locked = {c["id"] for c in engine.clue_list(game) if c["state"] == "locked"}
     try:
         result = action(game, *args)
     except GameError as error:
         st.session_state.flash = ("error", str(error))
         return None
     save(game)
+    unlocked = [c for c in engine.clue_list(game) if c["id"] in locked and c["state"] != "locked"]
+    if unlocked:
+        names = ", ".join(f"{c['id']}. {c['title']}" for c in unlocked)
+        st.session_state.toast = f"New clue unlocked: {names}. Find it in the case file or on the map."
     return result
 
 
@@ -486,23 +670,85 @@ with st.sidebar:
 flash = st.session_state.pop("flash", None)
 if flash:
     getattr(st, flash[0])(flash[1])
+toast = st.session_state.pop("toast", None)
+if toast:
+    st.toast(toast, icon="🔓")
 
 # ---- Intro --------------------------------------------------------------------
 
-cover_column, intro_column = st.columns([1, 2], vertical_alignment="center", gap="large")
-with cover_column:
-    if COVER.exists():
-        st.image(str(COVER), width=320)
-with intro_column:
-    st.title(TITLE)
-    st.markdown(
-        "It is a stormy Thursday night on the Carcavelos campus. At 23:47 an anonymous number posted "
-        "`SV_Final_v3.pdf`, tomorrow's **Semiconductor Valuation** final, to all 212 students in the "
-        "cohort group chat. The Dean has made you examiner for the honour council: "
-        "*\"I do not want a scandal. I want a name, and I want it before nine.\"*"
-    )
-    st.caption(game.variables["weather"])
-st.divider()
+STORY = (
+    "It is a stormy Thursday night on the Carcavelos campus. At 23:47 an anonymous number posted "
+    "`SV_Final_v3.pdf`, tomorrow's **Semiconductor Valuation** final, to all 212 students in the "
+    "cohort group chat. The Dean has made you examiner for the honour council: "
+    "*\"I do not want a scandal. I want a name, and I want it before nine.\"*"
+)
+
+HOW_TO_PLAY = f"""<div class="how-to">
+<div><b>1. Search</b>Tap places on the 🗺️ map and open documents in the 📁 case file. Each costs {case['clock']['clue_cost']} min.</div>
+<div><b>2. Question</b>Tap a suspect's portrait to talk. Ask anything, or show them a clue. Each costs {case['clock']['question_cost']} min.</div>
+<div><b>3. Catch lies</b>Show a suspect the clue that breaks their story and you catch them out ⚡. Clues unlock new clues.</div>
+<div><b>4. Accuse</b>Cross off what it cannot be on the 📋 case board, then name who, how, where and why before 09:00. You have {case['max_strikes']} tries.</div>
+</div>"""
+
+
+def pick_detective(avatar):
+    st.session_state.player_avatar = avatar
+
+
+def finish_intro():
+    st.session_state.intro_done = True
+
+
+@st.dialog("Welcome, examiner", width="large", on_dismiss=finish_intro)
+def intro_dialog():
+    """The story and the rules, and who you are, before the first move."""
+    uri = cover_uri()
+    if uri:
+        st.markdown(
+            f'<img src="{uri}" alt="" style="width:100%;max-height:180px;object-fit:cover;object-position:50% 45%;border-radius:10px">',
+            unsafe_allow_html=True,
+        )
+    st.markdown(STORY)
+    st.markdown("**How to play**")
+    st.markdown(GAME_CSS + HOW_TO_PLAY, unsafe_allow_html=True)
+    st.markdown("**Choose your detective**")
+    chosen = player_avatar()
+    for column, (avatar, label) in zip(st.columns(len(AVATARS)), AVATARS.items()):
+        with column:
+            uri = detective_uri(avatar)
+            if uri:
+                ring = " picked" if avatar == chosen else ""
+                st.markdown(f'<img class="detective-pick{ring}" src="{uri}" alt="">', unsafe_allow_html=True)
+            st.button(label, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
+                      use_container_width=True, on_click=pick_detective, args=(avatar,))
+    st.text_input("Your name", key="player_name", placeholder="Detective", max_chars=24)
+    if st.button("Start the investigation", type="primary", use_container_width=True):
+        finish_intro()
+        st.rerun()
+
+
+@st.cache_data
+def cover_uri():
+    if not COVER.exists():
+        return None
+    return "data:image/webp;base64," + base64.b64encode(COVER.read_bytes()).decode("ascii")
+
+
+with st.container(key="header"):
+    cover_column, intro_column = st.columns([1, 5], vertical_alignment="center", gap="medium")
+    with cover_column:
+        with st.container(key="cover"):
+            if COVER.exists():
+                st.image(str(COVER), width=120)
+    with intro_column:
+        st.title(TITLE)
+        st.markdown(
+            "An exam has leaked the night before it is sat. Find out **who** leaked it, **how**, "
+            "**where** and **why**, before 09:00."
+        )
+        st.caption(game.variables["weather"])
+        if game.status == "playing" and st.button("📖 Story and how to play"):
+            st.session_state.intro_done = False
 
 # ---- Case closed ----------------------------------------------------------------
 
@@ -525,52 +771,80 @@ if game.status != "playing":
     )
     st.stop()
 
-suspect_cards(game)
+hud(game)
 
-map_tab, case_tab, question_tab, accuse_tab = st.tabs(
-    ["🗺️ Campus map", "📁 Case file", "🗣️ Question suspects", "⚖️ Accuse"]
-)
+play_column, board_column = st.columns([5, 2], gap="medium")
+with board_column:
+    case_board()
+with play_column:
+    suspect_cards(game)
+    map_tab, case_tab, question_tab, accuse_tab = st.tabs(
+        [MAP_TAB, CASE_TAB, QUESTION_TAB, ACCUSE_TAB], key="view", on_change="rerun"
+    )
 
 with map_tab:
     campus_map(game)
 
 # ---- Case file ------------------------------------------------------------------
 
+def show_clue(item, expanded):
+    """An opened clue, in an expander: its text, a log search, a chart, hidden text."""
+    icon = "📄" if item["kind"] == "document" else "📍"
+    title = f"{icon} {item['id']}. {item['title']}"
+    clue = engine.read_clue(game, item["id"])
+    with st.expander(title, expanded=expanded):
+        picture = next((CLUE_PICTURES / f"{item['id']}{ext}" for ext in (".webp", ".png", ".jpg")
+                        if (CLUE_PICTURES / f"{item['id']}{ext}").exists()), None)
+        if picture:
+            st.image(str(picture), width=360)
+        st.write(clue["text"])
+        if clue["log"]:
+            query = st.text_input(
+                "Search this log",
+                key=f"search_{item['id']}",
+                placeholder="A card number, a job, a time…",
+            )
+            matches, total = search_log(clue["log"], query)
+            if query.strip():
+                st.caption(f"{len(matches)} of {total} lines match “{query.strip()}”.")
+            if matches:
+                st.code("\n".join(matches), language=None, wrap_lines=True)
+        if clue["chart"] in case.get("charts", {}):
+            spec = case["charts"][clue["chart"]]
+            st.altair_chart(payoff_chart(spec), width="stretch")
+            st.caption(
+                "The fellowship is all or nothing. The flat line is what the Class Representative gets "
+                "if the exam is annulled; the step is what they get if it goes ahead, assuming the "
+                "Exchange Student scores their mock average."
+            )
+        if clue["hidden_text"] and st.toggle("Show hidden text", key=f"hidden_{item['id']}"):
+            st.warning(clue["hidden_text"])
+
+
 with case_tab:
-    for item in engine.clue_list(game):
-        icon = "📄" if item["kind"] == "document" else "📍"
-        title = f"{icon} {item['id']}. {item['title']}"
-        if item["state"] == "locked":
-            st.markdown(f"🔒 ~~{item['id']}. {item['title']}~~ (locked)")
-        elif item["state"] == "available":
-            if st.button(f"Open {title} ({case['clock']['clue_cost']} min)", key=f"open_{item['id']}"):
+    clues = engine.clue_list(game)
+    ready = [c for c in clues if c["state"] == "available"]
+    opened = [c for c in clues if c["state"] == "open"]
+    locked = [c for c in clues if c["state"] == "locked"]
+    if ready:
+        st.markdown(f"**Ready to open** · {case['clock']['clue_cost']} min each")
+        for item in ready:
+            icon = "📄" if item["kind"] == "document" else "📍"
+            if st.button(
+                f"Open {icon} {item['id']}. {item['title']} ({case['clock']['clue_cost']} min)", key=f"open_{item['id']}"
+            ):
                 run(engine.open_clue, item["id"])
                 st.rerun()
-        else:
-            clue = engine.read_clue(game, item["id"])
-            with st.expander(title):
-                st.write(clue["text"])
-                if clue["log"]:
-                    query = st.text_input(
-                        "Search this log",
-                        key=f"search_{item['id']}",
-                        placeholder="A card number, a job, a time…",
-                    )
-                    matches, total = search_log(clue["log"], query)
-                    if query.strip():
-                        st.caption(f"{len(matches)} of {total} lines match “{query.strip()}”.")
-                    if matches:
-                        st.code("\n".join(matches), language=None, wrap_lines=True)
-                if clue["chart"] in case.get("charts", {}):
-                    spec = case["charts"][clue["chart"]]
-                    st.altair_chart(payoff_chart(spec), width="stretch")
-                    st.caption(
-                        "The fellowship is all or nothing. The flat line is what the Class Representative gets "
-                        "if the exam is annulled; the step is what they get if it goes ahead, assuming the "
-                        "Exchange Student scores their mock average."
-                    )
-                if clue["hidden_text"] and st.toggle("Show hidden text", key=f"hidden_{item['id']}"):
-                    st.warning(clue["hidden_text"])
+    if opened:
+        st.markdown(f"**Opened** · {len(opened)}")
+        newest = game.opened[-1] if game.opened else None
+        for item in opened:
+            show_clue(item, expanded=item["id"] == newest)
+    if locked:
+        with st.expander(f"🔒 Locked · {len(locked)}"):
+            st.caption("Question suspects, show them clues and search places to unlock these.")
+            for item in locked:
+                st.markdown(f"🔒 {item['id']}. {plain(item['title'])}")
 
 # ---- Questioning --------------------------------------------------------------
 
@@ -587,67 +861,107 @@ with question_tab:
 
     suspect_ids = list(case["suspects"])
     suspect = st.selectbox(
-        "Suspect", suspect_ids, format_func=lambda s: case["suspects"][s]["name"]
+        "Suspect", suspect_ids, format_func=lambda s: case["suspects"][s]["name"], key="suspect"
     )
     brief = engine.character_brief(game, suspect)
     uri = portrait_uri(suspect)
     if uri:
-        portrait_column, persona_column = st.columns([1, 3], vertical_alignment="center")
+        portrait_column, persona_column = st.columns([1, 4], vertical_alignment="center")
         with portrait_column:
             st.markdown(
                 f'<img class="suspect-portrait" src="{uri}" alt="{html.escape(brief["name"])}">',
                 unsafe_allow_html=True,
             )
         with persona_column:
+            st.markdown(f"**{plain(brief['name'])}**")
             st.caption(brief["persona"])
     else:
         st.caption(brief["persona"])
 
-    with st.form("suspect_chat", clear_on_submit=True):
-        question = st.text_input("Your question", help=f"Up to {ai.MAX_QUESTION_LENGTH} characters.")
-        send = st.form_submit_button(f"Send question ({case['clock']['question_cost']} min)")
+    clue_titles = {c["id"]: c["title"] for c in engine.clue_list(game)}
+    chats = st.session_state.setdefault("chats", {})
+
+    def say(entry):
+        """Add a line to this suspect's conversation."""
+        chats.setdefault(suspect, []).append(entry)
+
+    def unlocked_note(ids):
+        return "🔓 New clue unlocked: " + ", ".join(f"{i}. {clue_titles.get(i, '')}".rstrip(". ") for i in ids)
+
+    # The conversation so far, as speech bubbles: the detective on the right, the suspect on the left.
+    log = chats.get(suspect, [])
+    with st.container(key="chat_log", height=380 if log else "content", autoscroll=True):
+        if not log:
+            st.caption(f"Ask {brief['name']} anything, pick a topic, or show them a clue that breaks their story.")
+        for number, entry in enumerate(log):
+            if entry["who"] == "you":
+                with st.container(key=f"msg_you_{number}"):
+                    with st.chat_message("user", avatar=detective_avatar(player_avatar())):
+                        st.markdown(entry["text"])
+                continue
+            portrait = PORTRAITS / f"{suspect}.webp"
+            with st.container(key=f"msg_them_{number}"):
+                with st.chat_message("assistant", avatar=str(portrait) if portrait.exists() else "🗣️"):
+                    st.text(entry["text"])
+                    if entry.get("unlocked"):
+                        st.success(unlocked_note(entry["unlocked"]))
+                    latest = number == len(log) - 1
+                    for item in entry.get("caught", []):
+                        if not latest:  # the newest catch is shown in full just below
+                            st.markdown(f"⚡ *Caught out by {plain(item['clue'] or 'a clue')}.*")
+
+    with st.form("suspect_chat", clear_on_submit=True, border=False):
+        question = st.text_input(
+            "Your question",
+            help=f"Up to {ai.MAX_QUESTION_LENGTH} characters.",
+            placeholder="Type a question, like: where were you last night?",
+        )
+        send = st.form_submit_button(f"Send question ({case['clock']['question_cost']} min)", type="primary")
     if send:
-        result = run(lambda game: ai.ask(engine, game, suspect, question, cloud_key=cloud_key))
+        with st.spinner(f"{brief['name']} is thinking…"):
+            result = run(lambda game: ai.ask(engine, game, suspect, question, cloud_key=cloud_key))
         if result:
-            st.session_state.last_answer = result
+            say({"who": "you", "text": plain(question)})
+            say({"who": "them", "text": result["reply"], "unlocked": result["unlocked"]})
             st.session_state.pop("last_caught", None)
         st.rerun()
 
     left, right = st.columns(2)
     with left:
-        topic = st.selectbox("Ask about", case["topics"], format_func=lambda t: t.replace("_", " "))
+        topic = st.selectbox(
+            "Ask about", case["topics"], format_func=lambda t: t.replace("_", " ").capitalize()
+        )
         if st.button(f"Ask ({case['clock']['question_cost']} min)"):
             result = run(engine.ask, suspect, topic)
             if result:
-                st.session_state.last_answer = result["line"] or brief["cover"]
+                say({"who": "you", "text": TOPIC_QUESTIONS.get(topic, topic.replace("_", " ").capitalize())})
+                say({"who": "them", "text": result["line"] or brief["cover"], "unlocked": result["unlocked"]})
                 st.session_state.pop("last_caught", None)
-                if result["unlocked"]:
-                    st.session_state.last_answer += f"\n\n🔓 New clue unlocked: {', '.join(result['unlocked'])}"
                 st.rerun()
     with right:
         opened = [c["id"] for c in engine.clue_list(game) if c["state"] == "open"]
-        evidence = st.selectbox("Show them a clue", opened or ["(no clues open yet)"])
+        evidence = st.selectbox(
+            "Show them a clue",
+            opened or ["(no clues open yet)"],
+            format_func=lambda i: f"{i}. {clue_titles[i]}" if i in clue_titles else i,
+        )
         if st.button(f"Show clue ({case['clock']['question_cost']} min)", disabled=not opened):
             result = run(engine.present, suspect, evidence)
             if result:
-                st.session_state.last_answer = result["reveal"] or "They look at it and shrug."
-                st.session_state.last_caught = result.get("contradictions", [])
-                if result["unlocked"]:
-                    st.session_state.last_answer += f"\n\n🔓 New clue unlocked: {', '.join(result['unlocked'])}"
+                caught = result.get("contradictions", [])
+                say({"who": "you", "text": f"*You slide **{plain(evidence)}. {plain(clue_titles[evidence])}** across the table.*"})
+                say({
+                    "who": "them",
+                    "text": result["reveal"] or "They look at it and shrug.",
+                    "unlocked": result["unlocked"],
+                    "caught": caught,
+                })
+                st.session_state.last_caught = caught
                 st.rerun()
             elif "flash" in st.session_state:
                 # Show the refusal under the button, where it is seen on a phone.
                 st.error(st.session_state.pop("flash")[1])
 
-    if "last_answer" in st.session_state:
-        answer = st.session_state.last_answer
-        if isinstance(answer, dict):
-            st.text(answer["reply"])
-            if answer["unlocked"]:
-                st.success(f"🔓 New clue unlocked: {', '.join(answer['unlocked'])}")
-        else:
-            st.info(answer)
-    clue_titles = {c["id"]: c["title"] for c in engine.clue_list(game)}
     caught_moment(st.session_state.get("last_caught", []), clue_titles)
     contradiction_board(game, clue_titles)
 
@@ -662,10 +976,12 @@ with accuse_tab:
             choice[column] = st.radio(
                 column.capitalize(),
                 [o["id"] for o in case["accusation"][column]],
-                format_func=lambda o, c=column: label(c, o),
+                format_func=lambda o, c=column: label(c, o) + (" · ruled out" if c == "who" and ruled_out(o) else ""),
                 index=None,  # start empty so a default click can't solve the case
                 key=f"accuse_{column}",
             )
+    strikes_left = case["max_strikes"] - game.strikes
+    st.caption(f"⚖️ {strikes_left} wrong accusation{'s' if strikes_left != 1 else ''} left before the case goes cold.")
     if st.button("Make the accusation", type="primary"):
         missing = [c for c in ("who", "how", "where", "why") if choice[c] is None]
         if missing:
@@ -679,3 +995,9 @@ with accuse_tab:
                     f"{result['correct']} of 4 are right. Wrong accusations left: {result['strikes_left']}.",
                 )
             st.rerun()
+
+# ---- Start screen ---------------------------------------------------------------
+# Called last, so the story and rules open over the game on a new case.
+
+if not st.session_state.get("intro_done", bool(game.history)):
+    intro_dialog()
