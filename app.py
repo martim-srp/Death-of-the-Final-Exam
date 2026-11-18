@@ -363,11 +363,12 @@ header[data-testid="stHeader"] { display: none; }
   font: 800 1.15rem "Special Elite", "Courier New", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
-.evidence { position: relative; border-radius: 12px; overflow: hidden; background: #efe6d8; color: #2a201b; margin-bottom: 0.9rem;
+.evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
+  background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45); animation: flip 0.55s ease-out both; }
 .evidence img { width: 100%; display: block; max-height: 260px; object-fit: cover; }
-.evidence .icon { font-size: 2.6rem; text-align: center; padding: 0.8rem 0 0; }
-.evidence .body { padding: 0.7rem 0.9rem 0.9rem; font-family: Georgia, serif; font-size: 0.95rem; line-height: 1.45; }
+.evidence .body { padding: 0.85rem 1rem 1rem; font-family: Georgia, serif; font-size: 0.95rem; line-height: 1.5;
+  overflow-wrap: anywhere; white-space: normal; border-left: 3px solid #8a2a1f; }
 .facedown { border-radius: 12px; height: 150px; display: flex; align-items: center; justify-content: center; font-size: 2.6rem;
   background: repeating-linear-gradient(45deg, #5a1d16 0 10px, #6e241b 10px 20px); color: #f4d9a0; }
 .facedown.locked { background: repeating-linear-gradient(45deg, #2a221e 0 10px, #332924 10px 20px); }
@@ -421,21 +422,36 @@ header[data-testid="stHeader"] { display: none; }
 .how-to li span { flex: 1 1 auto; }
 .how-to li em { font: 0.75rem "Special Elite", "Courier New", monospace; font-style: normal; color: #a89a88; white-space: nowrap; }
 .ic { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; }
-.evidence mark { background: rgba(192, 57, 43, 0.18); color: #8a1f14; border-bottom: 2px solid #c0392b; padding: 0 0.1em; }
+.evidence mark { background: rgba(232, 194, 122, 0.22); color: #ffe2a8; border-bottom: 2px solid #e8c27a; padding: 0 0.1em; border-radius: 2px; }
 .hunch { display: flex; gap: 0.7rem; align-items: flex-start; margin: 0 0 0.8rem; padding: 0.65rem 0.8rem; border-left: 3px solid #e8c27a;
   background: rgba(232, 194, 122, 0.07); border-radius: 0 10px 10px 0; animation: rise 0.5s ease-out both; animation-delay: 0.2s; }
 .hunch img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; border: 2px solid #e8c27a; flex: 0 0 auto; }
 .hunch p { margin: 0; font-family: "Playfair Display", Georgia, serif; font-style: italic; font-size: 0.98rem; line-height: 1.4; color: #efe6d8; }
 .hunch code { display: block; margin-top: 0.4rem; font-size: 0.75rem; background: #1c1613; color: #cdbfa8; padding: 0.3rem 0.45rem; border-radius: 6px; white-space: pre-wrap; }
 .hunch mark { background: rgba(232, 194, 122, 0.25); color: #ffe2a8; padding: 0 0.1em; border-radius: 3px; }
+.st-key-panel h4 { font: 600 0.72rem "Special Elite", "Courier New", monospace !important; letter-spacing: 0.16em; text-transform: uppercase;
+  color: #e8c27a !important; margin: 0.6rem 0 0.2rem !important; padding: 0 !important; }
+.st-key-panel [class*="st-key-note_"] button { width: 100%; justify-content: flex-start; text-align: left; padding: 0.15rem 0; min-height: 0; }
+.st-key-panel [class*="st-key-note_"] button > div, .st-key-panel [class*="st-key-note_"] button [data-testid="stMarkdownContainer"] { justify-content: flex-start; text-align: left; width: 100%; }
+.st-key-panel [class*="st-key-note_"] button p { font-size: 0.88rem; }
+.st-key-panel [class*="st-key-note_"] button strong { font-family: "Special Elite", "Courier New", monospace; color: #e8c27a; margin-right: 0.3rem; }
+.story-note { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.45rem 0; border-bottom: 1px solid #3a2e28; font-size: 0.86rem; }
+.story-note b { font-family: "Playfair Display", Georgia, serif; font-size: 0.95rem; }
+.story-note span { color: #cdbfa8; }
+.story-note .lie-note { color: #ff8a7a; font-size: 0.8rem; }
+.story-note .lie-note .ic { width: 12px; height: 12px; }
+.story-note em { font-style: normal; font: 0.72rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
 .proof { display: flex; flex-direction: column; gap: 0.15rem; margin: -0.4rem 0 0.7rem; font-size: 0.8rem; color: #a89a88; }
 .proof .ic { color: #e8c27a; width: 13px; height: 13px; }
 .proof em { font-style: normal; font: 0.72rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
 .tips div span .ic { width: 26px; height: 26px; color: #e8c27a; }
-.evidence .icon .ic { width: 56px; height: 56px; color: #3a2e28; }
 .facedown.locked .ic { width: 40px; height: 40px; }
 .medals span .ic { width: 15px; height: 15px; }
 .chat .unlock .ic, .chat .caught b .ic { width: 14px; height: 14px; }
+.pick-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; justify-items: center; margin: 0.7rem 0 0.6rem; }
+.pick-row > div { width: 100%; display: flex; justify-content: center; padding: 4px; }
+.st-key-pick_buttons [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 1rem; }
+.st-key-pick_buttons [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important; }
 .detective-pick { width: 120px !important; height: 150px !important; max-width: 100%; object-fit: cover !important; display: block;
   margin: 0 auto 0.4rem; border-radius: 10px; border: 3px solid transparent; }
 .detective-pick.picked { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
@@ -455,8 +471,6 @@ header[data-testid="stHeader"] { display: none; }
   .tips { grid-template-columns: 1fr; }
   .st-key-suspect_row { display: none; }
   [data-testid="stDialog"] [data-testid="stColumn"]:has(.cover-art) { display: none; }
-  [data-testid="stDialog"] [data-testid="stHorizontalBlock"]:has(.detective-pick) { flex-wrap: nowrap !important; gap: 0.6rem; }
-  [data-testid="stDialog"] [data-testid="stHorizontalBlock"]:has(.detective-pick) > [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important; }
   .story { font-size: 1rem; }
   .facts { grid-template-columns: repeat(2, 1fr); }
   .finale .mug, .finale .mug img { width: 160px; }
@@ -777,7 +791,7 @@ def panel_clue(game, clue_id, fresh):
         return
     clue = engine.read_clue(game, clue_id)
     picture = board.find_picture("clues", clue_id)
-    art = f'<img src="{picture}" alt="">' if picture else f'<div class="icon">{board.icon(board.CARD_ICON.get(clue_id, "doc"))}</div>'
+    art = f'<img src="{picture}" alt="">' if picture else ""  # no placeholder: the words are the evidence
     style = "" if clue_id in fresh else ' style="animation:none"'
     hunches = engine.hunches(game, clue_id)
     body = esc(clue["text"])
@@ -805,24 +819,85 @@ def panel_clue(game, clue_id, fresh):
 # ---- Panel: case sheet and accusation ----------------------------------------------------
 
 
-def panel_sheet():
-    st.markdown('<div class="kicker">Case sheet</div><h3>Cross off what it can’t be</h3>', unsafe_allow_html=True)
-    st.caption("Cross off what can't be. The game crosses off what the evidence proves. What is left is your accusation.")
-    for column in COLUMNS:
-        options = case["accusation"][column]
-        proven = proven_out(column)
-        st.session_state[f"sheet_{column}"] = crossed(column)  # proven ones stay crossed off
-        left = len(options) - len(crossed(column))
-        st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()} · {left} left", [o["id"] for o in options],
-                 format_func=lambda o, c=column: label(c, o), selection_mode="multi", key=f"sheet_{column}")
-        if proven:
-            st.markdown(
-                '<div class="proof">' + "".join(
-                    f"<span>{board.icon('check')} {esc(label(column, o))} <em>ruled out by {esc(proof_name(by))}</em></span>"
-                    for o, by in proven.items()
-                ) + "</div>",
-                unsafe_allow_html=True,
+def clue_fact(game, clue_id):
+    """One line to remember a clue by: the detail that stood out, or the clue's first sentence."""
+    for hunch in engine.hunches(game, clue_id, include_caught=True):
+        if hunch["mark"]:
+            return hunch["mark"]
+    text = engine.read_clue(game, clue_id)["text"].strip()
+    first = re.split(r"(?<=[a-z0-9)\"'][.!?])\s", text, maxsplit=1)[0]
+    return first if len(first) <= 90 else first[:87].rstrip() + "…"
+
+
+def first_sentences(text, count=2):
+    return " ".join(re.split(r"(?<=[a-z0-9)\"'][.!?])\s", text.strip())[:count])
+
+
+def notebook_notes(game):
+    """The automatic half of the notebook: every card found, every story told, every lie and proof."""
+    opened = [e["clue"] for e in game.history if e.get("action") == "open"]
+    if not opened and not game.history:
+        st.caption("Empty for now. Everything you find and hear is written down here by itself.")
+        return
+    st.markdown(f"#### Evidence · {len(opened)}")
+    for clue_id in opened:
+        name = board.CARD_NAMES.get(clue_id, case["clues"][clue_id]["title"])
+        st.button(f"**{clue_id}** {plain(name)} · {plain(clue_fact(game, clue_id))}", key=f"note_{clue_id}", type="tertiary",
+                  on_click=set_focus, args=("clue", clue_id), use_container_width=True)
+    questioned = []
+    for event in game.history:
+        if event.get("suspect") in case["suspects"] and event["suspect"] not in questioned:
+            questioned.append(event["suspect"])
+    if questioned:
+        caught = {}
+        for item in engine.contradiction_list(game):
+            caught.setdefault(item["suspect"], []).append(item)
+        st.markdown(f"#### Their stories · {len(questioned)}")
+        rows = []
+        for suspect in questioned:
+            brief = engine.character_brief(game, suspect)
+            lies = "".join(
+                f'<span class="lie-note">{board.icon("bolt")} “{esc(item["text"].rstrip("."))}” <em>broken by {esc(item["clue"] or "a clue")}</em></span>'
+                for item in caught.get(suspect, [])
             )
+            rows.append(f'<div class="story-note"><b>{esc(board.short_name(brief["name"]))}</b>'
+                        f'<span>“{esc(first_sentences(brief["cover"]))}”</span>{lies}</div>')
+        st.markdown("".join(rows), unsafe_allow_html=True)
+    proven = engine.eliminated(game)
+    if proven:
+        st.markdown(f"#### Ruled out · {len(proven)}")
+        st.markdown(
+            '<div class="proof">' + "".join(
+                f"<span>{board.icon('check')} {esc(label(e['column'], e['option']))} <em>ruled out by {esc(proof_name(e['by']))}</em></span>"
+                for e in proven
+            ) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def panel_sheet():
+    game = current_game()
+    st.markdown('<div class="kicker">Notebook</div><h3>Everything you have found</h3>', unsafe_allow_html=True)
+    notes, sheet = st.tabs(["Notes", "Cross off"])
+    with notes:
+        notebook_notes(game)
+    with sheet:
+        st.caption("Cross off what can't be. Proven ones are crossed off for you. What is left is your accusation.")
+        for column in COLUMNS:
+            options = case["accusation"][column]
+            proven = proven_out(column)
+            st.session_state[f"sheet_{column}"] = crossed(column)  # proven ones stay crossed off
+            left = len(options) - len(crossed(column))
+            st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()} · {left} left", [o["id"] for o in options],
+                     format_func=lambda o, c=column: label(c, o), selection_mode="multi", key=f"sheet_{column}")
+            if proven:
+                st.markdown(
+                    '<div class="proof">' + "".join(
+                        f"<span>{board.icon('check')} {esc(label(column, o))} <em>ruled out by {esc(proof_name(by))}</em></span>"
+                        for o, by in proven.items()
+                    ) + "</div>",
+                    unsafe_allow_html=True,
+                )
     if st.button("Ready? Accuse", type="primary", icon=":material/balance:", use_container_width=True, key="to_accuse"):
         set_focus("accuse")
         st.rerun()
@@ -975,14 +1050,21 @@ def intro_dialog():
         st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + HOW_TO_PLAY, unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
-        for column, (avatar, text) in zip(st.columns(len(AVATARS)), AVATARS.items()):
-            with column:
-                uri = board.find_picture("detectives", avatar)
-                if uri:
-                    ring = " picked" if avatar == chosen else ""
-                    st.markdown(f'<img class="detective-pick{ring}" src="{uri}" alt="">', unsafe_allow_html=True)
-                st.button(text, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
-                          use_container_width=True, on_click=pick_detective, args=(avatar,))
+        # The portraits are one two-cell grid and the buttons one two-column row below it,
+        # so each portrait sits centred over its own button at every width.
+        st.markdown(
+            '<div class="pick-row">' + "".join(
+                f'<div><img class="detective-pick{" picked" if avatar == chosen else ""}" '
+                f'src="{board.find_picture("detectives", avatar) or ""}" alt=""></div>'
+                for avatar in AVATARS
+            ) + "</div>",
+            unsafe_allow_html=True,
+        )
+        with st.container(key="pick_buttons"):
+            for column, (avatar, text) in zip(st.columns(len(AVATARS)), AVATARS.items()):
+                with column:
+                    st.button(text, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
+                              use_container_width=True, on_click=pick_detective, args=(avatar,))
         st.text_input("Your name", key="player_name", placeholder="Detective", max_chars=24)
         if st.button("Start the investigation", type="primary", icon=":material/search:", use_container_width=True):
             finish_intro()

@@ -259,3 +259,47 @@ def test_the_panel_shows_the_hunch_and_highlights_the_detail():
     engine.open_clue(game, "D2")
     at = start(game=game, focus=("clue", "D2"))
     assert "<mark>owner=STAFF-" in page(at)  # quoted from the log
+
+
+# ---- The automatic notebook ------------------------------------------------------------------
+
+
+def test_the_notebook_starts_empty_and_says_it_fills_itself():
+    at = start(focus=("sheet", None))
+    assert any("written down here by itself" in c.value for c in at.caption)
+    assert not any(b.key and b.key.startswith("note_") for b in at.button)
+
+
+def test_the_notebook_lists_each_card_found_with_its_key_detail_and_reopens_it():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    for clue_id in ("D1", "D2"):
+        engine.open_clue(game, clue_id)
+    at = start(game=game, focus=("sheet", None))
+    notes = {b.key: b.label for b in at.button if b.key and b.key.startswith("note_")}
+    assert list(notes) == ["note_D1", "note_D2"]
+    assert "owner=STAFF-" in notes["note_D2"]  # the detail that stood out
+    at.button(key="note_D2").click().run()
+    assert at.session_state["focus"] == ("clue", "D2")
+
+
+def test_the_notebook_keeps_each_suspects_story_and_the_lies_caught():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    engine.open_clue(game, "L4")
+    engine.ask(game, "professor", "alibi")
+    engine.present(game, "companion", "L4")
+    at = start(game=game, focus=("sheet", None))
+    text = page(at)
+    assert text.count('class="story-note"') == 2
+    assert "Their stories · 2" in text
+    assert 'class="lie-note"' in text and "broken by L4" in text
+
+
+def test_the_notebook_lists_what_has_been_ruled_out():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    answer = CASE["variants"]["A"]["solution"]
+    engine.accuse(game, wrong_who(), answer["how"], answer["where"], answer["why"])
+    at = start(game=game, focus=("sheet", None))
+    assert "Ruled out · 1" in page(at)

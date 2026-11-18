@@ -141,7 +141,7 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'<div class="stat zapstat" title="Lies caught">{icon("bolt")}<b>{caught}</b></div>'
         '<div class="tools">'
         f'<button data-act="home" title="Leads">{icon("search")}</button>'
-        f'<button data-act="sheet" title="Case sheet">{icon("sheet")}</button>'
+        f'<button data-act="sheet" title="Notebook">{icon("sheet")}</button>'
         f'<button data-act="intro" title="Story and rules">{icon("book")}</button>'
         f'<button class="mute" type="button" title="Sound on or off">{icon("sound", "ic on")}{icon("mute", "ic off")}</button>'
         '<button class="accuse" data-act="accuse">Accuse</button></div></div>'
@@ -339,12 +339,17 @@ def hand_html(clues, picked=None, fresh=(), goal=None):
 # ---- Suspects ----------------------------------------------------------------------
 
 
+# Names that fit under a small portrait when the suspect row is narrow.
+TINY_NAME = {"class_rep": "Class Rep", "ta": "TA", "exchange": "Exchange", "professor": "Professor", "companion": "Companion"}
+
+
 def suspects_html(suspects, picked=None, goal=None):
     """The five suspects as big cards. Each item: id, name, questioned, caught, ruled_out."""
     cards = []
     for s in suspects:
         uri = find_picture("suspects", s["id"])
-        name = esc(short_name(s["name"]))
+        name = (f'<span class="long">{esc(short_name(s["name"]))}</span>'
+                f'<span class="short">{esc(TINY_NAME.get(s["id"], short_name(s["name"])))}</span>')
         classes = "sus" + (" picked" if s["id"] == picked else "") + (" out" if s["ruled_out"] else "") + (" goal" if s["id"] == goal else "")
         marks = ""
         if s["questioned"]:
@@ -489,7 +494,7 @@ BOARD_CSS = """
 :host { --ink: #efe6d8; --red: #c0392b; --gold: #e8c27a; --bg: #14100e; --type: "Special Elite", "Courier New", monospace;
   --serif: "Playfair Display", Georgia, serif; }
 .phone-only { display: none; }
-.deck { color: var(--ink); font-family: var(--serif); font-variant-numeric: lining-nums; user-select: none; }
+.deck { color: var(--ink); font-family: var(--serif); font-variant-numeric: lining-nums; user-select: none; container-type: inline-size; }
 button { font: inherit; color: inherit; cursor: pointer; }
 /* Status bar */
 .hud { display: flex; align-items: center; gap: 14px; padding: 8px 10px; background: linear-gradient(#241c18, #1a1411);
@@ -664,4 +669,31 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .zap .ic { width: 11px; height: 11px; }
 .sus .noimg .ic { width: 40px; height: 40px; color: #8a7a6a; }
 .goal-bar .gi .ic { width: 24px; height: 24px; color: var(--gold); display: block; }
+/* Narrow boards (a small laptop window, a tablet): lay out by the board's own width, not the screen's */
+@container (max-width: 700px) {
+  .hud { flex-wrap: wrap; gap: 8px 10px; padding: 8px; }
+  .hud .clock { order: 1; flex: 1 1 auto; min-width: 0; }
+  .hud .me { order: 0; }
+  .hud .me img { width: 34px; height: 34px; }
+  .hud .clock b { font-size: 22px; }
+  .hud .clock small { display: none; }
+  .hud .stat { order: 2; font-size: 14px; }
+  .tools { order: 3; flex: 1 1 100%; }
+  .tools button { flex: 0 0 38px; }
+  .tools .accuse { flex: 1 1 auto; }
+  .hand { gap: 5px; }
+  .card .lbl { padding: 2px 4px 4px; }
+  .card .lbl span { font-size: 10px; }
+}
+@container (max-width: 520px) {
+  .hand { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+}
+@container (max-width: 560px) {
+  .suspects { gap: 5px; }
+  .sus .nm { font-size: 10px; padding: 12px 2px 4px; }
+  .sus .nm .long { display: none; }
+  .sus .nm .short { display: inline; }
+  .sus .marks { top: 3px; right: 3px; }
+}
+.sus .nm .short { display: none; }
 """

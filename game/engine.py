@@ -419,7 +419,7 @@ class Engine:
                 result.append({"clue": clue_id, "from": rule["clue"], "text": self._hint_text(game, clue_id)})
         return result
 
-    def hunches(self, game, clue_id):
+    def hunches(self, game, clue_id, include_caught=False):
         """The detective's inner voice on an opened clue: a short line and the detail to highlight.
 
         One per suspect story this clue breaks in this variant (from the claims'
@@ -431,7 +431,8 @@ class Engine:
         result = []
         for suspect, data in self._suspects(game).items():
             for claim in data.get("claims", []):
-                if clue_id not in claim["broken_by"] or [suspect, claim["id"]] in game.contradictions:
+                caught = [suspect, claim["id"]] in game.contradictions
+                if clue_id not in claim["broken_by"] or (caught and not include_caught):
                     continue
                 hunch = self.hunch_lines.get(f"{clue_id}|{suspect}.{claim['id']}")
                 if hunch:
