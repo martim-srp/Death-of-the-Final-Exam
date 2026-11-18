@@ -33,6 +33,14 @@ MAP_PINS = {
 }
 # Optional evidence pictures, one <clue id>.<png|jpg|webp> each (D1.webp, L4.png…), shown inside an opened clue.
 CLUE_PICTURES = Path(__file__).resolve().parent / "assets" / "clues"
+# Shown under a free-text answer when the suspect gave a scripted line instead of the AI's.
+# Keys are the reasons game/ai.py records in the game's history.
+FALLBACK_NOTES = {
+    "no_key": "🤖 The AI isn't connected, so this is the suspect's scripted answer.",
+    "failed": "🤖 The AI didn't answer this time, so this is the suspect's scripted answer.",
+    "unreadable": "🤖 The AI's answer couldn't be read, so this is the suspect's scripted answer.",
+    "limit": "🤖 This case has used up its AI questions. Suspects now give their scripted answers.",
+}
 PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.<png|jpg|webp|svg> each
 # File types a portrait may have, in order of preference: a picture someone supplies
 # (PNG, JPG or WebP) wins over the drawn SVG of the same suspect.
@@ -903,6 +911,8 @@ with question_tab:
             with st.container(key=f"msg_them_{number}"):
                 with st.chat_message("assistant", avatar=str(portrait) if portrait.exists() else "🗣️"):
                     st.text(entry["text"])
+                    if entry.get("fallback") in FALLBACK_NOTES:
+                        st.caption(FALLBACK_NOTES[entry["fallback"]])
                     if entry.get("unlocked"):
                         st.success(unlocked_note(entry["unlocked"]))
                     latest = number == len(log) - 1
@@ -918,11 +928,17 @@ with question_tab:
         )
         send = st.form_submit_button(f"Send question ({case['clock']['question_cost']} min)", type="primary")
     if send:
+
+        def ask_and_note_fallback(game):
+            answer = ai.ask(engine, game, suspect, question, cloud_key=cloud_key)
+            return answer, game.history[-1].get("fallback")
+
         with st.spinner(f"{brief['name']} is thinking…"):
-            result = run(lambda game: ai.ask(engine, game, suspect, question, cloud_key=cloud_key))
+            result = run(ask_and_note_fallback)
         if result:
+            answer, fallback = result
             say({"who": "you", "text": plain(question)})
-            say({"who": "them", "text": result["reply"], "unlocked": result["unlocked"]})
+            say({"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback})
             st.session_state.pop("last_caught", None)
         st.rerun()
 
