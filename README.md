@@ -35,7 +35,8 @@ python -m pytest
 ## How to play
 
 The screen is laid out like a board game. The campus map is the board, the clues are a hand of evidence
-cards, and the five suspects sit across the top. Tap anything to open it in the side panel.
+cards, and the five suspects sit across the top. Tap anything to open it in the side panel. A new case
+starts with a four-step tour; 📖 shows the briefing again and 🔊 turns the sound effects on or off.
 
 It is midnight. Every action costs time: searching a place or opening a document costs 30 minutes, and
 each question to a suspect (or showing them a card) costs 10. Tap a red **?** card or pin to search it.

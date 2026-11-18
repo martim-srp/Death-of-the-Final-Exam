@@ -89,7 +89,7 @@ def test_unknown_taps_are_ignored(act):
 def test_status_bar_shows_clock_time_left_and_accusations():
     at = start()
     hud = board_markup(at)
-    assert "00:00" in hud and "9h 00m to 09:00" in hud
+    assert "00:00" in hud and "9h 00m left" in hud
     assert hud.count('class="pip on"') == CASE["max_strikes"]
     assert "Accuse" in hud
 
@@ -111,10 +111,11 @@ def test_map_has_a_pin_per_place_and_chiado():
     assert 'data-act="spot:chiado"' in markup
 
 
-def test_every_clue_is_a_card_in_the_hand():
+def test_every_clue_is_a_card_in_the_hand_or_a_pin_on_the_map():
     markup = board_markup(start())
     for clue_id in CASE["clues"]:
-        assert f'data-act="clue:{clue_id}"' in markup
+        kind = "place" if clue_id in board.MAP_PINS else "clue"
+        assert markup.count(f'data-act="{kind}:{clue_id}"') == 1
 
 
 def test_locked_and_unopened_clues_show_no_picture_or_text():
@@ -315,7 +316,7 @@ def test_the_right_accusation_closes_the_case_with_the_reveal():
     assert at.session_state["game"]["status"] == "solved"
     assert "GUILTY" in page(at) and "Case closed" in page(at)
     assert board.find_picture("suspects", solution()["who"]) in page(at)
-    assert not at.get("bidi_component")  # the board is gone
+    assert not any('class="hud' in m for m in markups(at))  # the board is gone
     assert any(e.label.startswith("📜") for e in at.expander)
 
 
@@ -484,3 +485,48 @@ def test_showing_the_same_card_again_does_not_catch_twice():
     assert not at.exception
     assert page(at).count("Caught lying") == 1
     assert len(at.session_state["game"]["contradictions"]) == 1
+
+
+# ---- Sound and the first-play tour -------------------------------------------------------------
+
+
+def test_opening_a_clue_plays_one_flip_sound():
+    at = start(focus=("clue", "D1"))
+    assert 'class="sfx"' not in board_markup(at)
+    click(at, "🔍 Open it")
+    assert 'data-sfx="flip"' in board_markup(at)
+    at.run()
+    assert 'class="sfx"' not in board_markup(at)  # played once, not on every redraw
+
+
+def test_a_wrong_accusation_thuds_and_a_caught_lie_stamps():
+    at = start(focus=("accuse", None))
+    pick(at, **{**solution(), "who": "exchange"})
+    click(at, "⚖️ Accuse")
+    assert 'data-sfx="thud"' in board_markup(at)
+    at = start(game=opened_game("L4"), focus=("suspect", "companion"), suspect="companion")
+    at.pills(key="show_clue").set_value("L4").run()
+    assert 'data-sfx="stamp"' in board_markup(at)
+
+
+def test_only_known_sounds_are_drawn():
+    assert board.sfx_html("stamp", 3) == '<i class="sfx" hidden data-sfx="stamp" data-n="3"></i>'
+    assert board.sfx_html("<script>", 1) == ""
+
+
+def test_the_tour_shows_once_on_a_new_case_after_the_intro():
+    at = start()
+    assert 'class="tour"' in board_markup(at)
+    assert board_markup(at).count('class="step"') == 4
+    at.session_state["tour_done"] = True
+    at.run()
+    assert 'class="tour"' not in board_markup(at)
+
+
+def test_no_tour_on_a_resumed_game_or_before_the_intro():
+    assert 'class="tour"' not in board_markup(start(game=opened_game("D1")))
+    assert 'class="tour"' not in board_markup(start(intro_done=False))
+
+
+def test_finishing_the_tour_is_a_known_tap():
+    assert board.parse_act("tour_done", CASE["suspects"], CASE["clues"]) == ("tour_done", None)

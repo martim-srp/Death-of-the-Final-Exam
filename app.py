@@ -127,11 +127,17 @@ def run(action, *args):
     return result
 
 
+def sound(name):
+    """Ask the board to play one short sound on the next draw (see board.sfx_html)."""
+    st.session_state.sfx = name
+    st.session_state.sfx_n = st.session_state.get("sfx_n", 0) + 1
+
+
 def new_case():
     start_new_game()
     for key in [k for k in st.session_state if str(k).startswith(("sheet_", "accuse_"))]:
         del st.session_state[key]
-    for key in ("chats", "focus", "suspect", "verdict", "fresh"):
+    for key in ("chats", "focus", "suspect", "verdict", "fresh", "sfx"):
         st.session_state.pop(key, None)
 
 
@@ -203,6 +209,8 @@ def on_act(key):
     kind, value = parsed
     if kind == "intro":
         st.session_state.intro_done = False
+    elif kind == "tour_done":
+        st.session_state.tour_done = True
     else:
         set_focus(kind, value)
 
@@ -298,15 +306,19 @@ def denouement(game):
 
 PAGE_CSS = """
 <style>
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Special+Elite&display=swap");
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
 [data-testid="stMainBlockContainer"] { padding: 3.4rem 1.2rem 1.5rem; max-width: 1480px; }
-header[data-testid="stHeader"] { background: transparent; }
+.stApp { font-variant-numeric: lining-nums; }
+header[data-testid="stHeader"] { background: rgba(20, 16, 14, 0.92); backdrop-filter: blur(6px); }
+.st-key-panel h3, .finale h1, [data-testid="stDialog"] h2 { font-family: "Playfair Display", Georgia, serif !important; }
 .st-key-panel { background: #1c1613; border: 1px solid #3a2e28; border-radius: 14px; padding: 0.9rem 1rem 1rem; gap: 0.6rem; }
-.st-key-panel h3 { margin: 0 0 0.2rem; padding: 0.1rem 0 0; font-size: 1.35rem; line-height: 1.3; }
-.kicker { font: 600 0.72rem "Courier New", monospace; letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
-.who-head { display: flex; gap: 0.8rem; align-items: center; }
+.st-key-panel h3 { margin: 0 0 0.55rem !important; padding: 0.1rem 0 0.1rem; font-size: 1.35rem; line-height: 1.35; }
+.kicker { font: 600 0.72rem "Special Elite", "Courier New", monospace; letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
+.who-head { padding-bottom: 0.9rem; display: flex; gap: 0.8rem; align-items: center; }
+.st-key-chat_log { margin-top: 0.5rem; }
 .who-head img { width: 64px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #c0392b; }
-.nerves { display: flex; align-items: center; gap: 0.4rem; font: 600 0.68rem "Courier New", monospace; letter-spacing: 0.12em;
+.nerves { display: flex; align-items: center; gap: 0.4rem; font: 600 0.68rem "Special Elite", "Courier New", monospace; letter-spacing: 0.12em;
   text-transform: uppercase; opacity: 0.85; margin-top: 0.25rem; }
 .nerves i { width: 110px; height: 6px; background: #3a2e28; border-radius: 3px; overflow: hidden; display: inline-block; }
 .nerves b { display: block; height: 100%; background: linear-gradient(90deg, #e8c27a, #e0645a); transition: width 0.6s; }
@@ -320,34 +332,36 @@ header[data-testid="stHeader"] { background: transparent; }
 .bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
 .bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
 .bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: sans-serif; }
-.bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem "Courier New", monospace; color: #e8c27a; }
+.bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem "Special Elite", "Courier New", monospace; color: #e8c27a; }
 .caught { margin: 0.2rem auto 0.3rem; text-align: center; animation: slam 0.5s cubic-bezier(.2,1.6,.4,1) both; }
 .caught b { display: inline-block; border: 3px solid #e0645a; color: #e0645a; padding: 0.1rem 0.6rem; transform: rotate(-4deg);
-  font: 800 1.15rem "Courier New", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+  font: 800 1.15rem "Special Elite", "Courier New", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
 .evidence { position: relative; border-radius: 12px; overflow: hidden; background: #efe6d8; color: #2a201b;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45); animation: flip 0.55s ease-out both; }
 .evidence img { width: 100%; display: block; max-height: 260px; object-fit: cover; }
-.evidence .icon { font-size: 4rem; text-align: center; padding: 1.4rem 0 0.4rem; }
+.evidence .icon { font-size: 2.6rem; text-align: center; padding: 0.8rem 0 0; }
 .evidence .body { padding: 0.7rem 0.9rem 0.9rem; font-family: Georgia, serif; font-size: 0.95rem; line-height: 1.45; }
 .facedown { border-radius: 12px; height: 150px; display: flex; align-items: center; justify-content: center; font-size: 2.6rem;
   background: repeating-linear-gradient(45deg, #5a1d16 0 10px, #6e241b 10px 20px); color: #f4d9a0; }
 .facedown.locked { background: repeating-linear-gradient(45deg, #2a221e 0 10px, #332924 10px 20px); }
 .lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
-.lead b { font-family: "Courier New", monospace; color: #e8c27a; }
-.tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.lead b { font-family: "Special Elite", "Courier New", monospace; color: #e8c27a; }
+.tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
 .tips div span { display: block; font-size: 1.6rem; }
 .lie { background: #2a1714; border: 1px solid #5a2a22; border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.88rem; }
 .lie b { color: #e0645a; }
 .verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; }
-.verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem "Courier New", monospace; letter-spacing: 0.08em; }
+.verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem "Special Elite", "Courier New", monospace; letter-spacing: 0.08em; }
 .verdict .ok { background: #1f3a24; color: #8be09a; border: 2px solid #3d7a48; }
 .verdict .no { background: #3a1714; color: #ff8a7a; border: 2px solid #7a2c22; }
 .verdict span { display: block; font-size: 1.5rem; }
-.st-key-panel [data-testid="stPills"] button { font-size: 0.85rem; }
+.st-key-panel [data-testid="stButtonGroup"] button { font-size: 0.85rem; height: auto; min-height: 2rem; max-width: 100%; }
+.st-key-panel [data-testid="stButtonGroup"] button * { white-space: normal !important; overflow: visible !important;
+  text-overflow: clip !important; text-align: left; }
 [class*="st-key-sheet_"] button[kind="pillsActive"] {
   text-decoration: line-through; text-decoration-color: #e0645a; text-decoration-thickness: 2px; opacity: 0.6;
   background: #2a1714 !important; border-color: #5a2a22 !important; color: #efe6d8 !important; }
@@ -359,7 +373,7 @@ header[data-testid="stHeader"] { background: transparent; }
 .finale .mug img { width: 220px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 14px; border: 3px solid #3a2e28;
   box-shadow: 0 16px 40px rgba(0,0,0,0.6); animation: rise 0.8s ease-out both; }
 .finale .slam { position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%) rotate(-14deg); border: 5px solid #e0645a;
-  color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem "Courier New", monospace;
+  color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem "Special Elite", "Courier New", monospace;
   letter-spacing: 0.15em; animation: stamp 0.6s 0.6s cubic-bezier(.2,1.6,.4,1) both; white-space: nowrap; }
 .finale.cold .slam { border-color: #9aa7b3; color: #9aa7b3; }
 .finale h1 { font-size: 2.6rem; margin: 1.1rem 0 0.1rem; animation: rise 0.6s 1s ease-out both; }
@@ -369,7 +383,7 @@ header[data-testid="stHeader"] { background: transparent; }
   font-size: 0.92rem; line-height: 1.3; animation: deal 0.5s ease-out both; }
 .facts div:nth-child(1) { animation-delay: 1.3s; } .facts div:nth-child(2) { animation-delay: 1.5s; }
 .facts div:nth-child(3) { animation-delay: 1.7s; } .facts div:nth-child(4) { animation-delay: 1.9s; }
-.facts small { display: block; font: 700 0.7rem "Courier New", monospace; letter-spacing: 0.15em; color: #8a2a1f; margin-bottom: 0.2rem; }
+.facts small { display: block; font: 700 0.7rem "Special Elite", "Courier New", monospace; letter-spacing: 0.15em; color: #8a2a1f; margin-bottom: 0.2rem; }
 .medals { margin-top: 0.8rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
 .medals span { background: #2b221d; border: 1px solid #e8c27a; color: #e8c27a; border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.85rem; }
 .how-to { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.3rem 0 0.6rem; }
@@ -436,8 +450,21 @@ def draw_board(game, clues, fresh):
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh)
         + board.hand_html(clues, picked, fresh)
+        + pending_sound()
+        + (board.tutorial_html() if show_tour(game) else "")
     )
     deck(data=markup, key="board", on_act_change=functools.partial(on_act, "board"))
+
+
+def pending_sound():
+    """The sound asked for by the last action, once."""
+    name = st.session_state.pop("sfx", None)
+    return board.sfx_html(name, st.session_state.get("sfx_n", 0)) if name else ""
+
+
+def show_tour(game):
+    """The first-play tour: once, after the intro, before the first move."""
+    return bool(st.session_state.get("intro_done")) and not st.session_state.get("tour_done") and not game.history
 
 
 def draw_suspects(game):
@@ -509,6 +536,7 @@ def ask_topic():
         return
     result = run(engine.ask, suspect, topic)
     if result:
+        sound("tick")
         brief = engine.character_brief(current_game(), suspect)
         say(suspect, {"who": "you", "text": TOPICS[topic][1]})
         say(suspect, {"who": "them", "text": result["line"] or brief["cover"], "unlocked": result["unlocked"]})
@@ -523,6 +551,7 @@ def show_evidence():
         return
     result = run(engine.present, suspect, clue_id)
     if result:
+        sound("stamp" if result.get("contradictions") else "tick")
         title = case["clues"][clue_id]["title"]
         say(suspect, {"who": "you", "text": f"You slide {clue_id}. {title} across the table.", "act": True})
         say(suspect, {
@@ -591,7 +620,7 @@ def panel_suspect(game, suspect):
     )
     titles = {c["id"]: c["title"] for c in engine.clue_list(game)}
     log = st.session_state.get("chats", {}).get(suspect, [])
-    with st.container(key="chat_log", height=300 if log else "content", autoscroll=True):
+    with st.container(key="chat_log", height=260 if log else "content", autoscroll=True):
         if log:
             st.markdown(chat_html(log, suspect, titles), unsafe_allow_html=True)
         else:
@@ -614,6 +643,7 @@ def panel_suspect(game, suspect):
             result = run(ask_and_note_fallback)
         if result:
             answer, fallback = result
+            sound("tick")
             say(suspect, {"who": "you", "text": question})
             say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback})
         st.rerun()
@@ -642,7 +672,8 @@ def panel_clue(game, clue_id, fresh):
         st.markdown('<div class="facedown">?</div>', unsafe_allow_html=True)
         if st.button(f"🔍 {verb} · {case['clock']['clue_cost']} min", key=f"open_{clue_id}", type="primary",
                      use_container_width=True):
-            run(engine.open_clue, clue_id)
+            if run(engine.open_clue, clue_id):
+                sound("flip")
             st.session_state.fresh = st.session_state.get("fresh", []) + [clue_id]
             st.rerun()
         return
@@ -707,6 +738,8 @@ def panel_accuse(game):
             st.warning(f"Pick one in each row first. Missing: {', '.join(missing)}.")
             return
         result = run(engine.accuse, *(choice[c] for c in COLUMNS))
+        if result:
+            sound("thud" if result["status"] == "playing" else "stamp")
         if result and result["status"] == "playing":
             st.session_state.verdict = engine.right_parts(current_game())
             st.session_state.toast = (f"{result['correct']} of 4 right. {result['strikes_left']} tries left.", "⚖️")
@@ -748,6 +781,9 @@ def finale(game):
         f'{f"<div class=medals>{medals}</div>" if medals else ""}</div>',
         unsafe_allow_html=True,
     )
+    marker = pending_sound()
+    if marker:
+        deck(data=marker, key="finale_sound", height=1)
     _, middle, _ = st.columns([1, 3, 1])
     with middle:
         case_summary(game)
