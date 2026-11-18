@@ -16,8 +16,8 @@ import pandas as pd
 import streamlit as st
 
 import db
+import reloading
 from game.case import load_case
-from game.engine import Engine, Game, GameError
 
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
 # The campus map picture. To swap it, replace the file (any size, WebP/PNG/JPG) and
@@ -67,13 +67,17 @@ TOPIC_QUESTIONS = {
 st.set_page_config(page_title=TITLE, page_icon="🕵️", layout="wide", initial_sidebar_state="collapsed")
 
 
-@st.cache_resource
-def get_engine():
-    return Engine()
+@st.cache_resource(max_entries=1)
+def get_engine(version):
+    """One Engine per version of the game code and case file (see reloading.py)."""
+    return reloading.build_engine(version)
 
 
-engine = get_engine()
+engine = get_engine(reloading.source_version())
 case = engine.case
+
+# Imported after get_engine(), which may have just reloaded game.engine.
+from game.engine import Game, GameError  # noqa: E402
 
 
 def start_new_game():
