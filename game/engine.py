@@ -12,7 +12,7 @@ has not opened, and nothing returns the solution while the game is running.
 import random
 import re
 import secrets
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 
 from game.case import load_case, load_hunches, option_ids, resolve_variant
 
@@ -129,7 +129,10 @@ class Game:
 
     @classmethod
     def from_dict(cls, data):
-        return cls(**data)
+        """Rebuild a game from to_dict(). Keys this version does not know are ignored,
+        so a save from a newer or older version of the code still loads."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{key: value for key, value in data.items() if key in known})
 
 
 class Engine:

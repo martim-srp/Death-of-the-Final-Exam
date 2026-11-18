@@ -13,6 +13,7 @@ from openai import OpenAI
 from game.engine import GameError
 
 MAX_QUESTION_LENGTH = 300
+MAX_REPLY_LENGTH = 600  # a longer model reply is cut, so a runaway answer cannot flood the chat
 MAX_AI_CALLS = 12  # per game; the free Requesty plan allows 200 requests a day for the whole team
 MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
@@ -92,7 +93,18 @@ def _parse_answer(raw, topics):
     reply = answer.get("reply")
     if not isinstance(reply, str) or not reply.strip():
         return None
-    return reply.strip(), topic if topic in topics else "other"
+    return _shorten(reply.strip()), topic if topic in topics else "other"
+
+
+def _shorten(reply):
+    """Cut a reply longer than MAX_REPLY_LENGTH at its last full sentence (or word) that fits."""
+    if len(reply) <= MAX_REPLY_LENGTH:
+        return reply
+    cut = reply[: MAX_REPLY_LENGTH - 1]
+    end = max(cut.rfind(". "), cut.rfind("! "), cut.rfind("? "))
+    if end >= MAX_REPLY_LENGTH // 2:
+        return cut[: end + 1]
+    return cut.rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
 
 
 def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
@@ -106,7 +118,8 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
     if blocked:
         result = engine.ask(game, suspect, "other")
         reply = "Thank you, darling." if suspect == "companion" else "I would rather not hear that."
-        return {"reply": reply, "unlocked": result["unlocked"]}
+        # "blocked" tells the interface not to show the typed text back on screen either.
+        return {"reply": reply, "unlocked": result["unlocked"], "blocked": True}
 
     if game.status != "playing" or engine.time_left(game) < engine.clock_rules["question_cost"]:
         return engine.ask(game, suspect, "other")  # The engine raises the rule error.
