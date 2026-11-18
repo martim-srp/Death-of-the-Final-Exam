@@ -17,6 +17,7 @@ details such as card numbers.
 - `game/engine.py`: the rules. Clock, unlocks, questions, evidence, accusations, saving.
 - `db.py`: saved games in SQLite. All database code lives here.
 - `app.py`: the Streamlit interface. Game state lives in `st.session_state` on the server.
+- `board.py`: the HTML of the game board (map, evidence cards, suspects), built only from what the engine returns.
 - `tests/`: pytest tests for the engine and for the story's consistency.
 
 ## Commands

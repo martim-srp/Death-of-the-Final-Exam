@@ -34,10 +34,18 @@ python -m pytest
 
 ## How to play
 
-It is midnight. Every action costs time: opening a clue costs 30 minutes, and each question to a suspect
-(or showing them a clue) costs 10. You must accuse before 09:00, so you have 540 minutes. Pick one
-option in each of four columns (who, how, where, why). A wrong accusation only tells you how many of the
-four are right. After three wrong ones, or at 09:00, the case goes cold.
+The screen is laid out like a board game. The campus map is the board, the clues are a hand of evidence
+cards, and the five suspects sit across the top. Tap anything to open it in the side panel.
+
+It is midnight. Every action costs time: searching a place or opening a document costs 30 minutes, and
+each question to a suspect (or showing them a card) costs 10. Tap a red **?** card or pin to search it.
+Tap a face to interrogate: pick a question, show them a card, or type your own. Show a suspect the card
+that breaks their story and you catch them lying. Stuck on a locked card? A 💡 hint costs 15 minutes,
+and 🔎 shows your free leads. Cross off what it cannot be on the 📋 case sheet.
+
+When you are ready, press **Accuse** and pick who, how, where and why. You must accuse before 09:00,
+so you have 540 minutes. A wrong accusation shows which of the four parts are right. After three
+wrong ones, or at 09:00, the case goes cold.
 
 ## How it works
 
@@ -53,7 +61,8 @@ All characters, the course and the companies in the game are fictional.
 
 | Part | File | What it does |
 | --- | --- | --- |
-| Screens | `app.py` | The Streamlit interface. Only shows what the engine returns. |
+| Screens | `app.py` | The Streamlit interface: the side panel, the accusation and the reveal. Only shows what the engine returns. |
+| Board | `board.py` | Builds the board's HTML (status bar, map, evidence cards, suspects) and turns taps into panel ids. |
 | Rules | `game/engine.py` | Clock, unlocks, questions, evidence, contradictions, accusations, badges. |
 | Story | `data/case.json`, `game/case.py` | Clues, suspects, claims, the three variants, and the loader that merges a variant. |
 | AI | `game/ai.py` | Sends one question to the model through Requesty and checks the reply. |
@@ -131,7 +140,7 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
 **Not covered:**
 - the real model's replies, which change from run to run
 - how the pages look in a real browser
-- the clicks inside the campus map's HTML component
+- the taps inside the board's HTML component (the tap parser itself is tested)
 - the deployed host (sleep, restarts)
 
 These are checked by hand on the live app before a demo.

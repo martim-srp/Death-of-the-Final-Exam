@@ -61,6 +61,23 @@ def short_name(name):
     return name.removeprefix("The ")
 
 
+def parse_act(act, suspects, clues):
+    """Turn a tap from the board into (panel, id), or None if it names nothing real.
+
+    The browser sends plain strings, so every id is checked against the case file.
+    """
+    kind, _, value = str(act or "").partition(":")
+    if kind == "suspect" and value in suspects:
+        return ("suspect", value)
+    if kind in ("clue", "place") and value in clues:
+        return ("clue", value)
+    if kind == "spot" and value in MAP_SPOTS:
+        return ("spot", value)
+    if kind in ("home", "sheet", "accuse", "intro") and not value:
+        return (kind, None)
+    return None
+
+
 # ---- Status bar --------------------------------------------------------------------
 
 

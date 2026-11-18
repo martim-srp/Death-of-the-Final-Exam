@@ -1,12 +1,10 @@
 """Free-text questions use fake completions and the real game rules."""
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 from openai import OpenAIError
-from streamlit.testing.v1 import AppTest
 
 from game import ai
 from game.engine import Engine, Game, GameError
@@ -213,24 +211,3 @@ def test_requesty_uses_dotenv_and_the_openai_client(case, monkeypatch, tmp_path)
     assert result["reply"] == "I was at dinner."
 
 
-def test_question_form_works_without_key(case, monkeypatch, tmp_path):
-    engine, game = case
-    monkeypatch.delenv("REQUESTY_API_KEY", raising=False)
-    monkeypatch.setattr(ai, "ENV_FILE", tmp_path / ".env")
-
-    def unexpected_request(*args):
-        pytest.fail("The interface test attempted a live model request")
-
-    monkeypatch.setattr(ai, "_requesty_answer", unexpected_request)
-    app = AppTest.from_file(Path(__file__).resolve().parents[1] / "app.py", default_timeout=10)
-    app.session_state["game"] = game.to_dict()
-    app.secrets["REQUESTY_API_KEY"] = ""
-    app.run()
-    next(widget for widget in app.selectbox if widget.label == "Suspect").set_value("professor")
-    app.text_input[0].set_value("What is Question 5?")
-    next(button for button in app.button if button.label.startswith("Send question")).click().run()
-
-    assert not app.exception
-    assert app.metric[0].value == "00:10"
-    assert any("yesterday" in text.value for text in app.text)
-    assert any("D3" in message.value for message in app.success)

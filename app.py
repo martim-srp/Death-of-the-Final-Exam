@@ -188,19 +188,14 @@ def on_act(key):
     """A tap on the board: open what was tapped in the side panel. Free; it never changes the game."""
     state = st.session_state.get(key) or {}
     act = state.get("act") if hasattr(state, "get") else getattr(state, "act", None)
-    if not act:
+    parsed = board.parse_act(act, case["suspects"], case["clues"])
+    if parsed is None:
         return
-    kind, _, value = str(act).partition(":")
-    if kind == "suspect" and value in case["suspects"]:
-        set_focus("suspect", value)
-    elif kind in ("clue", "place") and value in case["clues"]:
-        set_focus("clue", value)
-    elif kind == "spot" and value in board.MAP_SPOTS:
-        set_focus("spot", value)
-    elif kind in ("home", "sheet", "accuse"):
-        set_focus(kind)
-    elif kind == "intro":
+    kind, value = parsed
+    if kind == "intro":
         st.session_state.intro_done = False
+    else:
+        set_focus(kind, value)
 
 
 # ---- The D4 chart --------------------------------------------------------------------
@@ -302,6 +297,10 @@ header[data-testid="stHeader"] { background: transparent; }
 .kicker { font: 600 0.72rem "Courier New", monospace; letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
 .who-head { display: flex; gap: 0.8rem; align-items: center; }
 .who-head img { width: 64px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #c0392b; }
+.nerves { display: flex; align-items: center; gap: 0.4rem; font: 600 0.68rem "Courier New", monospace; letter-spacing: 0.12em;
+  text-transform: uppercase; opacity: 0.85; margin-top: 0.25rem; }
+.nerves i { width: 110px; height: 6px; background: #3a2e28; border-radius: 3px; overflow: hidden; display: inline-block; }
+.nerves b { display: block; height: 100%; background: linear-gradient(90deg, #e8c27a, #e0645a); transition: width 0.6s; }
 .who-head .line { font-size: 0.85rem; opacity: 0.75; line-height: 1.3; }
 .chat { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.2rem 0.1rem; }
 .bubble { display: flex; gap: 0.5rem; align-items: flex-end; max-width: 92%; animation: rise 0.35s ease-out both; }
@@ -314,7 +313,7 @@ header[data-testid="stHeader"] { background: transparent; }
 .bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem "Courier New", monospace; color: #e8c27a; }
 .caught { margin: 0.2rem auto 0.3rem; text-align: center; animation: slam 0.5s cubic-bezier(.2,1.6,.4,1) both; }
 .caught b { display: inline-block; border: 3px solid #e0645a; color: #e0645a; padding: 0.1rem 0.6rem; transform: rotate(-4deg);
-  font: 800 1.15rem "Courier New", monospace; letter-spacing: 0.12em; }
+  font: 800 1.15rem "Courier New", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
 .evidence { position: relative; border-radius: 12px; overflow: hidden; background: #efe6d8; color: #2a201b;
@@ -547,10 +546,20 @@ def chat_html(log, suspect, titles):
         rows.append(f'<div class="bubble them"{style}><img src="{them}" alt=""><div class="say">{esc(entry["text"])}{unlock}</div></div>')
         for item in entry.get("caught", []):
             rows.append(
-                f'<div class="caught"{style}><b>⚡ Caught lying</b><small>They said “{esc(item["text"])}”. '
+                f'<div class="caught"{style}><b>⚡ Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
                 f'{esc(item["clue"] or "Your clue")} says otherwise.</small></div>'
             )
     return '<div class="chat">' + "".join(rows) + "</div>"
+
+
+def nerve_level(game, suspect):
+    """How rattled a suspect looks, 0 to 100: up with each card shown to them, more with each lie caught.
+
+    Only for show. It comes from what the player has done, never from who is guilty.
+    """
+    shown = sum(1 for e in game.history if e.get("action") == "present" and e.get("suspect") == suspect)
+    caught = sum(1 for s, _claim in game.contradictions if s == suspect)
+    return min(100, 10 + 15 * shown + 35 * caught)
 
 
 def panel_suspect(game, suspect):
@@ -559,9 +568,12 @@ def panel_suspect(game, suspect):
     brief = engine.character_brief(game, suspect)
     uri = board.find_picture("suspects", suspect) or ""
     persona = brief["persona"].split(";")[0].split(". ")[0].rstrip(".") + "."
+    nerves = nerve_level(game, suspect)
     st.markdown(
         f'<div class="who-head"><img src="{uri}" alt="{esc(brief["name"])}"><div>'
-        f'<div class="kicker">Interrogation</div><h3>{esc(brief["name"])}</h3><div class="line">{esc(persona)}</div></div></div>',
+        f'<div class="kicker">Interrogation</div><h3>{esc(brief["name"])}</h3><div class="line">{esc(persona)}</div>'
+        f'<div class="nerves" title="Show them evidence and catch their lies to rattle them">Nerves <i><b style="width:{nerves}%"></b></i></div>'
+        "</div></div>",
         unsafe_allow_html=True,
     )
     titles = {c["id"]: c["title"] for c in engine.clue_list(game)}
@@ -691,7 +703,7 @@ def finale(game):
     uri = board.find_picture("suspects", culprit) or ""
     solved = game.status == "solved"
     stamp, heading = ("GUILTY", "Case closed") if solved else ("CASE COLD", "The trail went cold")
-    sub = (f"Solved at {engine.clock_label(game)} · {len(game.contradictions)} lies caught" if solved
+    sub = (f"Solved at {engine.clock_label(game)} · {len(game.contradictions)} {"lie" if len(game.contradictions) == 1 else "lies"} caught" if solved
            else f"It was {case['suspects'][culprit]['name']} all along.")
     facts = "".join(f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS)
     medals = "".join(f"<span>🏅 {esc(b['title'])}</span>" for b in engine.badge_list(game))
@@ -745,6 +757,7 @@ def intro_dialog():
             f'<img src="{uri}" alt="" style="width:100%;max-height:160px;object-fit:cover;object-position:50% 45%;border-radius:10px">',
             unsafe_allow_html=True,
         )
+    st.markdown(f'<div class="kicker">{esc(TITLE)}</div>', unsafe_allow_html=True)
     st.markdown(STORY)
     st.markdown(PAGE_CSS + HOW_TO_PLAY, unsafe_allow_html=True)
     chosen = player_avatar()
