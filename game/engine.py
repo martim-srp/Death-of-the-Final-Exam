@@ -17,6 +17,9 @@ from dataclasses import asdict, dataclass, field
 from game.case import load_case, option_ids, resolve_variant
 
 COLUMNS = ("who", "how", "where", "why")
+HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
+# How a hint names a topic: "Ask the Professor about the exam."
+_HINT_TOPICS = {"alibi": "their alibi", "exam": "the exam", "report": "the report", "work": "their work"}
 
 # Things that look like a password or an API key. Used for the Companion's password trap.
 _KEY_PATTERN = re.compile(r"\b(sk|pk|rk|ghp|gho|xoxb|xoxp)[-_][A-Za-z0-9_-]{8,}", re.IGNORECASE)
@@ -118,6 +121,7 @@ class Game:
     history: list = field(default_factory=list)
     badges: list = field(default_factory=list)
     contradictions: list = field(default_factory=list)  # [suspect, claim_id], in the order caught
+    hints: list = field(default_factory=list)  # clue ids the player bought a hint for
 
     def to_dict(self):
         return asdict(self)
@@ -360,10 +364,71 @@ class Engine:
             result.append(self._claim_view(game, suspect, claim, clue_id))
         return result
 
+    # ---- Hints ----------------------------------------------------------------
+
+    def hint_cost(self):
+        return self.clock_rules.get("hint_cost", HINT_COST)
+
+    def _hint_text(self, game, clue_id):
+        """How to unlock a clue, in plain words, built from its unlock rule."""
+        clues = self._clues(game)
+        suspects = self._suspects(game)
+        unlock = clues[clue_id]["unlock"]
+        if "requires" in unlock:
+            titles = " and ".join(f"{c}. {clues[c]['title']}" for c in unlock["requires"])
+            return f"Open {titles} first."
+        if "topic" in unlock:
+            rule = unlock["topic"]
+            topic = _HINT_TOPICS.get(rule["topic"], rule["topic"].replace("_", " "))
+            return f"Ask {self._lower_the(suspects[rule['suspect']]['name'])} about {topic}."
+        if "present" in unlock:
+            rule = unlock["present"]
+            clue = clues[rule["clue"]]
+            name = self._lower_the(suspects[rule["suspect"]]["name"])
+            return f"Show {rule['clue']}. {clue['title']} to {name}."
+        return "Keep investigating."
+
+    @staticmethod
+    def _lower_the(name):
+        return "the" + name[3:] if name.startswith("The ") else name
+
+    def hint(self, game, clue_id):
+        """Say how to unlock a locked clue. Costs hint_cost minutes the first time; free to read again."""
+        if self.clue_state(game, clue_id) != "locked":
+            raise GameError("That clue is not locked.")
+        if clue_id not in game.hints:
+            self._spend(game, self.hint_cost())
+            game.hints.append(clue_id)
+            game.history.append({"action": "hint", "clue": clue_id, "clock": game.clock})
+        return self._hint_text(game, clue_id)
+
+    def leads(self, game):
+        """Free leads: what to do next with the clues the player has opened.
+
+        For each locked clue that unlocks by showing an opened clue to a suspect,
+        a lead says so. Built from the unlock rules, which are the same in every
+        variant, so a lead never gives away the culprit. Returns a list of
+        {"clue": locked clue id, "from": opened clue id, "text": ...}, in case order.
+        """
+        result = []
+        for clue_id, clue in self._clues(game).items():
+            rule = clue["unlock"].get("present")
+            if rule and rule["clue"] in game.opened and self.clue_state(game, clue_id) == "locked":
+                result.append({"clue": clue_id, "from": rule["clue"], "text": self._hint_text(game, clue_id)})
+        return result
+
+    def hint_list(self, game):
+        """The hints bought so far for clues that are still locked, as {clue_id: text}."""
+        return {
+            clue_id: self._hint_text(game, clue_id)
+            for clue_id in game.hints
+            if self.clue_state(game, clue_id) == "locked"
+        }
+
     def accuse(self, game, who, how, where, why):
         """Make an accusation. Free, but three wrong ones and the case goes cold.
 
-        A wrong accusation only says how many of the four choices are right.
+        Returns how many of the four choices are right; right_parts() says which.
         """
         if game.status != "playing":
             raise GameError("The case is closed.")
@@ -372,7 +437,8 @@ class Engine:
             if choice[column] not in option_ids(self.case, column):
                 raise GameError(f"That is not a valid option for {column}.")
         solution = self._resolved[game.variant]["solution"]
-        correct = sum(choice[c] == solution[c] for c in COLUMNS)
+        right = [c for c in COLUMNS if choice[c] == solution[c]]
+        correct = len(right)
         if correct == len(COLUMNS):
             game.status = "solved"
             if game.clock < self.case["hedge_fund_minutes"]:
@@ -381,12 +447,23 @@ class Engine:
             game.strikes += 1
             if game.strikes >= self.case["max_strikes"]:
                 game.status = "cold"
-        game.history.append({"action": "accuse", "correct": correct, "clock": game.clock})
+        game.history.append({"action": "accuse", "correct": correct, "right": right, "clock": game.clock})
         return {
             "correct": correct,
             "status": game.status,
             "strikes_left": self.case["max_strikes"] - game.strikes,
         }
+
+    def right_parts(self, game):
+        """Which of the four parts the latest accusation got right, in column order.
+
+        Shown after a wrong accusation, so the player knows what to change. Empty
+        if there has been no accusation yet.
+        """
+        for event in reversed(game.history):
+            if event["action"] == "accuse":
+                return list(event.get("right", []))
+        return []
 
     def solution(self, game):
         """The answer. Only available once the game is over."""

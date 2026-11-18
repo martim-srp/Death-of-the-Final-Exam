@@ -370,13 +370,20 @@ def ruled_out(suspect):
 BOARD_HEADINGS = {"who": "👤 Who", "how": "🔧 How", "where": "📍 Where", "why": "💭 Why"}
 
 
-def case_board():
-    """A deduction grid, like a board game's detective sheet: cross off what it cannot be.
+def case_board(game):
+    """Leads to follow, then a deduction grid, like a board game's detective sheet: cross off what it cannot be.
 
     The player's own notes, kept in this browser session. It never changes the game.
     """
     with st.container(key="case_board", border=True):
         st.markdown("**📋 Case board**")
+        leads = engine.leads(game) + [
+            {"clue": c, "text": text} for c, text in engine.hint_list(game).items()
+        ]
+        if leads and game.status == "playing":
+            st.markdown('<div class="board-head">🔎 Leads</div>', unsafe_allow_html=True)
+            for lead in leads:
+                st.markdown(f"🔒 **{lead['clue']}** · {lead['text']}")
         st.caption("Cross off what it cannot be. What is left is your accusation.")
         for column, heading in BOARD_HEADINGS.items():
             options = case["accusation"][column]
@@ -625,6 +632,7 @@ def run(action, *args):
     """Run an engine action, save the game, and turn rule errors into messages."""
     game = current_game()
     locked = {c["id"] for c in engine.clue_list(game) if c["state"] == "locked"}
+    known_leads = {lead["clue"] for lead in engine.leads(game)}
     try:
         result = action(game, *args)
     except GameError as error:
@@ -635,6 +643,8 @@ def run(action, *args):
     if unlocked:
         names = ", ".join(f"{c['id']}. {c['title']}" for c in unlocked)
         st.session_state.toast = f"New clue unlocked: {names}. Find it in the case file or on the map."
+    elif any(lead["clue"] not in known_leads for lead in engine.leads(game)):
+        st.session_state.toast = "🔎 New lead on your case board."
     return result
 
 
@@ -686,7 +696,7 @@ STORY = (
 HOW_TO_PLAY = f"""<div class="how-to">
 <div><b>1. Search</b>Tap places on the 🗺️ map and open documents in the 📁 case file. Each costs {case['clock']['clue_cost']} min.</div>
 <div><b>2. Question</b>Tap a suspect's portrait to talk. Ask anything, or show them a clue. Each costs {case['clock']['question_cost']} min.</div>
-<div><b>3. Catch lies</b>Show a suspect the clue that breaks their story and you catch them out ⚡. Clues unlock new clues.</div>
+<div><b>3. Catch lies</b>Show a suspect the clue that breaks their story and you catch them out ⚡. Clues unlock new clues. Stuck? Buy a 💡 hint on a locked clue.</div>
 <div><b>4. Accuse</b>Cross off what it cannot be on the 📋 case board, then name who, how, where and why before 09:00. You have {case['max_strikes']} tries.</div>
 </div>"""
 
@@ -775,7 +785,7 @@ hud(game)
 
 play_column, board_column = st.columns([5, 2], gap="medium")
 with board_column:
-    case_board()
+    case_board(game)
 with play_column:
     suspect_cards(game)
     map_tab, case_tab, question_tab, accuse_tab = st.tabs(
@@ -841,10 +851,19 @@ with case_tab:
         for item in opened:
             show_clue(item, expanded=item["id"] == newest)
     if locked:
-        with st.expander(f"🔒 Locked · {len(locked)}"):
-            st.caption("Question suspects, show them clues and search places to unlock these.")
+        hints = engine.hint_list(game)
+        with st.expander(f"🔒 Locked · {len(locked)}", expanded=bool(hints)):
+            st.caption(
+                "Question suspects, show them clues and search places to unlock these. "
+                f"Stuck? A hint tells you how to unlock one clue ({engine.hint_cost()} min)."
+            )
             for item in locked:
                 st.markdown(f"🔒 {item['id']}. {plain(item['title'])}")
+                if item["id"] in hints:
+                    st.info(f"💡 {hints[item['id']]}")
+                elif st.button(f"💡 Hint ({engine.hint_cost()} min)", key=f"hint_{item['id']}"):
+                    run(engine.hint, item["id"])
+                    st.rerun()
 
 # ---- Questioning --------------------------------------------------------------
 
@@ -967,8 +986,19 @@ with question_tab:
 
 # ---- Accusation -------------------------------------------------------------------
 
+
+def accusation_feedback(result, right):
+    """What a wrong accusation tells the player: which of the four parts are right."""
+    wrong = [c for c in ("who", "how", "where", "why") if c not in right]
+    if right:
+        parts = f"Right: {', '.join(c.capitalize() for c in right)}. Wrong: {', '.join(c.capitalize() for c in wrong)}."
+    else:
+        parts = "None of the four parts are right."
+    return f"{result['correct']} of 4 are right. {parts} Wrong accusations left: {result['strikes_left']}."
+
+
 with accuse_tab:
-    st.write("Pick one option in each column. A wrong accusation only tells you how many are right.")
+    st.write("Pick one option in each column. A wrong accusation tells you which parts are right.")
     choice = {}
     columns = st.columns(4)
     for col, column in zip(columns, ("who", "how", "where", "why")):
@@ -990,10 +1020,7 @@ with accuse_tab:
         else:
             result = run(engine.accuse, choice["who"], choice["how"], choice["where"], choice["why"])
             if result and result["status"] == "playing":
-                st.session_state.flash = (
-                    "warning",
-                    f"{result['correct']} of 4 are right. Wrong accusations left: {result['strikes_left']}.",
-                )
+                st.session_state.flash = ("warning", accusation_feedback(result, engine.right_parts(game)))
             st.rerun()
 
 # ---- Start screen ---------------------------------------------------------------
