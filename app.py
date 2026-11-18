@@ -44,6 +44,8 @@ FALLBACK_NOTES = {
     "unreadable": "The AI's answer couldn't be read, so this is the suspect's scripted answer.",
     "limit": "This case has used up its AI questions. Suspects now give their scripted answers.",
 }
+# Shown in the chat instead of a typed question that looked like a password or key.
+HIDDEN_QUESTION = "(Hidden: that looked like a password, so it was not sent.)"
 # The questions a player can tap, by topic: (button label, what the detective says).
 TOPICS = {
     "alibi": ("Last night?", "Where were you last night?"),
@@ -87,6 +89,8 @@ def current_game():
     if "game" not in st.session_state:
         requested = st.query_params.get("game")
         saved = db.load_game(requested) if requested else None
+        if saved is not None and saved.variant not in case["variants"]:
+            saved = None  # saved with a variant this case file no longer has
         if saved is not None:
             st.session_state.game = saved.to_dict()
             st.session_state.game_id = requested
@@ -94,6 +98,12 @@ def current_game():
             if requested:
                 st.session_state.flash = ("warning", "That saved game was not found, so a new case has started.")
             start_new_game()
+    elif "game_id" in st.session_state:
+        # The saved game is the truth. Another tab or phone with the same link may have
+        # played on, so an old copy in this tab must not undo it (or undo a cold case).
+        saved = db.load_game(st.session_state.game_id)
+        if saved is not None and saved.variant in case["variants"]:
+            st.session_state.game = saved.to_dict()
     return Game.from_dict(st.session_state.game)
 
 
@@ -750,7 +760,7 @@ def panel_suspect(game, suspect):
         if result:
             answer, fallback = result
             sound("tick")
-            say(suspect, {"who": "you", "text": question})
+            say(suspect, {"who": "you", "text": HIDDEN_QUESTION if answer.get("blocked") else question})
             say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback})
         st.rerun()
 

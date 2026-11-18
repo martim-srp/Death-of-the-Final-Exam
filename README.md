@@ -123,12 +123,24 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
 - **Secrets:** the Requesty key is read from `REQUESTY_API_KEY` (environment, `.env`, or
   Streamlit secrets) and is never committed. `.env` and `.streamlit/secrets.toml` are in
   `.gitignore`.
-- **Input:** questions are limited to 300 characters, and empty questions are rejected.
+- **Logs:** when the AI call fails, the app logs only the error's type and HTTP status. It never
+  logs the key, the prompt, the player's question or the model's reply.
+- **Error pages:** players see only the type of an unexpected error, never its message or
+  traceback (`showErrorDetails = "type"` in `.streamlit/config.toml`). The full error goes to the
+  server log.
+- **Input:** questions are limited to 300 characters, and empty or blank questions are rejected
+  before they cost any time. Typed text is shown as plain text, never as HTML. A model reply
+  longer than 600 characters is cut.
 - **Password trap:** the Companion asks for your password. Anything that looks like a password
-  or an API key is stopped by `Engine.check_secret()` before it reaches the model.
+  or an API key is stopped by `Engine.check_secret()` before it reaches the model, and the chat
+  shows a note instead of the typed text.
+- **Resume links:** a link that is malformed, unknown or points to a damaged save starts a new
+  case. Every action reloads the saved game first, so a second tab with an old copy cannot undo
+  progress, or a cold case, made in another tab.
 - **Hidden content:** locked clue text never reaches the browser. The interface reads clues only
   through `Engine.clue_list()` and `Engine.read_clue()`.
-- **Dependencies:** four, each pinned to an exact version in `requirements.txt`.
+- **Dependencies:** four, each pinned to an exact version in `requirements.txt` and checked for
+  known vulnerabilities by `pip-audit` on every pull request.
 
 ### What the tests cover, and what they do not
 
@@ -139,7 +151,9 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
 - the AI layer, with fake model replies: bad JSON, code fences, failures, the call limit, and
   the password trap
 - that briefs never contain the solution
-- saving and resuming, including malformed ids and old saves
+- saving and resuming, including malformed ids, old saves, damaged saves and two open tabs
+- invalid input: blank, too long or HTML questions, replies of the wrong shape, AI timeouts
+  and rejected keys (`tests/test_invalid_input.py`)
 - the main screens, through Streamlit's `AppTest`
 
 **Not covered:**
