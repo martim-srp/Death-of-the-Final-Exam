@@ -190,13 +190,20 @@ def goal_target(step):
     return step.get("clue") if step["do"] == "search" else step.get("suspect")
 
 
-def goal_html(step):
-    """The always-visible objective strip: one next step, tap it to go there."""
+def goal_html(step, thought=None):
+    """The always-visible objective strip: one next step, tap it to go there.
+
+    With a thought, the detective's line leads and the plain step sits above it as the label.
+    """
     if not step:
         return ""
+    if thought and thought != step["text"]:
+        text = f'<small class="plain">{esc(step["text"])}</small><em>{esc(thought)}</em>'
+    else:
+        text = f'<small>Next step</small>{esc(step["text"])}'
     return (
         f'<button class="goal-bar" data-act="next:{goal_act(step)}"><span class="gi">{icon(GOAL_ICON[step["do"]])}</span>'
-        f'<span class="gt"><small>Next step</small>{esc(step["text"])}</span><span class="go">›</span></button>'
+        f'<span class="gt">{text}</span><span class="go">›</span></button>'
     )
 
 
@@ -630,6 +637,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .goal-bar .gt { flex: 1 1 auto; min-width: 0; }
 .goal-bar small { display: block; font: 600 10px var(--type); letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
 .goal-bar .go { font-size: 26px; color: var(--gold); flex: 0 0 auto; }
+.goal-bar small.plain { text-transform: none; letter-spacing: .04em; font-size: 11px; margin-bottom: 2px; }
+.goal-bar em { display: block; font-style: italic; line-height: 1.3; }
 @keyframes rise-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .card.goal, .sus.goal { border-color: var(--gold); animation: beacon-box 1.8s ease-in-out infinite; }
 @keyframes beacon-box { 50% { box-shadow: 0 0 0 4px rgba(232,194,122,.5), 0 0 18px rgba(232,194,122,.45); } }

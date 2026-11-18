@@ -14,7 +14,7 @@ import re
 import secrets
 from dataclasses import asdict, dataclass, field, fields
 
-from game.case import load_case, load_hunches, option_ids, resolve_variant
+from game.case import load_case, load_hunches, load_voice, option_ids, resolve_variant
 
 COLUMNS = ("who", "how", "where", "why")
 HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
@@ -138,9 +138,10 @@ class Game:
 class Engine:
     """Applies the rules of one case file to games."""
 
-    def __init__(self, case=None, hunches=None):
+    def __init__(self, case=None, hunches=None, voice=None):
         self.case = case if case is not None else load_case()
         self.hunch_lines = hunches if hunches is not None else load_hunches()
+        self.voice = voice if voice is not None else load_voice()
         self.clock_rules = self.case["clock"]
         self._resolved = {v: resolve_variant(self.case, v) for v in self.case["variants"]}
         self._vocabulary = case_vocabulary(self.case)
@@ -441,6 +442,56 @@ class Engine:
                 if hunch:
                     result.append({"line": self._fill(game, hunch["line"]), "mark": self._fill(game, hunch.get("mark", ""))})
         return result
+
+    def musing(self, game, clue_id):
+        """The detective's thought on an opened clue that breaks no story right now.
+
+        Shown instead of a hunch. The same in every variant, so it never points at anyone.
+        Returns a line, or None if the clue is not open or a hunch is showing.
+        """
+        if self.clue_state(game, clue_id) != "open" or self.hunches(game, clue_id):
+            return None
+        return self.voice.get("clues", {}).get(clue_id)
+
+    def reaction(self, game, topic=None, caught=False, unlocked=False, shown=False):
+        """A short thought after a suspect answers. Free, and no AI call.
+
+        Picked by what just happened (a lie caught, a clue unlocked, a card shown, the
+        question's topic, or a typed question), never by who is talking, so it gives
+        nothing away. Rotates through the lines so it does not repeat every time.
+        """
+        replies = self.voice.get("replies", {})
+        if caught:
+            kind = "caught"
+        elif unlocked:
+            kind = "unlocked"
+        elif shown:
+            kind = "shown"
+        else:
+            kind = topic if topic in replies else "typed"
+        lines = replies.get(kind) or []
+        return lines[len(game.history) % len(lines)] if lines else None
+
+    def thought(self, game, step):
+        """The next step as the detective's thought, for the guide bar. Built from the step
+        (itself built from the unlock rules), so it is the same in every variant."""
+        if not step:
+            return None
+        lines = self.voice.get("next", {})
+        if step["do"] == "search":
+            return self.voice.get("search", {}).get(step["clue"]) or step["text"]
+        if step["do"] in ("show", "ask"):
+            clue = self._clues(game).get(step.get("clue"), {})
+            topic = _HINT_TOPICS.get(step.get("topic"), str(step.get("topic", "")).replace("_", " "))
+            name = self._suspects(game)[step["suspect"]]["name"]
+            title = clue.get("title", "")
+            title_l = title[4:] if title.startswith("The ") else title[:1].lower() + title[1:]
+            return lines[step["do"]].format(name=name, name_l=self._lower_the(name), clue=step.get("clue", ""),
+                                            title=title, title_l=title_l, topic=topic)
+        if step["do"] == "accuse":
+            retry = any(event["action"] == "accuse" for event in game.history)
+            return lines["accuse_retry" if retry and self.time_left(game) > ACCUSE_NOW_MINUTES else "accuse_time"]
+        return lines.get(step["do"], step["text"])
 
     def next_step(self, game):
         """The single most useful thing to do now, like a quest objective. Free.
