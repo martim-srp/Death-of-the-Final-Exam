@@ -6,6 +6,8 @@ The game state lives in st.session_state on the server. The browser only ever
 receives what the engine returns, so locked clues and the solution never reach it.
 """
 
+import base64
+import html
 import re
 from pathlib import Path
 
@@ -18,6 +20,27 @@ import reloading
 from game.case import load_case
 
 COVER = Path(__file__).resolve().parent / "assets" / "cover.webp"
+# The campus map picture. To swap it, replace the file (any size, WebP/PNG/JPG) and
+# move the pins below: each is (x, y) as a fraction of the picture's width and height,
+# at the centre of the round head of the pin drawn on the picture. Only the places
+# drawn on the picture get a pin; the cafeteria (L2) is not on it, so it stays in the case file.
+CAMPUS_MAP = Path(__file__).resolve().parent / "assets" / "campus-map.webp"
+MAP_PINS = {
+    "L1": (0.365, 0.440, "Library gate"),  # the printer pin, library print station
+    "L3": (0.317, 0.731, "Residence"),  # the house pin
+    "L4": (0.537, 0.550, "Faculty corridor"),  # the graduation cap pin, Professor's office
+    "L5": (0.672, 0.115, "Beach café"),  # the coffee cup pin
+}
+PORTRAITS = Path(__file__).resolve().parent / "assets" / "suspects"  # one <suspect id>.<png|jpg|webp|svg> each
+# File types a portrait may have, in order of preference: a picture someone supplies
+# (PNG, JPG or WebP) wins over the drawn SVG of the same suspect.
+PORTRAIT_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+}
 TITLE = load_case()["title"]  # the game's name lives in data/case.json
 
 st.set_page_config(page_title=TITLE, page_icon="🕵️", layout="wide")
@@ -192,6 +215,233 @@ def contradiction_board(game, clue_titles):
             st.markdown(f"- **{plain(name)}**: “{plain(item['text'])}” Broken by *{plain(source.rstrip('. '))}*.")
 
 
+# ---- The noir look: portraits, suspect cards and the notebook ----------------------
+
+NOIR_CSS = """
+<style>
+.suspect-row { display: flex; gap: 0.75rem; overflow-x: auto; padding: 0.25rem 0 0.5rem; }
+.suspect-card { flex: 1 0 104px; max-width: 160px; text-align: center; position: relative; }
+.suspect-card img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; border-radius: 10px; }
+.suspect-card.ruled-out img { filter: grayscale(1) brightness(0.55); }
+.suspect-card .name { font-family: Georgia, serif; font-size: 0.85rem; margin-top: 0.3rem; line-height: 1.2; }
+.suspect-card .status { font-size: 0.75rem; opacity: 0.75; }
+.suspect-card .caught { color: #e0645a; font-weight: 600; }
+.suspect-card .stamp { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%) rotate(-14deg);
+  border: 2px solid #c0392b; color: #c0392b; background: rgba(20, 16, 14, 0.75); padding: 0 0.35rem;
+  font: 700 0.8rem "Courier New", monospace; letter-spacing: 0.08em; white-space: nowrap; }
+@media (max-width: 640px) {
+  .suspect-card { flex-basis: 70px; }
+  .suspect-card .name { font-size: 0.75rem; }
+  .suspect-card .status { font-size: 0.65rem; }
+}
+.suspect-portrait { width: 140px; max-width: 40vw; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; }
+</style>
+"""
+
+
+@st.cache_data
+def portrait_uri(suspect):
+    """The suspect's portrait as a data URI, or None if there is no picture for them."""
+    for extension, mime in PORTRAIT_TYPES.items():
+        path = PORTRAITS / f"{suspect}{extension}"
+        if path.exists():
+            return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+    return None
+
+
+def suspect_status(game):
+    """For each suspect: whether you have questioned them, and how many contradictions you caught."""
+    questioned = {event["suspect"] for event in game.history if "suspect" in event}
+    caught = {}
+    for suspect, _claim in game.contradictions:
+        caught[suspect] = caught.get(suspect, 0) + 1
+    return {s: {"questioned": s in questioned, "caught": caught.get(s, 0)} for s in case["suspects"]}
+
+
+def ruled_out(suspect):
+    """Whether the player has ticked this suspect off in their notebook."""
+    return bool(st.session_state.get(f"note_suspect_{suspect}"))
+
+
+def suspect_cards(game):
+    """A row of portrait cards: who you have questioned, who you caught out, who you ruled out."""
+    cards = []
+    for suspect, status in suspect_status(game).items():
+        name = html.escape(case["suspects"][suspect]["name"].removeprefix("The "))
+        uri = portrait_uri(suspect)
+        picture = f'<img src="{uri}" alt="{name}">' if uri else ""
+        line = "Questioned" if status["questioned"] else "Not questioned yet"
+        if status["caught"]:
+            line += f' · <span class="caught">⚡ {status["caught"]} caught</span>'
+        out = ruled_out(suspect)
+        stamp = '<div class="stamp">RULED OUT</div>' if out else ""
+        cards.append(
+            f'<div class="suspect-card{" ruled-out" if out else ""}">{picture}{stamp}'
+            f'<div class="name">{name}</div><div class="status">{line}</div></div>'
+        )
+    st.markdown(NOIR_CSS + '<div class="suspect-row">' + "".join(cards) + "</div>", unsafe_allow_html=True)
+
+
+def notebook(game):
+    """The detective's notebook: tick off suspects and clues, and jot down hunches.
+
+    It is the player's own scratch paper, kept in this browser session only. It never
+    changes the game: the engine alone decides what is true.
+    """
+    with st.expander("📓 Detective's notebook", expanded=True):
+        st.markdown("**Suspects I have ruled out**")
+        for suspect, details in case["suspects"].items():
+            st.checkbox(details["name"], key=f"note_suspect_{suspect}")
+        opened = [c for c in engine.clue_list(game) if c["state"] == "open"]
+        st.markdown("**Clues I have dealt with**")
+        if not opened:
+            st.caption("Open a clue in the case file and it will appear here.")
+        for clue in opened:
+            st.checkbox(f"{clue['id']}. {clue['title']}", key=f"note_clue_{clue['id']}")
+        st.text_area("Hunches", key="note_hunches", placeholder="Who was lying, and about what?")
+
+
+def clear_notebook():
+    for key in [k for k in st.session_state if str(k).startswith("note_")]:
+        del st.session_state[key]
+
+
+# ---- The campus map ---------------------------------------------------------------
+
+PIN_COLORS = {"locked": "#5a5048", "available": "#c0392b", "open": "#efe6d8"}
+PIN_STATES = {"locked": "Locked", "available": "Not searched yet", "open": "Searched"}
+
+
+def map_points(game):
+    """One pin per location clue on the map, with its state from the engine."""
+    points = []
+    for item in engine.clue_list(game):
+        if item["id"] in MAP_PINS:
+            x, y, place = MAP_PINS[item["id"]]
+            points.append(
+                {"id": item["id"], "x": x, "y": y, "place": place, "title": item["title"],
+                 "state": item["state"], "status": PIN_STATES[item["state"]]}
+            )
+    return points
+
+
+MAP_JS = """
+export default function(component) {
+    const { data, setTriggerValue, parentElement } = component;
+    let holder = parentElement.querySelector(".campus-map");
+    if (!holder) {
+        holder = document.createElement("div");
+        holder.className = "campus-map";
+        parentElement.appendChild(holder);
+    }
+    holder.innerHTML = data;
+    holder.querySelectorAll("[data-place]").forEach((pin) => {
+        const go = () => setTriggerValue("place", pin.getAttribute("data-place"));
+        pin.addEventListener("click", go);
+        pin.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    });
+}
+"""
+
+MAP_CSS = """
+.campus-map svg { width: 100%; max-width: 560px; height: auto; display: block; border-radius: 10px; }
+.campus-map [data-place] { cursor: pointer; }
+.campus-map [data-place]:hover circle.pin, .campus-map [data-place]:focus circle.pin { stroke-width: 9; }
+.campus-map [data-place]:focus { outline: none; }
+"""
+
+map_component = st.components.v2.component("campus_map", js=MAP_JS, css=MAP_CSS)
+
+
+@st.cache_data
+def campus_picture():
+    """The map picture as a data URI, with its size in pixels."""
+    from PIL import Image  # installed with streamlit
+
+    with Image.open(CAMPUS_MAP) as picture:
+        size = picture.size
+        mime = Image.MIME[picture.format]
+    uri = f"data:{mime};base64," + base64.b64encode(CAMPUS_MAP.read_bytes()).decode("ascii")
+    return uri, size
+
+
+def campus_svg(points, picked=None):
+    """The map picture, with each pin drawn on it made clickable and ringed in its state's colour.
+
+    All of it is our own trusted markup.
+    """
+    uri, (width, height) = campus_picture()
+    scale = width / 1200  # sizes below are for a 1200-pixel-wide picture
+    pins = []
+    for p in points:
+        x, y = p["x"] * width, p["y"] * height
+        color = PIN_COLORS[p["state"]]
+        text_color = "#14100e" if p["state"] == "open" else "#efe6d8"
+        picked_ring = (
+            '<circle r="38" fill="none" stroke="#efe6d8" stroke-width="3" stroke-dasharray="6 5"/>'
+            if p["id"] == picked
+            else ""
+        )
+        label = html.escape(f"{p['place']}: {p['status']}")
+        pins.append(
+            f'<g data-place="{p["id"]}" transform="translate({x:.0f} {y:.0f}) scale({scale:.3f})" '
+            f'role="button" tabindex="0" aria-label="{label}">'
+            f"<title>{label}</title>{picked_ring}"
+            f'<circle class="pin" r="29" fill="none" stroke="{color}" stroke-width="6"/>'
+            '<circle r="55" fill="#000" fill-opacity="0"/>'  # a finger-sized target on a phone
+            f'<g transform="translate(26 -26)"><circle r="14" fill="{color}" stroke="#14100e" stroke-width="2"/>'
+            f'<text y="4.5" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" '
+            f'fill="{text_color}">{p["id"]}</text></g></g>'
+        )
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
+        f'aria-label="Map of the campus"><image href="{uri}" width="{width}" height="{height}"/>'
+        + "".join(pins)
+        + "</svg>"
+    )
+
+
+def picked_on_map():
+    """Copy a tap on a map pin into the place picker, before the page is drawn again."""
+    state = st.session_state.get("campus_map") or {}
+    place = state.get("place") if hasattr(state, "get") else getattr(state, "place", None)
+    if place in MAP_PINS:
+        st.session_state.map_pick = place
+
+
+def campus_map(game):
+    """The map tab: tap a pin (or a name below the map) to go there."""
+    points = map_points(game)
+    by_id = {p["id"]: p for p in points}
+    map_column, place_column = st.columns([3, 2], gap="large")
+    with map_column:
+        map_component(
+            data=campus_svg(points, st.session_state.get("map_pick")), key="campus_map",
+            on_place_change=picked_on_map,
+        )
+        st.caption("🔴 not searched yet · ⚪ searched · ⚫ locked")
+    with place_column:
+        place = st.pills(
+            "Go to", list(by_id), key="map_pick", format_func=lambda i: by_id[i]["place"]
+        )
+        if place is None:
+            st.caption("Tap a pin on the map, or a place above, to go there.")
+            return
+        point = by_id[place]
+        st.markdown(f"#### 📍 {plain(point['title'])}")
+        if point["state"] == "locked":
+            st.markdown("🔒 Locked. You have no reason to be here yet. Keep investigating.")
+        elif point["state"] == "available":
+            if st.button(f"Search it ({case['clock']['clue_cost']} min)", key="map_search", type="primary"):
+                run(engine.open_clue, place)
+                st.rerun()
+        else:
+            clue = engine.read_clue(game, place)
+            st.write(clue["text"])
+            if clue["log"]:
+                st.caption("Its log is in the 📁 Case file, where you can search it.")
+
+
 def run(action, *args):
     """Run an engine action, save the game, and turn rule errors into messages."""
     game = current_game()
@@ -223,8 +473,11 @@ with st.sidebar:
         st.subheader("Badges")
         for badge in badges:
             st.markdown(f"🏅 **{badge['title']}**", help=badge["description"])
+    if game.status == "playing":
+        notebook(game)
     if st.button("New case", use_container_width=True):
         start_new_game()
+        clear_notebook()
         st.session_state.pop("last_answer", None)
         st.session_state.pop("last_caught", None)
         st.rerun()
@@ -272,7 +525,14 @@ if game.status != "playing":
     )
     st.stop()
 
-case_tab, question_tab, accuse_tab = st.tabs(["📁 Case file", "🗣️ Question suspects", "⚖️ Accuse"])
+suspect_cards(game)
+
+map_tab, case_tab, question_tab, accuse_tab = st.tabs(
+    ["🗺️ Campus map", "📁 Case file", "🗣️ Question suspects", "⚖️ Accuse"]
+)
+
+with map_tab:
+    campus_map(game)
 
 # ---- Case file ------------------------------------------------------------------
 
@@ -330,7 +590,18 @@ with question_tab:
         "Suspect", suspect_ids, format_func=lambda s: case["suspects"][s]["name"]
     )
     brief = engine.character_brief(game, suspect)
-    st.caption(brief["persona"])
+    uri = portrait_uri(suspect)
+    if uri:
+        portrait_column, persona_column = st.columns([1, 3], vertical_alignment="center")
+        with portrait_column:
+            st.markdown(
+                f'<img class="suspect-portrait" src="{uri}" alt="{html.escape(brief["name"])}">',
+                unsafe_allow_html=True,
+            )
+        with persona_column:
+            st.caption(brief["persona"])
+    else:
+        st.caption(brief["persona"])
 
     with st.form("suspect_chat", clear_on_submit=True):
         question = st.text_input("Your question", help=f"Up to {ai.MAX_QUESTION_LENGTH} characters.")
