@@ -651,6 +651,9 @@ def run(action, *args):
         result = action(game, *args)
     except GameError as error:
         st.session_state.flash = ("error", str(error))
+        # Also as a pop-up, so the player sees it wherever they are on the page:
+        # the message at the top is easy to miss after tapping a button further down.
+        st.session_state.refusal = str(error)
         return None
     save(game)
     unlocked = [c for c in engine.clue_list(game) if c["id"] in locked and c["state"] != "locked"]
@@ -695,6 +698,9 @@ if flash:
 toast = st.session_state.pop("toast", None)
 if toast:
     st.toast(toast, icon="🔓")
+refusal = st.session_state.pop("refusal", None)
+if refusal:
+    st.toast(refusal, icon="⚠️")
 
 # ---- Intro --------------------------------------------------------------------
 
@@ -957,6 +963,7 @@ with question_tab:
             "Your question",
             help=f"Up to {ai.MAX_QUESTION_LENGTH} characters.",
             placeholder="Type a question, like: where were you last night?",
+            max_chars=ai.MAX_QUESTION_LENGTH,  # stops typing at the limit, so a long question is never lost
         )
         send = st.form_submit_button(f"Send question ({case['clock']['question_cost']} min)", type="primary")
     if send:
