@@ -22,11 +22,22 @@ python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
+The game runs without an AI key: the suspects then answer with their scripted lines. To let the AI play
+them, copy `.env.example` to `.env` and put a [Requesty](https://requesty.ai) key in it. `.env` is
+ignored by git.
+
 ## Run the tests
 
 ```bash
 python -m pytest
 ```
+
+## How to play
+
+It is midnight. Every action costs time: opening a clue costs 30 minutes, and each question to a suspect
+(or showing them a clue) costs 10. You must accuse before 09:00, so you have 540 minutes. Pick one
+option in each of four columns (who, how, where, why). A wrong accusation only tells you how many of the
+four are right. After three wrong ones, or at 09:00, the case goes cold.
 
 ## How it works
 
