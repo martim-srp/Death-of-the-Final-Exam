@@ -590,6 +590,19 @@ def picked_on_map():
         st.session_state.map_spot = place
 
 
+def clue_picture(clue_id):
+    """An opened clue's evidence picture, if it has one.
+
+    Pictures come in two shapes (16:9 and 4:3). Each is shown whole at the same width, keeping its own
+    shape, so nothing is cropped or stretched.
+    """
+    for ext in (".webp", ".png", ".jpg"):
+        picture = CLUE_PICTURES / f"{clue_id}{ext}"
+        if picture.is_file():
+            st.image(str(picture), width=360)
+            return
+
+
 def campus_map(game):
     """The map tab: tap a pin (or a name below the map) to go there."""
     points = map_points(game)
@@ -623,6 +636,7 @@ def campus_map(game):
                 st.rerun()
         else:
             clue = engine.read_clue(game, place)
+            clue_picture(place)
             st.write(clue["text"])
             if clue["log"]:
                 st.caption("Its log is in the 📁 Case file, where you can search it.")
@@ -803,10 +817,7 @@ def show_clue(item, expanded):
     title = f"{icon} {item['id']}. {item['title']}"
     clue = engine.read_clue(game, item["id"])
     with st.expander(title, expanded=expanded):
-        picture = next((CLUE_PICTURES / f"{item['id']}{ext}" for ext in (".webp", ".png", ".jpg")
-                        if (CLUE_PICTURES / f"{item['id']}{ext}").exists()), None)
-        if picture:
-            st.image(str(picture), width=360)
+        clue_picture(item["id"])
         st.write(clue["text"])
         if clue["log"]:
             query = st.text_input(
