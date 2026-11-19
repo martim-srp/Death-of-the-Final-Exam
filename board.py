@@ -450,6 +450,23 @@ function tour(root, setTriggerValue) {
     show();
 }
 
+// What a tap opens shows in the panel. When the columns stack (phones, narrow windows) the
+// panel sits below the map and the cards, so bring it into view once the redraw has filled it.
+// Where the panel is already on screen, nothing moves.
+function revealPanel() {
+    const before = (document.querySelector(".st-key-panel") || {}).textContent;
+    const started = Date.now();
+    const check = () => {
+        const panel = document.querySelector(".st-key-panel");
+        const changed = panel && panel.textContent !== before;
+        if (!changed && Date.now() - started < 5000) { setTimeout(check, 150); return; }
+        if (!panel) return;
+        const r = panel.getBoundingClientRect();
+        if (r.top > window.innerHeight * 0.6 || r.bottom < 80) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    setTimeout(check, 150);
+}
+
 export default function(component) {
     const { data, setTriggerValue, parentElement } = component;
     let root = parentElement.querySelector(".deck");
@@ -485,10 +502,7 @@ export default function(component) {
     root.querySelectorAll("[data-act]").forEach((el) => {
         const go = () => {
             setTriggerValue("act", el.getAttribute("data-act"));
-            if (window.matchMedia("(max-width: 640px)").matches) {
-                const panel = document.querySelector(".st-key-panel");
-                if (panel) setTimeout(() => panel.scrollIntoView({ behavior: "smooth", block: "start" }), 350);
-            }
+            revealPanel();
         };
         el.addEventListener("click", go);
         el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
