@@ -232,7 +232,7 @@ def test_only_opened_cards_can_be_shown_to_a_suspect():
     game = Engine().new_game(seed=1, variant="A")
     Engine().open_clue(game, "L4")
     at = start(game=game, focus=("suspect", "companion"), suspect="companion")
-    assert at.pills(key="show_clue").options == ["L4"]
+    assert at.pills(key="show_clue").options == ["L4 · Faculty"]
 
 
 def test_showing_the_breaking_card_stamps_caught_lying():

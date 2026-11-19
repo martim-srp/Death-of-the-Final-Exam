@@ -738,10 +738,12 @@ def topic_label(topic, asked, tip=None):
 
 
 def card_label(clue_id, shown, tip=None):
-    """A card to show: an arrow on the suggested next step, ✓ once shown to this suspect."""
+    """A card to show, by code and name: an arrow on the suggested next step, ✓ once shown to this suspect."""
+    name = board.CARD_NAMES.get(clue_id)
+    label = f"{clue_id} · {name}" if name else clue_id
     if clue_id == tip:
-        return f"→ {clue_id}"
-    return f"✓ {clue_id}" if clue_id in shown else clue_id
+        return f"→ {label}"
+    return f"✓ {label}" if clue_id in shown else label
 
 
 def panel_suspect(game, suspect):
