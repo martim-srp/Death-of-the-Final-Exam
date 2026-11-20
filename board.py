@@ -158,9 +158,9 @@ def sfx_html(sound, nonce):
 def tutorial_html():
     """The first-play tour: four short steps, each pointing at one part of the screen."""
     steps = [
-        ("map", "The board", "Tap a red ? pin to search a place."),
+        ("map", "The board", "To search a new area, click on the red circle."),
         ("hand", "Your evidence", "Tap a card to open it. Red cards are new."),
-        ("suspects", "The suspects", "Tap a face to question them, or show them a card."),
+        ("suspects", "The suspects", "Tap a face to question them, or show them an evidence card."),
         ("accuse", "Accuse", "Name who, how, where and why before 09:00."),
     ]
     items = "".join(

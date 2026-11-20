@@ -51,7 +51,7 @@ def _looks_like_password(word, known_words):
     """True if one word looks like a password: 8+ characters mixing lowercase letters and digits.
 
     Game data is never a password: words from the case file and card numbers. Log fields
-    (job=88213) and file names (SV_Final_v3.pdf) only wrap a value, so the value inside is
+    (job=88213) and file names (INV_Final_v3.pdf) only wrap a value, so the value inside is
     checked instead: card=STU-2291 is fine, owner=Carcavelos2026 and secret2026.txt are not.
     A file name's stem is checked part by part (report_final2.docx is "report" and "final2").
     """

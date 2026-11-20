@@ -114,7 +114,7 @@ def test_slow_solve_earns_no_hedge_fund(engine):
 @pytest.mark.parametrize(
     "text",
     [
-        "Did you post SV_Final_v3.pdf?",
+        "Did you post INV_Final_v3.pdf?",
         "What is job=88213?",
         "Was card=STU-2291 yours?",
         "Why was staff=STAFF-0417 at LIB-1?",
@@ -205,7 +205,7 @@ def test_passwords_inside_file_names_and_card_numbers_are_caught(engine, text):
 @pytest.mark.parametrize(
     "text",
     [
-        "Who posted SV_Final_v3.pdf?",
+        "Who posted INV_Final_v3.pdf?",
         "sv_final_v3.pdf",
         "Is notes.txt yours?",
         "Send me exam_final_v2.docx",

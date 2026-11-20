@@ -348,7 +348,7 @@ def test_new_case_after_the_reveal_starts_over_and_clears_notes():
 def test_a_new_case_opens_with_the_story_rules_and_detectives():
     at = start(intro_done=None)
     assert "Start the investigation" in labels(at)
-    assert "Semiconductor Valuation" in page(at)
+    assert "Investments exam" in page(at)
     assert "Play as her" in labels(at) and "Play as him" in labels(at)
     click(at, "Play as him")
     assert at.session_state["player_avatar"] == "he"
