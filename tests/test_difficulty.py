@@ -92,10 +92,10 @@ def test_reading_a_hint_again_is_free(engine):
 @pytest.mark.parametrize(
     "clue_id, text",
     [
-        ("D2", "Open D1. The leaked PDF first."),
-        ("D3", "Ask the Professor about the exam."),
-        ("L2", "Show D2. Print server log to the Teaching Assistant."),
-        ("L3", "Ask the Class Representative about their alibi."),
+        ("D2", "Open Evidence 1. The leaked PDF first."),
+        ("D3", "The leaked PDF is version 3 of the exam. Is that really the paper students will sit? Ask the Professor about the exam."),
+        ("L2", "Show Evidence 2. Print server log to the Teaching Assistant."),
+        ("L3", "The Class Representative is first in the ranking. If the exam is annulled, they win the fellowship. Where were they last night? Ask about their alibi."),
     ],
 )
 def test_hint_says_how_to_unlock(engine, clue_id, text):
@@ -223,7 +223,7 @@ def test_opening_the_print_log_gives_a_lead_to_the_cafeteria(engine, variant):
     engine.open_clue(game, "D2")
     clock = game.clock
     assert engine.leads(game) == [
-        {"clue": "L2", "from": "D2", "text": "Show D2. Print server log to the Teaching Assistant."}
+        {"clue": "L2", "from": "D2", "text": "Show Evidence 2. Print server log to the Teaching Assistant."}
     ]
     assert game.clock == clock  # leads are free
 

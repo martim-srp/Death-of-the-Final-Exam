@@ -58,12 +58,12 @@ def build(engine, game, examiner="Detective"):
         "## Evidence examined",
         "",
     ]
-    lines += [f"- {c['id']}. {_plain(c['title'])}" for c in opened] or ["- None."]
+    lines += [f"- {_plain(engine.label(c['id']))}" for c in opened] or ["- None."]
     lines += ["", "## Lies caught", ""]
     if lies:
         names = {s: d["name"] for s, d in case["suspects"].items()}
         for item in lies:
-            source = f"{item['clue']}" if item["clue"] else "a clue"
+            source = f"evidence {engine.number(item['clue'])}" if item["clue"] else "a clue"
             lines.append(f"- **{_plain(names[item['suspect']])}** said: “{_plain(item['text'])}” Broken by {source}.")
     else:
         lines.append("- None.")

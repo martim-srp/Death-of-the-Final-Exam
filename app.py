@@ -16,8 +16,6 @@ import html
 import re
 from pathlib import Path
 
-import altair as alt
-import pandas as pd
 import streamlit as st
 
 import board
@@ -131,8 +129,8 @@ def run(action, *args):
     unlocked = [c for c in engine.clue_list(game) if c["id"] in locked and c["state"] != "locked"]
     st.session_state.fresh = [c["id"] for c in unlocked]
     if unlocked:
-        names = ", ".join(f"{c['id']}. {c['title']}" for c in unlocked)
-        st.session_state.toast = (f"New clue unlocked: {names}", ":material/lock_open:")
+        names = ", ".join(engine.label(c["id"]) for c in unlocked)
+        st.session_state.toast = (f"New evidence card unlocked: {names}", ":material/lock_open:")
     elif any(lead["clue"] not in known_leads for lead in engine.leads(game)):
         st.session_state.toast = ("New lead. Tap the magnifier to see it.", ":material/search:")
     return result
@@ -252,84 +250,6 @@ def on_act(key):
 
 # ---- The D4 chart --------------------------------------------------------------------
 
-# Categorical slots 1 and 2 of the validated chart palette (blue, orange).
-SERIES_COLORS = ["#2a78d6", "#eb6834"]
-
-
-def payoff_chart(spec):
-    """The D4 payoff chart: the fellowship against the Class Representative's grade on Friday."""
-    low, high = spec["grades"]
-    prize = spec["prize"]
-    rival = round(sum(spec["rival_mocks"]) / len(spec["rival_mocks"]), 1)
-    mocks = spec["subject_mocks"]
-    grades = sorted({*range(low, high + 1), rival})
-    goes_ahead, annulled = "Exam goes ahead", "Exam annulled"
-    rows = [
-        {"grade": g, "scenario": s, "payoff": prize if s == annulled or g >= rival else 0}
-        for s in (goes_ahead, annulled)
-        for g in grades
-    ]
-    data = pd.DataFrame(rows)
-    color = alt.Color(
-        "scenario:N",
-        title=None,
-        scale=alt.Scale(domain=[goes_ahead, annulled], range=SERIES_COLORS),
-        legend=alt.Legend(orient="top", direction="vertical", labelLimit=0),
-    )
-    x_scale = alt.Scale(domain=[low, high], nice=False)
-    y_scale = alt.Scale(domain=[0, prize * 1.1], nice=False)
-    x = alt.X("grade:Q", title="Class Rep's grade on Friday", scale=x_scale)
-    y = alt.Y("payoff:Q", title="Fellowship won (€)", scale=y_scale, axis=alt.Axis(format=",.0f"))
-
-    mock_band = (
-        alt.Chart(pd.DataFrame([{"from": min(mocks), "to": max(mocks), "label": "Their mock finals"}]))
-        .mark_rect(opacity=0.12, color="gray")
-        .encode(x=alt.X("from:Q", scale=x_scale), x2="to:Q", tooltip=[alt.Tooltip("label:N", title="")])
-    )
-
-    def note(x_value, y_value, text, align):
-        return (
-            alt.Chart(pd.DataFrame([{"x": x_value, "y": y_value, "text": text}]))
-            .mark_text(fontSize=11, color="gray", align=align)
-            .encode(x=alt.X("x:Q", scale=x_scale), y=alt.Y("y:Q", scale=y_scale), text="text:N")
-        )
-
-    notes = note((min(mocks) + max(mocks)) / 2, prize * 0.6, "Their mocks", "center") + note(
-        rival - 0.15, prize * 0.25, f"Rival: {rival}", "right"
-    )
-    rival_rule = (
-        alt.Chart(pd.DataFrame([{"x": rival, "label": f"Exchange Student's mock average: {rival}"}]))
-        .mark_rule(strokeDash=[4, 4], color="gray")
-        .encode(x=alt.X("x:Q", scale=x_scale), tooltip=[alt.Tooltip("label:N", title="")])
-    )
-    lines = (
-        alt.Chart(data)
-        .mark_line(strokeWidth=2, interpolate="step-after")
-        .encode(
-            x=x,
-            y=y,
-            color=color,
-            strokeDash=alt.StrokeDash(
-                "scenario:N", scale=alt.Scale(domain=[goes_ahead, annulled], range=[[1, 0], [6, 4]]), legend=None
-            ),
-        )
-    )
-    hover = (
-        alt.Chart(data)
-        .mark_point(size=250, opacity=0)
-        .encode(
-            x=x,
-            y=y,
-            tooltip=[
-                alt.Tooltip("scenario:N", title="If the"),
-                alt.Tooltip("grade:Q", title="Grade"),
-                alt.Tooltip("payoff:Q", title="Fellowship (€)", format=",.0f"),
-            ],
-        )
-    )
-    return (mock_band + notes + rival_rule + lines + hover).properties(title=spec["title"], height=260)
-
-
 def denouement(game):
     """The closing scene of this game's variant. Only once the case is closed."""
     engine.solution(game)  # raises GameError while the game is still running
@@ -386,6 +306,9 @@ header[data-testid="stHeader"] { display: none; }
 .evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
   background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45); animation: flip 0.55s ease-out both; }
+.evidence .body ul { margin: 0; padding-left: 1.1rem; }
+.evidence .body li { margin: 0 0 0.35rem; }
+.evidence .body p { margin: 0 0 0.5rem; }
 .evidence img { width: 100%; display: block; max-height: 260px; object-fit: cover; }
 .evidence .body { padding: 0.85rem 1rem 1rem; font-family: var(--prose); font-size: 0.95rem; line-height: 1.5;
   overflow-wrap: anywhere; white-space: normal; border-left: 3px solid #8a2a1f; }
@@ -601,9 +524,9 @@ def panel_home(game):
     else:
         st.markdown("### Where to start")
         st.markdown(
-            f'<div class="tips"><div><span>{board.icon("search")}</span>Tap a red card or pin to search it</div>'
+            f'<div class="tips"><div><span>{board.icon("search")}</span>Tap a red evidence card or pin to search it</div>'
             f'<div><span>{board.icon("ask")}</span>Tap a face to interrogate</div>'
-            f'<div><span>{board.icon("bolt")}</span>Show a suspect the clue that breaks their story</div></div>',
+            f'<div><span>{board.icon("bolt")}</span>Show a suspect the evidence card that breaks their story</div></div>',
             unsafe_allow_html=True,
         )
     caught = engine.contradiction_list(game)
@@ -674,8 +597,7 @@ def show_evidence():
     result = run(engine.present, suspect, clue_id)
     if result:
         sound("stamp" if result.get("contradictions") else "tick")
-        title = case["clues"][clue_id]["title"]
-        say(suspect, {"who": "you", "text": f"You slide {clue_id}. {title} across the table.", "act": True})
+        say(suspect, {"who": "you", "text": f"You slide {engine.label(clue_id)} across the table.", "act": True})
         say(suspect, {
             "who": "them", "text": result["reveal"] or "They look at it and shrug.",
             "unlocked": result["unlocked"], "caught": result.get("contradictions", []),
@@ -693,7 +615,7 @@ def cloud_key():
         return None
 
 
-def chat_html(log, suspect, titles):
+def chat_html(log, suspect):
     """The conversation as speech bubbles: the suspect on the left, you on the right."""
     them = board.find_picture("suspects", suspect) or ""
     you = board.find_picture("detectives", player_avatar()) or ""
@@ -706,14 +628,14 @@ def chat_html(log, suspect, titles):
             continue
         unlock = ""
         if entry.get("unlocked"):
-            unlock = '<span class="unlock">' + board.icon("unlock") + " Unlocked: " + esc(", ".join(f"{i}. {titles.get(i, '')}" for i in entry["unlocked"])) + "</span>"
+            unlock = '<span class="unlock">' + board.icon("unlock") + " Unlocked: " + esc(", ".join(engine.label(i) for i in entry["unlocked"])) + "</span>"
         note = FALLBACK_NOTES.get(entry.get("fallback"))
         note = f'<span class="note">{esc(note)}</span>' if note else ""
         rows.append(f'<div class="bubble them"{style}><img src="{them}" alt=""><div class="say">{esc(entry["text"])}{unlock}{note}</div></div>')
         for item in entry.get("caught", []):
             rows.append(
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
-                f'{esc(item["clue"] or "Your clue")} says otherwise.</small></div>'
+                f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small></div>'
             )
         if entry.get("think"):
             rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
@@ -739,9 +661,10 @@ def topic_label(topic, asked, tip=None):
 
 
 def card_label(clue_id, shown, tip=None):
-    """A card to show, by code and name: an arrow on the suggested next step, ✓ once shown to this suspect."""
+    """An evidence card to show, by number and name: an arrow on the suggested next step, ✓ once shown to this suspect."""
     name = board.CARD_NAMES.get(clue_id)
-    label = f"{clue_id} · {name}" if name else clue_id
+    number = engine.number(clue_id)
+    label = f"{number} · {name}" if name else str(number)
     if clue_id == tip:
         return f"→ {label}"
     return f"✓ {label}" if clue_id in shown else label
@@ -761,13 +684,12 @@ def panel_suspect(game, suspect):
         "</div></div>",
         unsafe_allow_html=True,
     )
-    titles = {c["id"]: c["title"] for c in engine.clue_list(game)}
     log = st.session_state.get("chats", {}).get(suspect, [])
     with st.container(key="chat_log", height=260 if log else "content", autoscroll=True):
         if log:
-            st.markdown(chat_html(log, suspect, titles), unsafe_allow_html=True)
+            st.markdown(chat_html(log, suspect), unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="empty-chat">Ask {esc(brief["name"])} something, or show them a card.</div>',
+            st.markdown(f'<div class="empty-chat">Ask {esc(brief["name"])} something, or show them an evidence card.</div>',
                         unsafe_allow_html=True)
     cost = case["clock"]["question_cost"]
     step = engine.next_step(game) or {}
@@ -779,7 +701,7 @@ def panel_suspect(game, suspect):
     if opened:
         shown = {e["clue"] for e in game.history if e.get("action") == "present" and e.get("suspect") == suspect}
         show_tip = tip.get("clue") if tip.get("do") == "show" else None
-        st.pills(f"Show a card · {cost} min", opened, format_func=lambda i: card_label(i, shown, show_tip),
+        st.pills(f"Show an evidence card · {cost} min", opened, format_func=lambda i: card_label(i, shown, show_tip),
                  key="show_clue", on_change=show_evidence, help="Show them evidence. The right card breaks a lie.")
     question = st.chat_input(f"Or type your own question · {cost} min", max_chars=ai.MAX_QUESTION_LENGTH, key="typed")
     if question:
@@ -817,10 +739,28 @@ def hunch_html(hunches, log):
     return "".join(rows)
 
 
+def clue_body_html(text):
+    """A clue's text as HTML: lines starting with "- " become a bulleted list, other lines paragraphs."""
+    parts, points = [], []
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("- "):
+            points.append(f"<li>{esc(line[2:])}</li>")
+            continue
+        if points:
+            parts.append("<ul>" + "".join(points) + "</ul>")
+            points = []
+        if line:
+            parts.append(f"<p>{esc(line)}</p>")
+    if points:
+        parts.append("<ul>" + "".join(points) + "</ul>")
+    return "".join(parts)
+
+
 def panel_clue(game, clue_id, fresh):
     item = next(c for c in engine.clue_list(game) if c["id"] == clue_id)
     verb = "Search it" if item["kind"] == "location" else "Open it"
-    st.markdown(f'<div class="kicker">{board.icon(board.KIND_ICON[item["kind"]])} Evidence {esc(clue_id)}</div><h3>{esc(item["title"])}</h3>',
+    st.markdown(f'<div class="kicker">{board.icon(board.KIND_ICON[item["kind"]])} Evidence {item["number"]}</div><h3>{esc(item["title"])}</h3>',
                 unsafe_allow_html=True)
     if item["state"] == "locked":
         st.markdown(f'<div class="facedown locked">{board.icon("lock")}</div>', unsafe_allow_html=True)
@@ -828,7 +768,7 @@ def panel_clue(game, clue_id, fresh):
         if clue_id in hints:
             st.info(hints[clue_id], icon=":material/lightbulb:")
         else:
-            st.caption("Locked. Question suspects and show them cards to unlock it.")
+            st.caption("Locked. Question suspects and show them evidence cards to unlock it.")
             if st.button(f"Hint · {engine.hint_cost()} min", key=f"hint_{clue_id}", icon=":material/lightbulb:", use_container_width=True):
                 run(engine.hint, clue_id)
                 st.rerun()
@@ -847,7 +787,7 @@ def panel_clue(game, clue_id, fresh):
     art = f'<img src="{picture}" alt="">' if picture else ""  # no placeholder: the words are the evidence
     style = "" if clue_id in fresh else ' style="animation:none"'
     hunches = engine.hunches(game, clue_id)
-    body = esc(clue["text"])
+    body = clue_body_html(clue["text"])
     for hunch in hunches:
         if hunch["mark"] and hunch["mark"] in clue["text"]:
             body = body.replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
@@ -865,12 +805,9 @@ def panel_clue(game, clue_id, fresh):
             st.caption(f"{len(matches)} of {total} lines match.")
         if matches:
             st.code("\n".join(matches), language=None, wrap_lines=True)
-    if clue["chart"] in case.get("charts", {}):
-        st.altair_chart(payoff_chart(case["charts"][clue["chart"]]), width="stretch")
-        st.caption("All or nothing: the flat line is what the Class Rep gets if the exam is annulled.")
     if clue["hidden_text"] and st.toggle("Look closer", key=f"hidden_{clue_id}"):
         st.warning(clue["hidden_text"])
-    st.caption("Tap a suspect's face, then show them this card.")
+    st.caption("Tap a suspect's face, then show them this evidence card.")
 
 
 # ---- Panel: case sheet and accusation ----------------------------------------------------
@@ -881,7 +818,7 @@ def clue_fact(game, clue_id):
     for hunch in engine.hunches(game, clue_id, include_caught=True):
         if hunch["mark"]:
             return hunch["mark"]
-    text = engine.read_clue(game, clue_id)["text"].strip()
+    text = engine.read_clue(game, clue_id)["text"].strip().splitlines()[0].removeprefix("- ")
     first = re.split(r"(?<=[a-z0-9)\"'][.!?])\s", text, maxsplit=1)[0]
     return first if len(first) <= 90 else first[:87].rstrip() + "…"
 
@@ -899,7 +836,7 @@ def notebook_notes(game):
     st.markdown(f"#### Evidence · {len(opened)}")
     for clue_id in opened:
         name = board.CARD_NAMES.get(clue_id, case["clues"][clue_id]["title"])
-        st.button(f"**{clue_id}** {plain(name)} · {plain(clue_fact(game, clue_id))}", key=f"note_{clue_id}", type="tertiary",
+        st.button(f"**{engine.number(clue_id)}** {plain(name)} · {plain(clue_fact(game, clue_id))}", key=f"note_{clue_id}", type="tertiary",
                   on_click=set_focus, args=("clue", clue_id), use_container_width=True)
     questioned = []
     for event in game.history:
@@ -914,7 +851,7 @@ def notebook_notes(game):
         for suspect in questioned:
             brief = engine.character_brief(game, suspect)
             lies = "".join(
-                f'<span class="lie-note">{board.icon("bolt")} “{esc(item["text"].rstrip("."))}” <em>broken by {esc(item["clue"] or "a clue")}</em></span>'
+                f'<span class="lie-note">{board.icon("bolt")} “{esc(item["text"].rstrip("."))}” <em>broken by {esc(proof_name(item["clue"]) if item["clue"] else "a clue")}</em></span>'
                 for item in caught.get(suspect, [])
             )
             rows.append(f'<div class="story-note"><b>{esc(board.short_name(brief["name"]))}</b>'
@@ -961,8 +898,8 @@ def panel_sheet():
 
 
 def proof_name(by):
-    """How a ruling-out is credited: a clue id, or your own wrong accusation."""
-    return "your accusation" if by == "accusation" else by
+    """How a ruling-out is credited: an evidence card, or your own wrong accusation."""
+    return "your accusation" if by == "accusation" else f"evidence {engine.number(by)}"
 
 
 def verdict_html(right):
@@ -1028,7 +965,7 @@ def case_summary(game):
     with st.container(border=True, key="case_summary"):
         time_col, clue_col, question_col, caught_col, wrong_col = st.columns(5)
         time_col.metric("Time used", f"{hours}h {minutes:02d}m", help=f"Out of {limit // 60} hours, before 09:00.")
-        clue_col.metric("Clues opened", f"{opened} of {len(clues)}")
+        clue_col.metric("Evidence found", f"{opened} of {len(clues)}")
         question_col.metric("Questions asked", questions)
         caught_col.metric("Lies caught", len(game.contradictions))
         wrong_col.metric("Wrong accusations", game.strikes)
@@ -1101,7 +1038,7 @@ HOW_TO_PLAY = CLOCK_RULE + (
     '<ol class="how-to">'
     f'<li>{board.icon("search")}<span><b>Search</b> a new place or document</span><em>−{case["clock"]["clue_cost"]} min</em></li>'
     f'<li>{board.icon("ask")}<span><b>Question</b> the five suspects</span><em>−{case["clock"]["question_cost"]} min</em></li>'
-    f'<li>{board.icon("bolt")}<span><b>Show</b> the card that breaks a lie</span><em>−{case["clock"]["question_cost"]} min</em></li>'
+    f'<li>{board.icon("bolt")}<span><b>Show</b> the evidence card that breaks a lie</span><em>−{case["clock"]["question_cost"]} min</em></li>'
     f'<li>{board.icon("scale")}<span><b>Accuse</b> who, how, where and why</span><em>no time · {case["max_strikes"]} tries</em></li>'
     "</ol>"
 )

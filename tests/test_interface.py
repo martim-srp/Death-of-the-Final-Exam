@@ -31,18 +31,6 @@ def page_text(at):
 # ---- Log search ------------------------------------------------------------------
 
 
-# ---- Payoff chart ----------------------------------------------------------------
-
-
-def test_payoff_chart_data_matches_the_standings_in_d4():
-    spec = CASE["charts"]["payoff"]
-    d4 = CASE["clues"]["D4"]["text"]
-    assert CASE["clues"]["D4"]["chart"] == "payoff"
-    assert f"{spec['prize']:,}" in d4
-    assert "Mock finals: Exchange Student " + ", ".join(map(str, spec["rival_mocks"])) in d4
-    assert "Class Representative " + ", ".join(map(str, spec["subject_mocks"])) in d4
-
-
 # ---- Denouement ------------------------------------------------------------------
 
 
@@ -50,5 +38,3 @@ def test_denouement_is_hidden_while_the_case_is_open():
     at = start()
     assert "Half past seven" not in "\n".join(s.value for s in at.subheader)
     assert "You close the folder" not in page_text(at)
-
-

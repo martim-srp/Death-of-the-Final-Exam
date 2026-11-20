@@ -40,7 +40,7 @@ def test_solved_case_shows_the_summary():
     game = played_and_solved()
     shown = metrics(closed_app(game))
     assert shown["Time used"] == "1h 20m"  # two clues (60) and two questions (20)
-    assert shown["Clues opened"] == f"2 of {len(CASE['clues'])}"
+    assert shown["Evidence found"] == f"2 of {len(CASE['clues'])}"
     assert shown["Questions asked"] == "2"
     assert shown["Lies caught"] == "1"
     assert shown["Wrong accusations"] == "1"

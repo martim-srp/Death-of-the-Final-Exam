@@ -122,7 +122,7 @@ def test_locked_clue_content_is_never_returned(engine):
     with pytest.raises(GameError):
         engine.read_clue(game, "L3")
     for item in engine.clue_list(game):
-        assert set(item) == {"id", "title", "kind", "state"}
+        assert set(item) == {"id", "number", "title", "kind", "state"}
 
 
 # ---- Questions and evidence ------------------------------------------------
