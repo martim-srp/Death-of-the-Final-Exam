@@ -137,8 +137,8 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'<div class="me" title="{esc(name)}">{face}</div>'
         f'<div class="clock"><b>{esc(clock)}</b><div class="fuse"><i style="width:{burnt:.1f}%"></i></div>'
         f'<small>{hours}h {minutes:02d}m left</small></div>'
-        f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span></div>'
-        f'<div class="stat zapstat" title="Lies caught">{icon("bolt")}<b>{caught}</b></div>'
+        f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span><small>tries left</small></div>'
+        f'<div class="stat zapstat" title="Lies caught">{icon("bolt")}<b>{caught}</b><small>{"lie" if caught == 1 else "lies"} caught</small></div>'
         '<div class="tools">'
         f'<button data-act="home" title="Leads">{icon("search")}</button>'
         f'<button data-act="sheet" title="Notebook">{icon("sheet")}</button>'
@@ -530,6 +530,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hud.urgent .clock b { color: #ff6b5a; animation: throb 1s ease-in-out infinite; }
 .hud .stat { font-size: 16px; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .hud .stat b { font: 700 18px var(--type); }
+.hud .stat small { font: 12px var(--ui); color: #cdbfa8; white-space: nowrap; }
 .pips { display: inline-flex; gap: 3px; }
 .pip { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--red); display: inline-block; box-sizing: border-box; }
 .pip.on { background: var(--red); }

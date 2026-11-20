@@ -39,3 +39,9 @@ def test_the_tour_uses_the_new_wording():
     tour = board.tutorial_html()
     assert "To search a new area, click on the red circle." in tour
     assert "Tap a face to question them, or show them an evidence card." in tour
+
+
+def test_the_status_bar_names_its_counters_without_hovering():
+    hud = board.hud_html("00:00", 540, 540, 3, 3, 0, None, "Detective")
+    assert "tries left</small>" in hud and "0</b><small>lies caught</small>" in hud
+    assert "1</b><small>lie caught</small>" in board.hud_html("01:00", 480, 540, 2, 3, 1, None, "Detective")
