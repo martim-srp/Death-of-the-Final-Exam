@@ -79,7 +79,7 @@ def test_opening_a_clue_costs_thirty_minutes(engine):
     game = engine.new_game(seed=1, variant="A")
     clue = engine.open_clue(game, "D1")
     assert game.clock == 30
-    assert "Semiconductor Valuation" in clue["text"]
+    assert "Investments, Final" in clue["text"]
 
 
 def test_opening_a_locked_clue_is_rejected_and_costs_nothing(engine):

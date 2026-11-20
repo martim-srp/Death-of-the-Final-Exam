@@ -1,6 +1,6 @@
 # Death of the Final Exam
 
-A detective game. The night before the Semiconductor Valuation final, the exam leaks in the cohort
+A detective game. The night before the Investments exam, the paper leaks in the cohort
 group chat. You have until 09:00 to question five suspects, played by AI, and name who did it, how,
 where and why. The culprit changes from game to game.
 

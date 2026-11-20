@@ -444,6 +444,7 @@ header[data-testid="stHeader"] { display: none; }
 .whos-who li { display: flex; align-items: center; gap: 0.55rem; margin: 0; font-size: 0.8rem; line-height: 1.25; color: #cdbfa8; }
 .whos-who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; flex: 0 0 auto; border: 1px solid #3a2e28; }
 .whos-who b { display: block; font-family: var(--display); font-size: 0.9rem; color: #efe6d8; }
+.clock-rule { display: flex; gap: 0.6rem; align-items: flex-start; margin: 0 0 0.6rem; padding: 0.6rem 0.75rem; border: 1px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.08); font-size: 0.95rem; line-height: 1.45; }
 .how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
 .how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
 .how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
@@ -1076,8 +1077,8 @@ def finale(game):
 # ---- The start screen ------------------------------------------------------------------
 
 STORY_HTML = (
-    "Thursday, 23:47, a storm over Carcavelos. An anonymous number posts tomorrow's <b>Semiconductor Valuation</b> "
-    "final in the class group chat, to all 212 students. The exam is at <b>09:00</b>. Find out who leaked it before then."
+    "Thursday, 23:47, a storm over Carcavelos. An anonymous number posts tomorrow's <b>Investments exam</b> "
+    "in the class group chat, to all 212 students. The exam is at <b>09:00</b>. Find out who leaked it before then."
 )
 
 
@@ -1090,12 +1091,18 @@ def whos_who_html():
     ) + "</ul>"
 
 
-HOW_TO_PLAY = (
+HOURS = case["clock"]["limit_minutes"] // 60
+CLOCK_RULE = (
+    f'<div class="clock-rule"><span>You have <b>{HOURS} hours</b>, from midnight to 09:00. '
+    "Every search and every question moves the clock forward. "
+    "At 09:00 you can no longer search or ask: you can only accuse.</span></div>"
+)
+HOW_TO_PLAY = CLOCK_RULE + (
     '<ol class="how-to">'
-    f'<li>{board.icon("search")}<span><b>Search</b> places and documents</span><em>{case["clock"]["clue_cost"]} min</em></li>'
-    f'<li>{board.icon("ask")}<span><b>Question</b> the five suspects</span><em>{case["clock"]["question_cost"]} min</em></li>'
-    f'<li>{board.icon("bolt")}<span><b>Show</b> the card that breaks a lie</span><em>{case["clock"]["question_cost"]} min</em></li>'
-    f'<li>{board.icon("scale")}<span><b>Accuse</b> who, how, where and why</span><em>{case["max_strikes"]} tries</em></li>'
+    f'<li>{board.icon("search")}<span><b>Search</b> a new place or document</span><em>−{case["clock"]["clue_cost"]} min</em></li>'
+    f'<li>{board.icon("ask")}<span><b>Question</b> the five suspects</span><em>−{case["clock"]["question_cost"]} min</em></li>'
+    f'<li>{board.icon("bolt")}<span><b>Show</b> the card that breaks a lie</span><em>−{case["clock"]["question_cost"]} min</em></li>'
+    f'<li>{board.icon("scale")}<span><b>Accuse</b> who, how, where and why</span><em>no time · {case["max_strikes"]} tries</em></li>'
     "</ol>"
 )
 SHOW_COVER = True  # the cover picture beside the briefing on the start screen (hidden on phones)
