@@ -159,7 +159,7 @@ def tutorial_html():
     """The first-play tour: four short steps, each pointing at one part of the screen."""
     steps = [
         ("map", "The board", "To search a new area, click on the red circle."),
-        ("hand", "Your evidence", "Tap a card to open it. Red cards are new."),
+        ("hand", "Your evidence", "Tap an evidence card to open it. Red ones are new."),
         ("suspects", "The suspects", "Tap a face to question them, or show them an evidence card."),
         ("accuse", "Accuse", "Name who, how, where and why before 09:00."),
     ]
@@ -325,21 +325,17 @@ def card_html(item, picked=None, fresh=(), goal=None):
     else:
         art = f'<div class="art back locked"><span>{icon("lock")}</span></div>'
     return (
-        f'<button class="{classes}" data-act="clue:{item["id"]}" title="{item["id"]}. {esc(item["title"])}">'
-        f'{art}<div class="lbl"><b>{item["id"]}</b><span>{name}</span></div></button>'
+        f'<button class="{classes}" data-act="clue:{item["id"]}" title="Evidence {item["number"]}. {esc(item["title"])}">'
+        f'{art}<div class="lbl"><b>{item["number"]}</b><span>{name}</span></div></button>'
     )
 
 
 def hand_html(clues, picked=None, fresh=(), goal=None):
-    """The cards in your hand: the documents, and any place that has no pin on the map.
-
-    Places on the map are played from their pins. The count covers every clue.
-    """
+    """All the evidence cards, numbered 1 to 13. Places also have a pin on the map; both open the same card."""
     opened = sum(c["state"] == "open" for c in clues)
-    cards = [c for c in clues if c["id"] not in MAP_PINS]
     return (
         f'<div class="handhead"><b>Evidence</b><span>{opened} of {len(clues)} found</span></div>'
-        f'<div class="hand" style="--n:{len(cards)}">' + "".join(card_html(c, picked, fresh, goal) for c in cards) + "</div>"
+        f'<div class="hand" style="--n:{len(clues)}">' + "".join(card_html(c, picked, fresh, goal) for c in clues) + "</div>"
     )
 
 

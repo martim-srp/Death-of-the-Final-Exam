@@ -167,7 +167,7 @@ def test_a_locked_clue_cannot_be_opened_but_can_be_hinted():
     assert not any(label.startswith(("Open it", "Search it")) for label in labels(at))
     click(at, "Hint")
     assert at.session_state["game"]["clock"] == Engine().hint_cost()
-    assert any("Open D1" in i.value for i in at.info)
+    assert any("Open Evidence 1" in i.value for i in at.info)
 
 
 def test_an_opened_clue_shows_its_text_and_picture_in_the_panel():
@@ -175,14 +175,15 @@ def test_an_opened_clue_shows_its_text_and_picture_in_the_panel():
     Engine().open_clue(game, "D1")
     at = start(game=game, focus=("clue", "D1"))
     clue = Engine().read_clue(game, "D1")
-    assert clue["text"][:40] in page(at).replace("&quot;", '"').replace("&#x27;", "'")
+    first_point = clue["text"].splitlines()[0].removeprefix("- ")
+    assert f"<li>{first_point[:40]}" in page(at).replace("&quot;", '"').replace("&#x27;", "'")
     assert board.find_picture("clues", "D1") in page(at)
 
 
 def test_opening_an_unlocking_clue_pops_up_a_toast():
     at = start(focus=("clue", "L4"))
     click(at, "Search it")
-    assert any("New clue unlocked" in t.value for t in at.toast)
+    assert any("New evidence card unlocked: Evidence 7" in t.value for t in at.toast)
 
 
 def test_actions_are_saved():
@@ -232,7 +233,7 @@ def test_only_opened_cards_can_be_shown_to_a_suspect():
     game = Engine().new_game(seed=1, variant="A")
     Engine().open_clue(game, "L4")
     at = start(game=game, focus=("suspect", "companion"), suspect="companion")
-    assert at.pills(key="show_clue").options == ["L4 · Faculty"]
+    assert at.pills(key="show_clue").options == ["12 · Faculty"]
 
 
 def test_showing_the_breaking_card_stamps_caught_lying():
@@ -397,7 +398,7 @@ def test_home_panel_shows_a_lead_after_the_print_log():
     Engine().open_clue(game, "D1")
     Engine().open_clue(game, "D2")
     at = start(game=game)
-    assert "Show D2. Print server log to the Teaching Assistant." in page(at)
+    assert "Show Evidence 2. Print server log to the Teaching Assistant." in page(at)
 
 
 def test_a_bought_hint_also_shows_in_the_home_panel():
@@ -439,7 +440,7 @@ def test_a_typed_question_works_without_a_key(monkeypatch, tmp_path):
     chat = at.session_state["chats"]["professor"]
     assert chat[0]["text"] == "What is Question 5?"
     assert "yesterday" in chat[1]["text"]
-    assert "Unlocked: D3" in page(at)
+    assert "Unlocked: Evidence 3. The sealed exam" in page(at)
 
 
 # ---- Evidence details -----------------------------------------------------------------------
@@ -463,9 +464,10 @@ def test_log_search_shows_only_matching_lines_for_free():
     assert at.session_state["game"]["clock"] == game.clock
 
 
-def test_d4_shows_the_payoff_chart():
+def test_d4_has_no_chart_any_more():
     at = start(game=opened_game("D4"), focus=("clue", "D4"))
-    assert len(at.get("vega_lite_chart")) == 1
+    assert len(at.get("vega_lite_chart")) == 0
+    assert "Article 14" in page(at)
 
 
 def test_a_cold_case_also_offers_the_confrontation():

@@ -118,7 +118,7 @@ def test_the_guide_bar_leads_with_the_thought_and_keeps_the_plain_step():
     at = start()
     markup = html.unescape(board_markup(at))
     assert VOICE["search"]["D1"] in markup
-    assert "Search D1. The leaked PDF." in markup
+    assert "Search Evidence 1. The leaked PDF." in markup
 
 
 def test_asking_a_question_adds_the_detectives_reaction_to_the_chat():

@@ -26,7 +26,7 @@ def test_cards_to_show_are_labelled_with_their_name():
     at.session_state["focus"] = ("suspect", "companion")
     at.run()
     assert not at.exception
-    assert at.pills(key="show_clue").options == ["L4 · Faculty"]
+    assert at.pills(key="show_clue").options == ["12 · Faculty"]
 
 
 def test_a_tap_brings_the_panel_into_view_at_any_width():

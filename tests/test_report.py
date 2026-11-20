@@ -38,9 +38,9 @@ def test_report_sums_up_the_investigation():
     assert "Examiner: **Lúcia**" in text
     assert "**Case solved** at 01:10" in text
     assert "- Evidence examined: 2 of" in text
-    assert "- D1. The leaked PDF" in text
+    assert "- Evidence 1. The leaked PDF" in text
     assert "- Wrong accusations: 1 of 3" in text
-    assert "I never went to his office door." in text and "Broken by L4." in text
+    assert "I never went to his office door." in text and "Broken by evidence 12." in text
 
 
 @pytest.mark.parametrize("variant", sorted(CASE["variants"]))

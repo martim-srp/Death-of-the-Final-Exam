@@ -35,7 +35,7 @@ def follow_the_guide(engine, game):
 
 def test_a_new_case_starts_by_searching_the_first_clue():
     step = Engine().next_step(Engine().new_game(seed=1, variant="A"))
-    assert step == {"do": "search", "clue": "D1", "text": "Search D1. The leaked PDF."}
+    assert step == {"do": "search", "clue": "D1", "text": "Search Evidence 1. The leaked PDF."}
 
 
 @pytest.mark.parametrize("variant", ["A", "B", "C"])
@@ -96,7 +96,7 @@ def test_a_suggested_question_is_marked_and_asked_ones_are_ticked():
     engine.present(game, "ta", "D2")
     engine.open_clue(game, "L2")
     assert engine.next_step(game) == {"do": "ask", "suspect": "professor", "topic": "exam",
-                                      "text": "Ask the Professor about the exam."}
+                                      "text": "Ask the Professor about the exam.", "why": "The leaked PDF is version 3 of the exam. Is that really the paper students will sit? Ask the Professor about the exam."}
     at = start(game=game, focus=("suspect", "professor"), suspect="professor")
     assert re.search(r'class="sus[^"]* goal" data-act="suspect:professor"', suspect_markup(at))
     options = at.pills(key="ask_topic").options
@@ -293,7 +293,7 @@ def test_the_notebook_keeps_each_suspects_story_and_the_lies_caught():
     text = page(at)
     assert text.count('class="story-note"') == 2
     assert "Their stories · 2" in text
-    assert 'class="lie-note"' in text and "broken by L4" in text
+    assert 'class="lie-note"' in text and "broken by evidence 12" in text
 
 
 def test_the_notebook_lists_what_has_been_ruled_out():

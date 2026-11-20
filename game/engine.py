@@ -144,6 +144,8 @@ class Engine:
         self.voice = voice if voice is not None else load_voice()
         self.clock_rules = self.case["clock"]
         self._resolved = {v: resolve_variant(self.case, v) for v in self.case["variants"]}
+        # Players see evidence as 1 to 13, in case-file order; the ids (D1, L4) stay internal.
+        self._numbers = {clue_id: n for n, clue_id in enumerate(self.case["clues"], start=1)}
         self._vocabulary = case_vocabulary(self.case)
 
     # ---- Starting a game -------------------------------------------------
@@ -206,11 +208,20 @@ class Engine:
             return "locked"
         return "available" if clue_id in game.unlocked else "locked"
 
+    def number(self, clue_id):
+        """The number a player sees for a clue: 1 to 13."""
+        return self._numbers[clue_id]
+
+    def label(self, clue_id):
+        """How a clue is named to the player: "Evidence 7. The faculty visitors' book"."""
+        return f"Evidence {self._numbers[clue_id]}. {self.case['clues'][clue_id]['title']}"
+
     def clue_list(self, game):
         """Every clue with its title and state. Locked clues show no content."""
         return [
             {
                 "id": clue_id,
+                "number": self._numbers[clue_id],
                 "title": clue["title"],
                 "kind": clue["kind"],
                 "state": self.clue_state(game, clue_id),
@@ -381,18 +392,20 @@ class Engine:
         suspects = self._suspects(game)
         unlock = clues[clue_id]["unlock"]
         if "requires" in unlock:
-            titles = " and ".join(f"{c}. {clues[c]['title']}" for c in unlock["requires"])
+            titles = " and ".join(self.label(c) for c in unlock["requires"])
             return f"Open {titles} first."
         if "topic" in unlock:
-            rule = unlock["topic"]
-            topic = _HINT_TOPICS.get(rule["topic"], rule["topic"].replace("_", " "))
-            return f"Ask {self._lower_the(suspects[rule['suspect']]['name'])} about {topic}."
+            return unlock["topic"].get("why") or self._ask_text(game, unlock["topic"])
         if "present" in unlock:
             rule = unlock["present"]
-            clue = clues[rule["clue"]]
             name = self._lower_the(suspects[rule["suspect"]]["name"])
-            return f"Show {rule['clue']}. {clue['title']} to {name}."
+            return f"Show {self.label(rule['clue'])} to {name}."
         return "Keep investigating."
+
+    def _ask_text(self, game, rule):
+        """The plain instruction for a question rule: "Ask the Professor about the exam." """
+        topic = _HINT_TOPICS.get(rule["topic"], rule["topic"].replace("_", " "))
+        return f"Ask {self._lower_the(self._suspects(game)[rule['suspect']]['name'])} about {topic}."
 
     @staticmethod
     def _lower_the(name):
@@ -480,6 +493,8 @@ class Engine:
         lines = self.voice.get("next", {})
         if step["do"] == "search":
             return self.voice.get("search", {}).get(step["clue"]) or step["text"]
+        if step.get("why"):
+            return step["why"]  # the reason to ask, which already says what to ask
         if step["do"] in ("show", "ask"):
             clue = self._clues(game).get(step.get("clue"), {})
             topic = _HINT_TOPICS.get(step.get("topic"), str(step.get("topic", "")).replace("_", " "))
@@ -505,21 +520,23 @@ class Engine:
         if game.status != "playing":
             return None
         clues = self._clues(game)
-        suspects = self._suspects(game)
         left = self.time_left(game)
         if left <= ACCUSE_NOW_MINUTES:
             return {"do": "accuse", "text": "Time is nearly up. Make your accusation."}
         if left >= self.clock_rules["clue_cost"]:
-            for clue_id, clue in clues.items():
+            for clue_id in clues:
                 if self.clue_state(game, clue_id) == "available":
-                    return {"do": "search", "clue": clue_id, "text": f"Search {clue_id}. {clue['title']}."}
+                    return {"do": "search", "clue": clue_id, "text": f"Search {self.label(clue_id)}."}
         for lead in self.leads(game):
             rule = clues[lead["clue"]]["unlock"]["present"]
             return {"do": "show", "clue": rule["clue"], "suspect": rule["suspect"], "text": lead["text"]}
         for clue_id, clue in clues.items():
             rule = clue["unlock"].get("topic")
             if rule and self.clue_state(game, clue_id) == "locked":
-                return {"do": "ask", "suspect": rule["suspect"], "topic": rule["topic"], "text": self._hint_text(game, clue_id)}
+                step = {"do": "ask", "suspect": rule["suspect"], "topic": rule["topic"], "text": self._ask_text(game, rule)}
+                if rule.get("why"):
+                    step["why"] = rule["why"]
+                return step
         if any(event["action"] == "accuse" for event in game.history):
             return {"do": "accuse", "text": "Change the parts that were wrong and accuse again."}
         return {"do": "sheet", "text": "You have every card. Cross off what can't be, then accuse."}
