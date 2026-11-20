@@ -11,6 +11,7 @@ from pathlib import Path
 CASE_PATH = Path(__file__).resolve().parent.parent / "data" / "case.json"
 HUNCHES_PATH = CASE_PATH.parent / "hunches.json"
 VOICE_PATH = CASE_PATH.parent / "voice.json"
+CRACKS_PATH = CASE_PATH.parent / "cracks.json"
 
 
 def load_hunches(path=HUNCHES_PATH):
@@ -21,6 +22,12 @@ def load_hunches(path=HUNCHES_PATH):
 
 def load_voice(path=VOICE_PATH):
     """Read the detective's other lines: thoughts on clues, reactions to replies, the next step (data/voice.json)."""
+    with open(path, encoding="utf-8") as f:
+        return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
+
+
+def load_cracks(path=CRACKS_PATH):
+    """Read what a suspect blurts out when their nerves break (data/cracks.json)."""
     with open(path, encoding="utf-8") as f:
         return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
 
