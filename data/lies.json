@@ -1,0 +1,10 @@
+{
+  "_about": "What a caught lie tells you, shown under the CAUGHT LYING stamp and in the lies list. One line per claim id (claims live in case.json). Each line states what is now known and asks the question it opens; it never says who is guilty, because a liar is not always the culprit. Hidden in hard mode.",
+  "home_all_evening": "The Class Representative left their room that evening. Where did they go, and when?",
+  "reported_at_once": "Their report email was first drafted hours before the exam was posted at 23:47. Why write it so early?",
+  "proofread_on_screen": "The Teaching Assistant did send the exam to print. Did anyone collect it, and with which card?",
+  "card_lost_at_lunch": "Nobody saw the TA's card go missing at lunch. If it was never lost, who used it?",
+  "faculty_dinner": "There was no faculty dinner. Where was the Professor really, and who was with him?",
+  "never_went_to_office_door": "The Companion was at the Professor's office door at 19:40. What was she after?",
+  "never_touched_laptop": "The leaked file was saved on an iPad, not printed. Who had the Professor's file, and when?"
+}
