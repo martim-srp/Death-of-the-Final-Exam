@@ -45,6 +45,12 @@ FALLBACK_NOTES = {
 }
 # Shown in the chat instead of a typed question that looked like a password or key.
 HIDDEN_QUESTION = "(Hidden: that looked like a password, so it was not sent.)"
+# Shown under the hidden line in the leaked PDF: what that line is, and why it cannot work here.
+AI_TRAP_NOTE = (
+    "Behind the scenes: this is a prompt injection, text hidden in evidence that tries to give orders to an AI. "
+    "The suspects are played by an AI, but it only ever sees its own character, never the evidence, "
+    "so a note like this cannot steer it. Only the rules engine decides what is true."
+)
 # The questions a player can tap, by topic: (button label, what the detective says).
 TOPICS = {
     "alibi": ("Last night?", "Where were you last night?"),
@@ -899,6 +905,7 @@ def panel_clue(game, clue_id, fresh):
             st.code("\n".join(matches), language=None, wrap_lines=True)
     if clue["hidden_text"] and st.toggle("Look closer", key=f"hidden_{clue_id}"):
         st.warning(clue["hidden_text"])
+        st.caption(AI_TRAP_NOTE)
     st.caption("Tap a suspect's face, then show them this evidence card.")
 
 
