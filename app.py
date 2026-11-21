@@ -33,6 +33,7 @@ TITLE = load_case()["title"]  # the game's name lives in data/case.json
 AVATARS = {"she": "Play as her", "he": "Play as him"}
 DEFAULT_AVATAR = "she"
 COLUMNS = ("who", "how", "where", "why")
+APP_URL = "https://carcavelos-paper.streamlit.app"
 COLUMN_ICONS = {"who": ":material/person:", "how": ":material/build:", "where": ":material/location_on:", "why": ":material/psychology_alt:"}
 # Shown under a free-text answer when the suspect gave a scripted line instead of the AI's.
 # Keys are the reasons game/ai.py records in the game's history.
@@ -357,6 +358,12 @@ header[data-testid="stHeader"] { display: none; }
 .facts div:nth-child(1) { animation-delay: 1.3s; } .facts div:nth-child(2) { animation-delay: 1.5s; }
 .facts div:nth-child(3) { animation-delay: 1.7s; } .facts div:nth-child(4) { animation-delay: 1.9s; }
 .facts small { display: block; font: 700 0.7rem var(--label); letter-spacing: 0.15em; color: var(--gold); margin-bottom: 0.25rem; }
+.rank { text-align: center; margin: 0.4rem auto 0.3rem; animation: rise 0.6s 2.1s ease-out both; }
+.rank small { display: block; font: 700 0.7rem var(--label); letter-spacing: 0.15em; color: var(--gold); }
+.rank b { display: inline-block; border: 3px solid var(--gold); color: var(--gold); padding: 0.15rem 0.9rem; margin: 0.3rem 0;
+  animation: slam 0.5s 2.4s cubic-bezier(.2,1.6,.4,1) both; font: 800 1.5rem var(--label); letter-spacing: 0.1em; text-transform: uppercase; }
+.rank .score { display: block; font: 700 1.1rem var(--display); opacity: 0.85; }
+.rank.cold b { border-color: #9aa7b3; color: #9aa7b3; }
 .medals { margin-top: 0.8rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
 .medals span { background: #2b221d; border: 1px solid #e8c27a; color: #e8c27a; border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.85rem; }
 .cover-art { width: 100%; aspect-ratio: 800 / 731; background-size: cover; background-position: center; border-radius: 14px;
@@ -971,6 +978,30 @@ def case_summary(game):
         wrong_col.metric("Wrong accusations", game.strikes)
 
 
+def share_text(game, rank):
+    """A spoiler-free line to paste in a chat: rank, time and lies caught, never the culprit."""
+    lies = len(game.contradictions)
+    lies_text = f"{lies} {'lie' if lies == 1 else 'lies'} caught"
+    if game.status != "solved":
+        return f"The trail went cold on me in Death of the Final Exam ({lies_text}). Can you name who leaked the exam? {APP_URL}"
+    wrong = f", {game.strikes} wrong {'guess' if game.strikes == 1 else 'guesses'}" if game.strikes else ""
+    return (f"I solved Death of the Final Exam at {engine.clock_label(game)} as {rank['title']} "
+            f"({rank['score']}/100), {lies_text}{wrong}. Can you beat it? {APP_URL}")
+
+
+def rank_card(game):
+    rank = engine.rank(game)
+    solved = game.status == "solved"
+    score = f'<span class="score">{rank["score"]} / 100</span>' if solved else ""
+    st.markdown(f'<div class="rank{"" if solved else " cold"}"><small>YOUR RANK</small><b>{esc(rank["title"])}</b>{score}</div>',
+                unsafe_allow_html=True)
+    if solved:
+        st.caption("50 for solving, up to 25 for time left, 5 per lie caught (up to 20); "
+                   "minus 3 per hint and 10 per wrong accusation.")
+    st.caption("Share it (no spoilers):")
+    st.code(share_text(game, rank), language=None, wrap_lines=True)
+
+
 def finale(game):
     solution = engine.solution(game)
     culprit = solution["who"]
@@ -992,6 +1023,7 @@ def finale(game):
     if marker:
         deck(data=marker, key="finale_sound", height=1)
     with middle:
+        rank_card(game)
         case_summary(game)
         st.download_button(
             "Download the honour council report",
