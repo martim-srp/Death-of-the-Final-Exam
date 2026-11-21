@@ -277,6 +277,15 @@ class Engine:
     def time_left(self, game):
         return self.clock_rules["limit_minutes"] - game.clock
 
+    def can_afford(self, game, minutes):
+        """True while the game is on and the clock has `minutes` left before 09:00. The
+        interface asks this to hide moves the engine would refuse anyway."""
+        return game.status == "playing" and minutes <= self.time_left(game)
+
+    def out_of_time(self, game):
+        """True once not even a question fits before 09:00: only an accusation is left."""
+        return not self.can_afford(game, self.clock_rules["question_cost"])
+
     def night_events(self, game, since=0):
         """What happens around the building as the night goes on: story only, the same in
         every variant, so it never points at anyone and changes no rule. Returns the events
@@ -640,6 +649,8 @@ class Engine:
             return lines[step["do"]].format(name=name, name_l=self._lower_the(name), clue=step.get("clue", ""),
                                             title=title, title_l=title_l, topic=topic)
         if step["do"] == "accuse":
+            if self.out_of_time(game) and lines.get("accuse_now"):
+                return lines["accuse_now"]
             retry = any(event["action"] == "accuse" for event in game.history)
             return lines["accuse_retry" if retry and self.time_left(game) > ACCUSE_NOW_MINUTES else "accuse_time"]
         return lines.get(step["do"], step["text"])
@@ -658,6 +669,8 @@ class Engine:
             return None
         clues = self._clues(game)
         left = self.time_left(game)
+        if self.out_of_time(game):
+            return {"do": "accuse", "text": "Time is up. Make your accusation."}
         if left <= ACCUSE_NOW_MINUTES:
             return {"do": "accuse", "text": "Time is nearly up. Make your accusation."}
         if left >= self.clock_rules["clue_cost"]:

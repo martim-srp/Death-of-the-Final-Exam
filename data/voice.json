@@ -48,6 +48,7 @@
     "show": "I want to watch {name_l}'s face when they see the {title_l}.",
     "ask": "{name} has been quiet about {topic}. That's worth a question.",
     "accuse_time": "The night is nearly gone. Time to name someone.",
+    "accuse_now": "Nine o'clock. No more questions, no more searches. Time to name someone.",
     "accuse_retry": "Not all wrong. Keep what held and rethink the rest.",
     "sheet": "Every card is on the table. Now cross off what can't be."
   }
