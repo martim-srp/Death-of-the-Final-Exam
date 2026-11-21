@@ -431,13 +431,13 @@ header[data-testid="stHeader"] { display: none; }
 .who-head .line { font-size: 0.85rem; opacity: 0.75; line-height: 1.3; }
 .chat { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.2rem 0.1rem; }
 .bubble { display: flex; gap: 0.5rem; align-items: flex-end; max-width: 92%; animation: rise 0.35s ease-out both; }
-.bubble img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; object-position: top; flex: none; }
+.bubble .face { width: 30px; height: 30px; border-radius: 50%; background: #2b221d center top / cover no-repeat; flex: none; }
 .bubble .say { padding: 0.5rem 0.75rem; border-radius: 16px; font-family: var(--prose); font-size: 0.95rem; line-height: 1.35; }
 .bubble.them .say { background: #2b221d; border: 1px solid #3f322b; border-bottom-left-radius: 4px; }
 .bubble.you { margin-left: auto; flex-direction: row-reverse; }
 .bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
 .bubble.think { margin-left: auto; flex-direction: row-reverse; max-width: 86%; }
-.bubble.think img { width: 24px; height: 24px; opacity: 0.85; }
+.bubble.think .face { width: 24px; height: 24px; opacity: 0.85; }
 .bubble.think .say { background: transparent; border: 0; border-right: 2px solid var(--gold); border-radius: 0; padding: 0.15rem 0.6rem;
   font: italic 0.88rem/1.35 var(--display); color: #cdbfa8; text-align: right; }
 .bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
@@ -944,19 +944,20 @@ def chat_html(log, suspect):
     """The conversation as speech bubbles: the suspect on the left, you on the right."""
     them = board.suspect_picture(suspect, rattled(current_game(), suspect)) or ""
     you = board.find_picture("detectives", player_avatar()) or ""
-    rows = []
+    # Each face is sent once, as a CSS background, not once per bubble: a long chat stays light on a phone.
+    rows = [f'<style>.chat .face.them {{ background-image: url("{them}"); }} .chat .face.you {{ background-image: url("{you}"); }}</style>']
     for number, entry in enumerate(log):
         style = "" if number >= len(log) - 2 else ' style="animation:none"'  # only the newest lines animate
         if entry["who"] == "you":
             act = " act" if entry.get("act") else ""
-            rows.append(f'<div class="bubble you"{style}><img src="{you}" alt=""><div class="say{act}">{esc(entry["text"])}</div></div>')
+            rows.append(f'<div class="bubble you"{style}><i class="face you"></i><div class="say{act}">{esc(entry["text"])}</div></div>')
             continue
         unlock = ""
         if entry.get("unlocked"):
             unlock = '<span class="unlock">' + board.icon("unlock") + " Unlocked: " + esc(", ".join(engine.label(i) for i in entry["unlocked"])) + "</span>"
         note = FALLBACK_NOTES.get(entry.get("fallback"))
         note = f'<span class="note">{esc(note)}</span>' if note else ""
-        rows.append(f'<div class="bubble them"{style}><img src="{them}" alt=""><div class="say">{esc(entry["text"])}{unlock}{note}</div></div>')
+        rows.append(f'<div class="bubble them"{style}><i class="face them"></i><div class="say">{esc(entry["text"])}{unlock}{note}</div></div>')
         for item in entry.get("caught", []):
             rows.append(
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
@@ -967,7 +968,7 @@ def chat_html(log, suspect):
             after = "Their story broke. Write down what slipped out."
             rows.append(f'<div class="caught cracked"{style}><b>{board.icon("bolt")} Cracked</b><small>{after}</small></div>')
         if entry.get("think"):
-            rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
+            rows.append(f'<div class="bubble think"{style}><i class="face you"></i><div class="say">{esc(entry["think"])}</div></div>')
     return '<div class="chat">' + "".join(rows) + "</div>"
 
 
