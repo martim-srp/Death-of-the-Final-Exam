@@ -726,6 +726,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @container (max-width: 520px) {
   .hand { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 }
+/* The short name is for narrow rows only. This rule must come before the @container rule below,
+   or it wins and a narrow row (the desktop side column) shows no name at all. */
+.sus .nm .short { display: none; }
 @container (max-width: 560px) {
   .suspects { gap: 5px; }
   .sus .nm { font-size: 10px; padding: 12px 2px 4px; }
@@ -733,5 +736,4 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .sus .nm .short { display: inline; }
   .sus .marks { top: 3px; right: 3px; }
 }
-.sus .nm .short { display: none; }
 """
