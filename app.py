@@ -1004,10 +1004,6 @@ def clue_fact(game, clue_id):
     return first if len(first) <= 90 else first[:87].rstrip() + "…"
 
 
-def first_sentences(text, count=2):
-    return " ".join(re.split(r"(?<=[a-z0-9)\"'][.!?])\s", text.strip())[:count])
-
-
 def notebook_notes(game):
     """The automatic half of the notebook: every card found, every story told, every lie and proof."""
     opened = [e["clue"] for e in game.history if e.get("action") == "open"]
@@ -1036,7 +1032,7 @@ def notebook_notes(game):
                 for item in caught.get(suspect, [])
             )
             rows.append(f'<div class="story-note"><b>{esc(board.short_name(brief["name"]))}</b>'
-                        f'<span>“{esc(first_sentences(brief["cover"]))}”</span>{lies}</div>')
+                        f'<span>“{esc(brief["cover"].strip())}”</span>{lies}</div>')  # whole story: a cut could hide the line a card breaks
         st.markdown("".join(rows), unsafe_allow_html=True)
     proven = engine.eliminated(game)
     if proven:
@@ -1118,7 +1114,8 @@ def panel_accuse(game):
     verdict = st.session_state.get("verdict")
     if verdict is not None:
         st.markdown(verdict_html(verdict), unsafe_allow_html=True)
-        st.caption(f"{len(verdict)} of 4 right. Keep the ✓ parts and rethink the ✗ ones.")
+        st.caption(f"{len(verdict)} of 4 right. Keep the ✓ parts and rethink the ✗ ones." if verdict
+                   else "0 of 4 right. Nothing to keep: rethink all four.")
     opened = [c["id"] for c in engine.clue_list(game) if c["state"] == "open"]
     for column in COLUMNS:
         out = set(crossed(column))
