@@ -20,7 +20,7 @@ COLUMNS = ("who", "how", "where", "why")
 HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
 # Nerves (Engine.nerves): where every suspect starts, what each different card shown
 # and each lie caught adds, and the top, where they crack.
-NERVES_START, NERVES_PER_CARD, NERVES_PER_LIE, NERVES_MAX = 10, 15, 35, 100
+NERVES_START, NERVES_PER_CARD, NERVES_PER_LIE, NERVES_MAX = 10, 30, 20, 100
 ACCUSE_NOW_MINUTES = 30  # with this little time left, the next step is to accuse
 # The detective's rank at the end of a solved case, best first: (lowest score, title).
 RANKS = ((85, "Chief Inspector"), (70, "Inspector"), (55, "Detective Sergeant"), (0, "Detective Constable"))

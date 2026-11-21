@@ -39,7 +39,7 @@ def test_the_board_shows_every_suspects_nerves_from_the_engine():
     found = bars(suspect_markup(start(game=game)))
     assert len(found) == 5
     levels = [int(level) for _, level, _ in found]
-    assert sorted(levels) == [10, 10, 10, 10, 40]
+    assert sorted(levels) == [10, 10, 10, 10, 70]
 
 
 def test_a_cracked_suspect_shows_a_full_bar_on_the_board():

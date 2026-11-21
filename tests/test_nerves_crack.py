@@ -35,12 +35,12 @@ def cards_without_lies(engine, game, suspect):
 
 
 def push_to_the_edge(engine, game, suspect):
-    """Show five plain cards: nerves 85, one card short of cracking. Returns the next card."""
+    """Show two plain cards: nerves 70, one card short of cracking. Returns the next card."""
     cards = cards_without_lies(engine, game, suspect)
-    for clue in cards[:5]:
+    for clue in cards[:2]:
         assert "cracked" not in engine.present(game, suspect, clue)
-    assert engine.nerves(game, suspect) == 85
-    return cards[5]
+    assert engine.nerves(game, suspect) == 70
+    return cards[2]
 
 
 def culprit(variant):
@@ -61,14 +61,14 @@ def test_showing_the_same_card_twice_adds_nothing():
     game = all_open("A")
     engine.present(game, "exchange", "D3")
     engine.present(game, "exchange", "D3")
-    assert engine.nerves(game, "exchange") == 25
+    assert engine.nerves(game, "exchange") == 40
 
 
 def test_a_caught_lie_adds_more_than_a_card():
     engine = Engine()
     game = all_open("A")
     engine.present(game, "companion", "L4")  # breaks never_went_to_office_door
-    assert engine.nerves(game, "companion") == 10 + 15 + 35
+    assert engine.nerves(game, "companion") == 10 + 30 + 20
 
 
 def test_nerves_for_an_unknown_suspect_are_refused():
@@ -149,7 +149,7 @@ def test_a_suspect_cracks_only_once():
 def test_lies_caught_count_toward_cracking():
     engine = Engine()
     game = all_open("A")
-    # Class Representative, variant A: L1 and D6 each break a claim (10 + 2 x (15 + 35) = 110).
+    # Class Representative, variant A: L1 and D6 each break a claim (10 + 2 x (30 + 20) = 110).
     engine.present(game, "class_rep", "L1")
     result = engine.present(game, "class_rep", "D6")
     assert result["contradictions"]
@@ -202,7 +202,7 @@ def test_after_cracking_the_ai_knows_what_they_blurted_out(variant):
     for suspect in SUSPECTS:
         game = all_open(variant)
         assert engine.character_brief(game, suspect)["broke_down"] is None
-        for clue in cards_without_lies(engine, game, suspect)[:6]:
+        for clue in cards_without_lies(engine, game, suspect)[:3]:
             result = engine.present(game, suspect, clue)
         assert engine.character_brief(game, suspect)["broke_down"] == result["cracked"]["line"]
         others = [s for s in SUSPECTS if s != suspect]
@@ -261,7 +261,7 @@ def test_the_app_shows_the_crack_and_rules_the_innocent_out():
     game = all_open("A")
     last = push_to_the_edge(engine, game, "exchange")
     at = start(game=game, focus=("suspect", "exchange"), suspect="exchange")
-    assert "width:85%" in page(at)
+    assert "width:70%" in page(at)
     assert "Cracked" not in page(at)
     at.pills(key="show_clue").set_value(last).run()
     assert not at.exception
