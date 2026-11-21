@@ -647,8 +647,11 @@ class Engine:
             if self.clue_state(game, clue_id) == "locked"
         }
 
-    def accuse(self, game, who, how, where, why):
+    def accuse(self, game, who, how, where, why, proofs=None):
         """Make an accusation. Free, but three wrong ones and the case goes cold.
+
+        proofs (optional): {column: clue id}, an opened evidence card offered as proof of
+        each answer. A right proof on a solved case adds to the rank (see proven()).
 
         Returns how many of the four choices are right; right_parts() says which.
         """
@@ -658,6 +661,12 @@ class Engine:
         for column in COLUMNS:
             if choice[column] not in option_ids(self.case, column):
                 raise GameError(f"That is not a valid option for {column}.")
+        proofs = {column: clue for column, clue in (proofs or {}).items() if clue}
+        for column, clue in proofs.items():
+            if column not in COLUMNS:
+                raise GameError(f"There is no {column} to prove.")
+            if clue not in game.opened:
+                raise GameError("You can only prove an answer with an evidence card you have opened.")
         solution = self._resolved[game.variant]["solution"]
         right = [c for c in COLUMNS if choice[c] == solution[c]]
         correct = len(right)
@@ -669,7 +678,10 @@ class Engine:
             game.strikes += 1
             if game.strikes >= self.case["max_strikes"]:
                 game.status = "cold"
-        game.history.append({"action": "accuse", "correct": correct, "right": right, "choice": choice, "clock": game.clock})
+        event = {"action": "accuse", "correct": correct, "right": right, "choice": choice, "clock": game.clock}
+        if proofs:
+            event["proofs"] = proofs
+        game.history.append(event)
         return {
             "correct": correct,
             "status": game.status,
@@ -716,12 +728,23 @@ class Engine:
                         add(column, event["choice"][column], "accusation")
         return result
 
+    def proven(self, game):
+        """For a solved case: {column: True/False} for each answer the winning accusation
+        offered a proof for (True when that evidence card proves it in this variant).
+        Empty when no proof was given. Only once solved, so it never helps a guess."""
+        if game.status != "solved":
+            return {}
+        winning = next(e for e in reversed(game.history) if e["action"] == "accuse")
+        proofs = self.case["variants"][game.variant].get("proofs", {})
+        return {column: clue in proofs.get(column, []) for column, clue in winning.get("proofs", {}).items()}
+
     def rank(self, game):
         """The detective's rank once the case is closed: {"title", "score", "parts"}.
 
         Out of 100. Solving gives 50; time left before 09:00 gives up to 25; each lie
-        caught gives 5 (up to 20); each hint costs 3, each wrong accusation 10. The
-        score never goes below 0. A cold case scores 0 and has its own title. Built
+        caught gives 5 (up to 20); each hint costs 3, each wrong accusation 10; each answer
+        proved with the right evidence card gives 5 (up to 20, only when proofs were given).
+        The score stays between 0 and 100. A cold case scores 0 and has its own title. Built
         only from what the player did, never from the variant, so it gives nothing away.
         """
         if game.status == "playing":
@@ -736,6 +759,9 @@ class Engine:
             "hints": -3 * len(game.hints),
             "wrong": -10 * game.strikes,
         }
+        proven = self.proven(game)
+        if proven:
+            parts["proof"] = 5 * sum(proven.values())
         score = max(0, min(100, sum(parts.values())))
         title = next(name for lowest, name in RANKS if score >= lowest)
         return {"title": title, "score": score, "parts": parts}

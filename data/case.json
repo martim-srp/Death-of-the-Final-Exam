@@ -257,6 +257,7 @@
     "A": {
       "label": "The Class Representative leaked it to have the exam annulled",
       "solution": {"who": "class_rep", "how": "borrowed_card_print", "where": "library_print_station", "why": "annul_exam"},
+      "proofs": {"who": ["L1", "L2", "L3", "D6"], "how": ["L2", "D2", "L1"], "where": ["D1", "D2"], "why": ["D4", "D6"]},
       "clues": {
         "L1": {"rules_out": {"who": ["companion"], "how": ["own_card_print"]}}
       },
@@ -270,6 +271,7 @@
     "B": {
       "label": "The Teaching Assistant leaked it to expose the Professor",
       "solution": {"who": "ta", "how": "own_card_print", "where": "library_print_station", "why": "humiliate_professor"},
+      "proofs": {"who": ["L1", "L2", "D2"], "how": ["L1", "L2", "D2"], "where": ["D1", "D2", "L1"], "why": ["D1", "D3", "D8"]},
       "clues": {
         "D1": {
           "text": "- A six-page exam headed \"Investments, Final, v3\". File name: INV_Final_v3.pdf.\n- Question 5: \"Value Meridian Silicon using the figures below.\"\n- The figures are marked \"Strictly confidential. Project Lantern.\"\n- Scanned with a phone app on Thursday at 17:55. The pages sit slightly crooked, as if photographed.\n- A hidden line of white text was added at 17:58.\n- A faint band at the foot of each page: \"Secure Print, job 88213, LIB-1\". LIB-1 is the library's printer.",
@@ -331,6 +333,7 @@
     "C": {
       "label": "The Companion leaked it to hide a theft inside a scandal",
       "solution": {"who": "companion", "how": "copied_laptop_dinner", "where": "chiado_restaurant", "why": "foreign_power"},
+      "proofs": {"who": ["D1", "D5", "D7", "L4"], "how": ["D1", "D2"], "where": ["D5"], "why": ["D8"]},
       "clues": {
         "D1": {
           "text": "- A six-page exam headed \"Investments, Final, v3\". File name: INV_Final_v3.pdf.\n- Question 5: \"Value Meridian Silicon using the figures below.\"\n- The figures are marked \"Strictly confidential. Project Lantern.\"\n- Not a scan. Saved on Thursday at 22:14 from an email attachment named INV_Final_v3.pdf.\n- Saved on a device named \"iPad ({alias_initials})\".\n- The pages are perfectly straight. There is no print watermark.",
