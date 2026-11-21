@@ -403,24 +403,21 @@ class Engine:
     def _crack(self, game, suspect):
         """At full nerves a suspect breaks, once. Returns what they blurt out, or None.
 
-        The culprit lets their motive slip. An innocent suspect swears they did not do
-        it (and is ruled out) and says where the paper really left from. Either way it
-        is one part of the answer, never the whole of it.
+        Every suspect who cracks says the same kind of thing: they swear they did not do
+        it and say where the paper really left from. The culprit cracks exactly like an
+        innocent and nobody is ruled out, so cracking never shows who is guilty (showing
+        cards at random would otherwise find the culprit). It gives one part of the answer.
         """
         if suspect in game.cracked or self.nerves(game, suspect) < NERVES_MAX:
             return None
         game.cracked.append(suspect)
-        guilty = suspect == self._resolved[game.variant]["solution"]["who"]
-        return {"suspect": suspect, "line": self._crack_line(game, suspect), "cleared": not guilty}
+        return {"suspect": suspect, "line": self._crack_line(game, suspect)}
 
     def _crack_line(self, game, suspect):
         """What a suspect blurted out when they cracked, or None if they have not cracked."""
         if suspect not in game.cracked:
             return None
-        solution = self._resolved[game.variant]["solution"]
-        if suspect == solution["who"]:
-            return self.crack_lines["guilty"][solution["why"]]
-        return self.crack_lines["innocent"][solution["where"]]
+        return self.crack_lines["where"][self._resolved[game.variant]["solution"]["where"]]
 
     def _catch_contradictions(self, game, suspect, clue_id):
         """Record each claim of the suspect that this clue breaks. Each claim counts once."""
@@ -672,11 +669,11 @@ class Engine:
     def eliminated(self, game):
         """Options the evidence has already ruled out, for the case sheet and the accusation.
 
-        Three sources, all proven: an opened clue's "rules_out" list in the case file
-        ({column: [option ids]}, per variant), an innocent suspect who cracked (see
-        _crack), and the parts of a wrong accusation that were wrong. The solution is
-        never listed. Returns a list of {"column", "option", "by"}, where "by" is a clue
-        id, "crack" or "accusation", oldest first.
+        Two sources, both proven: an opened clue's "rules_out" list in the case file
+        ({column: [option ids]}, per variant), and the parts of a wrong accusation that
+        were wrong. A crack rules nobody out (see _crack). The solution is never listed.
+        Returns a list of {"column", "option", "by"}, where "by" is a clue id or
+        "accusation", oldest first.
         """
         solution = self._resolved[game.variant]["solution"]
         clues = self._clues(game)
@@ -692,8 +689,6 @@ class Engine:
                 for column, options in clues[event["clue"]].get("rules_out", {}).items():
                     for option in options:
                         add(column, option, event["clue"])
-            elif event["action"] == "present" and event.get("cracked"):
-                add("who", event["suspect"], "crack")
             elif event["action"] == "accuse" and "choice" in event:
                 for column in COLUMNS:
                     if column not in event.get("right", []):

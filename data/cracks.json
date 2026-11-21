@@ -1,13 +1,6 @@
 {
-  "_about": "What a suspect blurts out when their nerves reach the top (Engine.nerves, at 100). The engine picks the line from the variant's solution, so the same file works in every variant. 'guilty': the culprit lets their motive slip, keyed by the 'why' option. 'innocent': an innocent suspect swears they did not do it and, to get you off their back, says where the paper really left from, keyed by the 'where' option. No line names a suspect, a card or a time, and none says how it was done.",
-  "guilty": {
-    "annul_exam": "Their composure goes all at once. \"Nobody should sit that exam. Not tomorrow, not ever. If it is annulled, it is annulled for everyone, and that is fair.\" They hear what they just said, and stop.",
-    "cheat": "\"Everyone was going to see it in the morning anyway. I only wanted to see it first.\" They look away, too late.",
-    "sell_paper": "\"It was business. Somebody always pays for a paper like that, and somebody always sells it.\" They catch themselves, too late.",
-    "humiliate_professor": "Something snaps. \"Do you know what it is like to do all the work and watch someone else take the credit? I wanted everyone to see what goes into that exam.\" They close their mouth, too late.",
-    "foreign_power": "The smile slips. \"You think anyone cares about a student exam? Those figures are worth more than this whole faculty, to the right buyer.\" A beat. \"Hypothetically.\""
-  },
-  "innocent": {
+  "_about": "What a suspect blurts out when their nerves reach the top (Engine.nerves, at 100). Every suspect who cracks, guilty or not, says the same kind of thing: they swear they did not do it (the culprit is lying) and, to get you off their back, say where the paper really left from. Keyed by the variant's 'where' option. So a crack gives one part of the answer and never shows who is guilty. No line names a suspect, a card or a time, and none says how it was done.",
+  "where": {
     "library_print_station": "\"Enough. I did not touch that paper, and I will swear it to the Dean. But since you keep pushing: it was printed, in the library. Go and ask who stood at that printer, not me.\"",
     "professor_office": "\"Enough. I did not touch that paper, and I will swear it to the Dean. But since you keep pushing: it never left the faculty. It was taken from that office. Ask who had a reason to be there.\"",
     "chiado_restaurant": "\"Enough. I did not touch that paper, and I will swear it to the Dean. But since you keep pushing: nothing was printed. It left the building over dinner, at a restaurant in Chiado. Ask who sat at that table.\"",

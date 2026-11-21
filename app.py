@@ -716,7 +716,7 @@ def chat_html(log, suspect):
                 f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small></div>'
             )
         if entry.get("cracked"):
-            after = "They are off your list." if entry["cracked"]["cleared"] else "That was not meant to come out."
+            after = "Their story broke. Write down what slipped out."
             rows.append(f'<div class="caught cracked"{style}><b>{board.icon("bolt")} Cracked</b><small>{after}</small></div>')
         if entry.get("think"):
             rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
@@ -991,8 +991,6 @@ def panel_sheet():
 
 def proof_name(by):
     """How a ruling-out is credited: an evidence card, or your own wrong accusation."""
-    if by == "crack":
-        return "their breakdown"
     return "your accusation" if by == "accusation" else f"evidence {engine.number(by)}"
 
 
