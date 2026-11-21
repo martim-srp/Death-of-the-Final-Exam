@@ -95,6 +95,8 @@ def _parse_answer(raw, topics):
         return None
 
     topic = answer.get("topic")
+    if isinstance(topic, str):
+        topic = topic.strip().lower()  # "Alibi" or " alibi " is still the alibi topic
     reply = answer.get("reply")
     if not isinstance(reply, str) or not reply.strip():
         return None
