@@ -331,7 +331,7 @@ def test_a_cold_case_names_the_culprit():
     game.status = "cold"
     at = start(game=game)
     assert "CASE COLD" in page(at)
-    assert "It was The Teaching Assistant all along." in page(at)
+    assert "It was the Teaching Assistant all along." in page(at)
 
 
 def test_new_case_after_the_reveal_starts_over_and_clears_notes():

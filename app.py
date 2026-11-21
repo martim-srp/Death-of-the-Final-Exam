@@ -166,6 +166,11 @@ def plain(text):
     return _MARKDOWN_SPECIAL.sub(r"\\\1", text)
 
 
+def mid_sentence(name):
+    """A suspect's name inside a sentence: "The Professor" becomes "the Professor"."""
+    return "the" + name[3:] if name.startswith("The ") else name
+
+
 def esc(text):
     return html.escape(str(text), quote=True)
 
@@ -1016,8 +1021,10 @@ def finale(game):
     uri = board.find_picture("suspects", culprit) or ""
     solved = game.status == "solved"
     stamp, heading = ("GUILTY", "Case closed") if solved else ("CASE COLD", "The trail went cold")
-    sub = (f"Solved at {engine.clock_label(game)} · {len(game.contradictions)} {"lie" if len(game.contradictions) == 1 else "lies"} caught" if solved
-           else f"It was {case['suspects'][culprit]['name']} all along.")
+    lies = len(game.contradictions)
+    # Plain quotes inside the f-strings: Python 3.11 (the dev container) cannot reuse the outer quote.
+    sub = (f"Solved at {engine.clock_label(game)} · {lies} {'lie' if lies == 1 else 'lies'} caught" if solved
+           else f"It was {mid_sentence(case['suspects'][culprit]['name'])} all along.")
     facts = "".join(f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS)
     medals = "".join(f"<span>{board.icon('medal')} {esc(b['title'])}</span>" for b in engine.badge_list(game))
     _, middle, _ = st.columns([1, 3, 1])
