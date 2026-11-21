@@ -41,6 +41,7 @@
     "typed": ["I'll weigh that against the logs.", "Words are cheap. Timestamps aren't.", "Let's see if the evidence agrees."],
     "caught": ["There it is. The story and the evidence don't match.", "That's one lie on the record."],
     "shown": ["No flinch. Either it means nothing to them, or they're good.", "Nothing. Maybe the wrong card for this face."],
+    "reacted": ["That landed. I'll write down exactly what they just said.", "They had an answer for that one. Worth checking it against the rest."],
     "unlocked": ["That gives me somewhere new to look.", "A new lead. Better follow it before it goes cold."]
   },
   "next": {
