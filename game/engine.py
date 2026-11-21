@@ -22,6 +22,9 @@ HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
 # and each lie caught adds, and the top, where they crack.
 NERVES_START, NERVES_PER_CARD, NERVES_PER_LIE, NERVES_MAX = 10, 15, 35, 100
 ACCUSE_NOW_MINUTES = 30  # with this little time left, the next step is to accuse
+# The detective's rank at the end of a solved case, best first: (lowest score, title).
+RANKS = ((85, "Chief Inspector"), (70, "Inspector"), (55, "Detective Sergeant"), (0, "Detective Constable"))
+COLD_RANK = "Case gone cold"
 # How a hint names a topic: "Ask the Professor about the exam."
 _HINT_TOPICS = {"alibi": "their alibi", "exam": "the exam", "report": "the report", "work": "their work"}
 
@@ -664,6 +667,30 @@ class Engine:
                     if column not in event.get("right", []):
                         add(column, event["choice"][column], "accusation")
         return result
+
+    def rank(self, game):
+        """The detective's rank once the case is closed: {"title", "score", "parts"}.
+
+        Out of 100. Solving gives 50; time left before 09:00 gives up to 25; each lie
+        caught gives 5 (up to 20); each hint costs 3, each wrong accusation 10. The
+        score never goes below 0. A cold case scores 0 and has its own title. Built
+        only from what the player did, never from the variant, so it gives nothing away.
+        """
+        if game.status == "playing":
+            raise GameError("The rank is only given when the case is closed.")
+        if game.status != "solved":
+            return {"title": COLD_RANK, "score": 0, "parts": {}}
+        limit = self.clock_rules["limit_minutes"]
+        parts = {
+            "solved": 50,
+            "time": round(25 * self.time_left(game) / limit),
+            "lies": min(20, 5 * len(game.contradictions)),
+            "hints": -3 * len(game.hints),
+            "wrong": -10 * game.strikes,
+        }
+        score = max(0, min(100, sum(parts.values())))
+        title = next(name for lowest, name in RANKS if score >= lowest)
+        return {"title": title, "score": score, "parts": parts}
 
     def solution(self, game):
         """The answer. Only available once the game is over."""
