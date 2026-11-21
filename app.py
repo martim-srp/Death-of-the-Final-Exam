@@ -362,6 +362,10 @@ header[data-testid="stHeader"] { display: none; }
 .caught.cracked b { border-color: #e8c27a; color: #e8c27a; transform: rotate(3deg); }
 .nerves.broke { color: #e0645a; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
+.caught .means, .lie .means { display: block; max-width: 30rem; margin: 0.45rem auto 0; padding: 0.45rem 0.7rem; border-radius: 8px;
+  background: rgba(232, 194, 122, 0.1); border-left: 3px solid #e8c27a; text-align: left; font-size: 0.92rem; line-height: 1.4; }
+.caught .means b, .lie .means b { display: inline; border: 0; padding: 0; transform: none; color: #e8c27a;
+  font: 600 0.92rem var(--prose); letter-spacing: 0; text-transform: none; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
 .evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
   background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
@@ -731,6 +735,7 @@ def panel_lies(game):
         st.markdown(
             f'<div class="lie"><b>{esc(name)}</b> said “{esc(item["text"].rstrip("."))}” · broken by '
             f'<b>{esc(proof_name(item["clue"]) if item["clue"] else "a clue")}</b>'
+            f'{lie_meaning_html(item)}'
             f'<span class="nerves-mini">Nerves {engine.nerves(game, item["suspect"])} of {NERVES_MAX}{broke}</span></div>',
             unsafe_allow_html=True,
         )
@@ -819,6 +824,12 @@ def cloud_key():
         return None
 
 
+def lie_meaning_html(item):
+    """Under a caught lie: what it tells you, so the stamp leads somewhere."""
+    meaning = engine.lie_meaning(current_game(), item.get("claim"))
+    return f'<span class="means"><b>What it means:</b> {esc(meaning)}</span>' if meaning else ""
+
+
 def chat_html(log, suspect):
     """The conversation as speech bubbles: the suspect on the left, you on the right."""
     them = board.suspect_picture(suspect, rattled(current_game(), suspect)) or ""
@@ -839,7 +850,8 @@ def chat_html(log, suspect):
         for item in entry.get("caught", []):
             rows.append(
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
-                f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small></div>'
+                f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small>'
+                f'{lie_meaning_html(item)}</div>'
             )
         if entry.get("cracked"):
             after = "Their story broke. Write down what slipped out."
