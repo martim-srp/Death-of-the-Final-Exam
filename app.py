@@ -124,6 +124,7 @@ def run(action, *args):
     Newly unlocked clues pop up as a toast and are dealt into the hand with an animation.
     """
     game = current_game()
+    clock_before = game.clock
     locked = {c["id"] for c in engine.clue_list(game) if c["state"] == "locked"}
     known_leads = {lead["clue"] for lead in engine.leads(game)}
     try:
@@ -140,6 +141,10 @@ def run(action, *args):
         st.session_state.toast = (f"New evidence card unlocked: {names}", ":material/lock_open:")
     elif any(lead["clue"] not in known_leads for lead in engine.leads(game)):
         st.session_state.toast = ("New lead. Tap the magnifier to see it.", ":material/search:")
+    # Something happened in the building while the clock moved on: the latest event pops up.
+    passed = engine.night_events(game, since=clock_before)
+    if passed:
+        st.session_state.night_toast = f"{passed[-1]['time']} · {passed[-1]['text']}"
     return result
 
 
@@ -613,6 +618,11 @@ def panel_home(game):
             f'<div><span>{board.icon("bolt")}</span>Show a suspect the evidence card that breaks their story</div></div>',
             unsafe_allow_html=True,
         )
+    night = engine.night_events(game)
+    if night:
+        st.markdown("### The night so far")
+        st.markdown("".join(f'<div class="lead"><b>{e["time"]}</b><span>{esc(e["text"])}</span></div>' for e in night),
+                    unsafe_allow_html=True)
     caught = engine.contradiction_list(game)
     if caught:
         st.markdown(f"### Lies caught · {len(caught)}")
@@ -1281,6 +1291,9 @@ if flash:
 toast = st.session_state.pop("toast", None)
 if toast:
     st.toast(toast[0], icon=toast[1])
+night = st.session_state.pop("night_toast", None)
+if night:
+    st.toast(night, icon=":material/thunderstorm:")
 refusal = st.session_state.pop("refusal", None)
 if refusal:
     st.toast(refusal, icon=":material/warning:")
