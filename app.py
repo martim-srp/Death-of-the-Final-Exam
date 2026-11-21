@@ -478,8 +478,20 @@ header[data-testid="stHeader"] { display: none; }
 @keyframes flip { from { opacity: 0; transform: perspective(800px) rotateY(80deg); } to { opacity: 1; transform: none; } }
 @keyframes deal { from { opacity: 0; transform: translateY(-30px) rotate(-6deg); } to { opacity: 1; transform: none; } }
 @keyframes shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+/* The mode choice on the start screen: roomy buttons, and air between the kicker, the buttons and the note. */
+.st-key-mode_pick { gap: 0.8rem; margin: 0.5rem 0 1.4rem; }
+.st-key-mode_pick [data-testid="stButtonGroup"] button { min-height: 48px; padding: 0.6rem 1.6rem; font-size: 1rem; }
+.st-key-mode_pick [data-testid="stCaptionContainer"] { line-height: 1.55; }
+/* Pop-ups (a new card unlocked, a refused move) slide in at the bottom, so they never cover the
+   suspects, the clock or the answer you just got at the top of the screen. */
+[data-testid="stToastContainer"] { top: auto !important; bottom: 1rem; }
 @media (max-width: 640px) {
   [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1rem; }
+  [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; bottom: 0.5rem; }
+  [data-testid="stButtonGroup"] button { min-height: 40px; }
+  .st-key-mode_pick [data-testid="stElementContainer"], .st-key-mode_pick [data-testid="stButtonGroup"],
+  .st-key-mode_pick [data-testid="stButtonGroup"] > div { width: 100% !important; max-width: none !important; }
+  .st-key-mode_pick [data-testid="stButtonGroup"] button { flex: 1 1 0; padding: 0.6rem 0.5rem; }  /* question and evidence pills: easy to tap */
   .evidence img { max-height: 170px; }
   .st-key-next_phone { display: block; margin-top: 0.4rem; }
   .st-key-case_summary [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.4rem 0.8rem; }
@@ -1272,7 +1284,7 @@ HOW_TO_PLAY = (
 SHOW_COVER = True  # the cover picture beside the briefing on the start screen (hidden on phones)
 
 
-MODE_LABELS = {"normal": "Normal mode", "hard": "Hard mode"}
+MODE_LABELS = {"normal": "Normal", "hard": "Hard"}
 MODE_NOTE = ("Hard mode is the same case with one difference: no tips. No next step, no hints, "
              "no highlighted details and nothing crossed off for you. Normal mode keeps them all.")
 
@@ -1314,11 +1326,12 @@ def intro_dialog():
         st.markdown('<div class="kicker">Choose your mode</div>', unsafe_allow_html=True)
         game = current_game()
         if game.history:
-            st.caption(f"{MODE_LABELS[game.mode]}. The mode is chosen before the first move.")
+            st.caption(f"{MODE_LABELS[game.mode]} mode. The mode is chosen before the first move.")
         else:
-            st.segmented_control("Mode", list(MODE_LABELS), format_func=MODE_LABELS.get, default=game.mode,
-                                 key="mode_choice", on_change=pick_mode, label_visibility="collapsed")
-            st.caption(MODE_NOTE)
+            with st.container(key="mode_pick"):
+                st.segmented_control("Mode", list(MODE_LABELS), format_func=MODE_LABELS.get, default=game.mode,
+                                     key="mode_choice", on_change=pick_mode, label_visibility="collapsed")
+                st.caption(MODE_NOTE)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
         # Each portrait is its own button (keyboard and screen readers get "Play as her/him").

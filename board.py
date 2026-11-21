@@ -774,6 +774,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .tools { order: 3; flex: 1 1 100%; }
   .tools button { flex: 0 0 38px; }
   .tools .accuse { flex: 1 1 auto; }
+  .tools button { flex-basis: 44px; height: 44px; }  /* a finger-sized target on phones and tablets */
   .hand { gap: 5px; }
   .card .lbl { padding: 2px 4px 4px; }
   .card .lbl span { font-size: 10px; }
