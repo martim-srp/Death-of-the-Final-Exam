@@ -655,7 +655,7 @@ def map_picture():
 
     with Image.open(CAMPUS_MAP) as picture:
         size = picture.size
-    return board.data_uri(str(CAMPUS_MAP)), size
+    return board.static_url(CAMPUS_MAP.name) or board.data_uri(str(CAMPUS_MAP)), size
 
 
 def rattled(game, suspect):

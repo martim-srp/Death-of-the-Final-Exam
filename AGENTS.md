@@ -20,6 +20,7 @@ details such as card numbers.
 - `db.py`: saved games in SQLite. All database code lives here.
 - `app.py`: the Streamlit interface. Game state lives in `st.session_state` on the server.
 - `board.py`: the HTML of the game board (map, evidence cards, suspects), built only from what the engine returns.
+- `static/`: copies of the map and the portraits, served at `app/static/` so the browser caches them. Never put evidence pictures here: anyone can fetch a static file, even for a locked card.
 - `tests/`: pytest tests for the engine and for the story's consistency.
 
 ## Commands

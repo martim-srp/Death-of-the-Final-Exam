@@ -12,3 +12,8 @@ headingFont = "serif"  # a noir, typewriter-era feel for titles
 # The full error still goes to the server log.
 [client]
 showErrorDetails = "none"
+
+# Serve static/ at app/static/: the map and the portraits are downloaded once and cached by the
+# browser instead of being re-sent inside every redraw (see board.STATIC).
+[server]
+enableStaticServing = true
