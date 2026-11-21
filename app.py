@@ -449,6 +449,9 @@ header[data-testid="stHeader"] { display: none; }
 .caught.cracked b { border-color: #e8c27a; color: #e8c27a; transform: rotate(3deg); }
 .nerves.broke { color: #e0645a; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
+.keyfact { margin: 0.2rem 0 0.7rem; padding: 0.6rem 0.8rem; border-left: 4px solid #e8c27a; border-radius: 6px;
+  background: rgba(232, 194, 122, 0.1); font-size: 1.02rem; font-weight: 600; line-height: 1.4; }
+.keyfact small { display: block; font: 600 0.68rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
 .evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
   background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
@@ -731,7 +734,7 @@ def panel_home(game):
     if leads:
         st.markdown("### Leads")
         st.markdown(
-            "".join(f'<div class="lead"><b>{esc(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
+            "".join(f'<div class="lead"><b>Evidence {engine.number(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
             unsafe_allow_html=True,
         )
     elif game.history:
@@ -757,7 +760,7 @@ def panel_home(game):
         st.markdown(
             "".join(
                 f'<div class="lie"><b>{esc(board.short_name(case["suspects"][c["suspect"]]["name"]))}</b> said '
-                f'“{esc(c["text"])}” · broken by <b>{esc(c["clue"] or "a clue")}</b></div>'
+                f'“{esc(c["text"])}” · broken by <b>{esc(proof_name(c["clue"]) if c["clue"] else "a clue")}</b></div>'
                 for c in caught
             ),
             unsafe_allow_html=True,
@@ -1109,6 +1112,9 @@ def panel_clue(game, clue_id, fresh):
     for hunch in hunches:
         if hunch["mark"] and hunch["mark"] in clue["text"]:
             body = body.replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
+    fact = engine.key_fact(game, clue_id)
+    if fact:
+        st.markdown(f'<div class="keyfact"><small>In short</small>{esc(fact)}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{body}</div></div>', unsafe_allow_html=True)
     if hunches:
         st.markdown(hunch_html(hunches, clue["log"]), unsafe_allow_html=True)
