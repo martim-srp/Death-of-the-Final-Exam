@@ -478,8 +478,13 @@ header[data-testid="stHeader"] { display: none; }
 @keyframes flip { from { opacity: 0; transform: perspective(800px) rotateY(80deg); } to { opacity: 1; transform: none; } }
 @keyframes deal { from { opacity: 0; transform: translateY(-30px) rotate(-6deg); } to { opacity: 1; transform: none; } }
 @keyframes shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+/* Pop-ups (a new card unlocked, a refused move) slide in at the bottom, so they never cover the
+   suspects, the clock or the answer you just got at the top of the screen. */
+[data-testid="stToastContainer"] { top: auto !important; bottom: 1rem; }
 @media (max-width: 640px) {
   [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1rem; }
+  [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; bottom: 0.5rem; }
+  [data-testid="stButtonGroup"] button { min-height: 40px; }  /* question and evidence pills: easy to tap */
   .evidence img { max-height: 170px; }
   .st-key-next_phone { display: block; margin-top: 0.4rem; }
   .st-key-case_summary [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.4rem 0.8rem; }
