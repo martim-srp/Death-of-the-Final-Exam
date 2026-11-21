@@ -721,7 +721,7 @@ class Engine:
                 for column, options in clues[event["clue"]].get("rules_out", {}).items():
                     for option in options:
                         add(column, option, event["clue"])
-            elif event["action"] == "present" and event.get("cracked"):
+            elif event["action"] == "present" and event.get("cracked") and not self.hard(game):
                 add("who", event["suspect"], "crack")
             elif event["action"] == "accuse" and "choice" in event:
                 for column in COLUMNS:

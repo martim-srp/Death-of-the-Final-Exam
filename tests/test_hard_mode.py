@@ -90,6 +90,17 @@ def test_hard_mode_crosses_off_only_what_your_own_wrong_accusation_proved():
     assert out and all(e["by"] == "accusation" for e in out)
 
 
+def test_a_breakdown_does_not_cross_off_a_suspect_in_hard_mode():
+    engine, game = hard_game("A")  # The Exchange Student is innocent in variant A.
+    game.opened = list(CASE["clues"])
+    for clue in CASE["clues"]:
+        result = engine.present(game, "exchange", clue)
+        if result.get("cracked"):
+            break
+    assert "exchange" in game.cracked
+    assert not any(e["option"] == "exchange" and e["by"] == "crack" for e in engine.eliminated(game))
+
+
 def test_the_rules_are_the_same_in_both_modes():
     normal = Engine()
     hard_engine, hard = hard_game()

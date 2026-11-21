@@ -716,7 +716,10 @@ def chat_html(log, suspect):
                 f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small></div>'
             )
         if entry.get("cracked"):
-            after = "They are off your list." if entry["cracked"]["cleared"] else "That was not meant to come out."
+            if engine.hard(current_game()):
+                after = "You note the breakdown."
+            else:
+                after = "They are off your list." if entry["cracked"]["cleared"] else "That was not meant to come out."
             rows.append(f'<div class="caught cracked"{style}><b>{board.icon("bolt")} Cracked</b><small>{after}</small></div>')
         if entry.get("think"):
             rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
