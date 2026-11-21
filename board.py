@@ -330,12 +330,18 @@ def card_html(item, picked=None, fresh=(), goal=None):
     )
 
 
+def hand_columns(count):
+    """Columns for the evidence hand on a wide board: two rows, so each card is wide enough
+    for its name to break between words. A narrow board (a phone) uses five columns instead."""
+    return max(1, (count + 1) // 2)
+
+
 def hand_html(clues, picked=None, fresh=(), goal=None):
     """All the evidence cards, numbered 1 to 13. Places also have a pin on the map; both open the same card."""
     opened = sum(c["state"] == "open" for c in clues)
     return (
         f'<div class="handhead"><b>Evidence</b><span>{opened} of {len(clues)} found</span></div>'
-        f'<div class="hand" style="--n:{len(clues)}">' + "".join(card_html(c, picked, fresh, goal) for c in clues) + "</div>"
+        f'<div class="hand" lang="en" style="--n:{hand_columns(len(clues))}">' + "".join(card_html(c, picked, fresh, goal) for c in clues) + "</div>"
     )
 
 
@@ -582,7 +588,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .card .lbl { display: flex; flex-direction: column; padding: 3px 6px 5px; min-width: 0; line-height: 1.2; }
 .card .lbl b { font: 400 10px var(--type); opacity: .75; }
 .card .lbl span { font: 600 11px var(--prose); height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+  -webkit-box-orient: vertical; overflow-wrap: normal; word-break: normal; hyphens: auto; }
 .card.locked { background: #2a221e; color: #8d7f72; border-color: #3a2e28; }
 .card.available { border-color: var(--red); animation: glow 1.8s infinite; }
 .card.picked { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 0 0 3px rgba(232,194,122,.45); }
