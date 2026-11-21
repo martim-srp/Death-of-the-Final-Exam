@@ -188,7 +188,7 @@ def sound(name):
 
 def new_case():
     start_new_game()
-    for key in [k for k in st.session_state if str(k).startswith(("sheet_", "accuse_"))]:
+    for key in [k for k in st.session_state if str(k).startswith(("sheet_", "crossed_", "accuse_"))]:
         del st.session_state[key]
     for key in ("chats", "focus", "suspect", "verdict", "fresh", "sfx"):
         st.session_state.pop(key, None)
@@ -247,8 +247,26 @@ def proven_out(column):
 
 def crossed(column):
     """The options crossed off: the player's own notes, plus what the evidence has ruled out."""
-    mine = list(st.session_state.get(f"sheet_{column}") or [])
+    # Kept under its own key: Streamlit drops a widget's value once the notebook is closed.
+    live = st.session_state.get(f"sheet_{column}")
+    mine = list(live if live is not None else st.session_state.get(f"crossed_{column}") or [])
     return mine + [o for o in proven_out(column) if o not in mine]
+
+
+def case_columns():
+    """For the case strip: each question, how many options are still possible, and the answer once one is left."""
+    columns = []
+    for column in COLUMNS:
+        options = [o["id"] for o in case["accusation"][column]]
+        left = [o for o in options if o not in crossed(column)]
+        only = label(column, left[0]).removeprefix("The ") if len(left) == 1 else None
+        columns.append((column, len(left), len(options), only))
+    return columns
+
+
+def keep_crossed(column):
+    """Save the notebook's cross-offs where they outlive the notebook panel."""
+    st.session_state[f"crossed_{column}"] = list(st.session_state.get(f"sheet_{column}") or [])
 
 
 def ruled_out(suspect):
@@ -581,6 +599,7 @@ def draw_board(game, clues, fresh):
         )
         # In calm mode the next step is one plain line, without the detective's musing.
         + board.goal_html(step, None if calm() else engine.thought(game, step))
+        + board.case_html(case_columns())
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
@@ -1115,7 +1134,8 @@ def panel_sheet():
             st.session_state[f"sheet_{column}"] = crossed(column)  # proven ones stay crossed off
             left = len(options) - len(crossed(column))
             st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()} · {left} left", [o["id"] for o in options],
-                     format_func=lambda o, c=column: label(c, o), selection_mode="multi", key=f"sheet_{column}")
+                     format_func=lambda o, c=column: label(c, o), selection_mode="multi", key=f"sheet_{column}",
+                     on_change=keep_crossed, args=(column,))
             if proven:
                 st.markdown(
                     '<div class="proof">' + "".join(

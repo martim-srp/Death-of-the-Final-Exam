@@ -208,6 +208,22 @@ def goal_target(step):
     return step.get("clue") if step["do"] == "search" else step.get("suspect")
 
 
+CASE_NOUNS = {"who": "suspects", "how": "methods", "where": "places", "why": "motives"}
+
+
+def case_html(columns):
+    """The four questions the player must answer, always in sight. Tap to open the notebook.
+
+    columns: [(column, options left, total, the one option left or None)]. An option is left
+    when neither the player nor the evidence has crossed it off."""
+    chips = "".join(
+        f'<button class="cq{" solved" if only else ""}" data-act="sheet" title="Open the notebook to cross off what cannot be">'
+        f"<small>{esc(column.upper())}</small><b>{esc(only) if only else f'{left} {CASE_NOUNS[column]} left'}</b></button>"
+        for column, left, total, only in columns
+    )
+    return f'<div class="case-strip" aria-label="Your case: who, how, where and why">{chips}</div>'
+
+
 def goal_html(step, thought=None):
     """The always-visible objective strip: one next step, tap it to go there.
 
@@ -700,6 +716,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .suspects { gap: 5px; }
   .pin .tag { font-size: 24px; }
 }
+/* The four questions: who, how, where, why. Always visible, tap to open the notebook */
+.case-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 0 10px; }
+.case-strip .cq { min-width: 0; padding: 5px 8px; text-align: left; cursor: pointer; border-radius: 10px;
+  border: 1px solid rgba(232,194,122,.3); background: rgba(36,28,24,.85); color: var(--ink); font: 13px/1.25 var(--prose); }
+.case-strip .cq:hover { border-color: var(--gold); }
+.case-strip .cq small { display: block; font: 600 10px var(--type); letter-spacing: .16em; color: var(--gold); }
+.case-strip .cq b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.case-strip .cq.solved { border-color: var(--gold); background: rgba(232,194,122,.14); }
 /* Next step: one objective, always visible */
 .goal-bar { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 10px; padding: 8px 12px; text-align: left;
   border: 1px solid rgba(232,194,122,.55); border-radius: 12px; background: linear-gradient(90deg, rgba(232,194,122,.16), rgba(232,194,122,.04));
