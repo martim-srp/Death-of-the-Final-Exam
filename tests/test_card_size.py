@@ -34,7 +34,7 @@ def test_card_names_still_never_break_inside_a_word():
 
 
 def test_map_leaves_room_for_both_rows_of_cards():
-    assert "calc((100vh - 390px) * 1.5)" in SOURCE
+    assert "calc((100vh - 390px) * 1.65)" in SOURCE
 
 
 def test_tour_box_has_no_gold_bar():

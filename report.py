@@ -1,7 +1,7 @@
 """The honour council report: a Markdown file the player can download when the case closes.
 
-It sums up the player's investigation and ends with the outcome. Only solved cases
-include the answer and confrontation; cold cases remain unsolved in the report too.
+It sums up the player's investigation and outcome. A cold case stays unsolved in
+the story, with the correct answer shown separately for the player after it ends.
 """
 
 from game.engine import GameError
@@ -32,7 +32,8 @@ def _plain(text):
 def build(engine, game, examiner="Detective"):
     """The report as Markdown text. Raises GameError while the case is still open."""
     scene = closing_scene(engine, game)
-    solution = engine.solution(game) if game.status == "solved" else None
+    solution = engine.solution(game)
+    solved = game.status == "solved"
     case = engine.case
     title = case.get("title", "The case")
     examiner = _plain((examiner or "Detective").strip()[:24] or "Detective")
@@ -81,15 +82,20 @@ def build(engine, game, examiner="Detective"):
         lines += [f"- {_plain(b['title'])}: {_plain(b['description'])}" for b in badges]
 
     lines += ["", "## Finding of the council", ""]
-    if solution:
+    if solved:
         lines += [f"- **{c.capitalize()}:** {_plain(_label(case, c, solution[c]))}" for c in COLUMNS]
     else:
         lines += ["The case remains unsolved. No culprit has been identified."]
 
     if scene:
-        heading = "The boardroom confrontation" if solution else "The case remains unsolved"
+        heading = "The boardroom confrontation" if solved else "The case remains unsolved"
         lines += ["", f"## {heading}", ""]
         lines += [_plain(p) + "\n" for p in scene.split("\n\n")]
+
+    if not solved:
+        lines += ["", "## The correct solution (for the player)", "",
+                  "The investigation itself remained unsolved. This is the correct answer for your case.", ""]
+        lines += [f"- **{c.capitalize()}:** {_plain(_label(case, c, solution[c]))}" for c in COLUMNS]
 
     lines += ["", f"*{_plain(title)}. All characters, the course and the companies are fictional.*", ""]
     return "\n".join(lines)

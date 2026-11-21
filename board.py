@@ -69,7 +69,7 @@ def icon(name, cls="ic"):
 KIND_ICON = {"document": "doc", "location": "pin"}
 # Short names for the cards, so each fits on one line. The full title is in the panel.
 CARD_NAMES = {
-    "D1": "Leaked PDF", "D2": "Print log", "D3": "Sealed exam", "D4": "Standings", "D5": "Anon number",
+    "D1": "Leaked PDF", "D2": "Print log", "D3": "Sealed exam", "D4": "Rules/Standings", "D5": "Mystery number",
     "D6": "Email trail", "D7": "Visitors' book", "D8": "Clipping", "L1": "Gate log", "L2": "Cafeteria",
     "L3": "Residence", "L4": "Faculty", "L5": "Beach café",
 }
@@ -366,7 +366,7 @@ def card_html(item, picked=None, fresh=(), goal=None):
     classes = f"card {state}" + (" picked" if item["id"] == picked else "") + (" goal" if item["id"] == goal else "")
     if is_fresh:
         classes += " flip" if state == "open" else " fresh"
-    name = esc(CARD_NAMES.get(item["id"], item["title"]))
+    name = esc(CARD_NAMES.get(item["id"], item["title"])).replace("/", "/<wbr>")
     if state == "open":
         uri = find_picture("clues", item["id"])
         art = (
@@ -616,7 +616,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @keyframes beckon { 0%,70%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); } 35% { box-shadow: 0 0 0 6px rgba(192,57,43,.35); } }
 @keyframes throb { 50% { opacity: .55; } }
 /* Map */
-.map { width: min(100%, calc((100vh - 390px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
+.map { width: min(100%, calc((100vh - 390px) * 1.65)); min-width: min(100%, 462px); height: auto; display: block; margin: 0 auto;
   border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .pin { cursor: pointer; }
 .pin .ring { fill: none; stroke-width: 6; }
