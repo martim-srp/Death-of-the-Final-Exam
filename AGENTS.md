@@ -25,7 +25,7 @@ details such as card numbers.
 ## Commands
 
 ```bash
-python -m pip install -r requirements.txt   # install
+python -m pip install -r requirements-dev.txt   # install (the app's dependencies plus pytest)
 python -m pytest                            # run all tests
 streamlit run app.py                        # run the app locally
 ```
@@ -47,7 +47,8 @@ streamlit run app.py                        # run the app locally
 4. **Never commit secrets.** API keys come from environment variables (`REQUESTY_API_KEY`). `.env` is
    ignored by git. Never print or log a key.
 5. **Stay in scope.** Change only the files the task needs.
-6. **Keep dependencies minimal and pinned** with exact versions (`package==x.y.z`) in `requirements.txt`.
+6. **Keep dependencies minimal and pinned** with exact versions (`package==x.y.z`). The app's go in `requirements.txt`; tools only the
+   tests need go in `requirements-dev.txt`.
 7. **Do not claim something works without running it.** Paste the test output in the pull request.
 
 ## Rules for the game's design

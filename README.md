@@ -29,8 +29,12 @@ ignored by git.
 ## Run the tests
 
 ```bash
+python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
+
+`requirements-dev.txt` adds pytest to the app's own dependencies. The deployed app installs only
+`requirements.txt`.
 
 ## How to play
 
@@ -165,7 +169,8 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
   progress, or a cold case, made in another tab.
 - **Hidden content:** locked clue text never reaches the browser. The interface reads clues only
   through `Engine.clue_list()` and `Engine.read_clue()`.
-- **Dependencies:** four, each pinned to an exact version in `requirements.txt` and checked for
+- **Dependencies:** three for the app (`requirements.txt`) and pytest for the tests only
+  (`requirements-dev.txt`), each pinned to an exact version and checked for
   known vulnerabilities by `pip-audit` on every pull request.
 
 ### What the tests cover, and what they do not
