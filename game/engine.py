@@ -14,7 +14,7 @@ import re
 import secrets
 from dataclasses import asdict, dataclass, field, fields
 
-from game.case import load_case, load_cracks, load_hunches, load_lies, load_voice, option_ids, resolve_variant
+from game.case import load_case, load_cracks, load_hunches, load_keyfacts, load_lies, load_voice, option_ids, resolve_variant
 
 COLUMNS = ("who", "how", "where", "why")
 HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
@@ -172,6 +172,7 @@ class Engine:
         self.hunch_lines = hunches if hunches is not None else load_hunches()
         self.voice = voice if voice is not None else load_voice()
         self.crack_lines = cracks if cracks is not None else load_cracks()
+        self.keyfacts = load_keyfacts()
         self.lie_lines = load_lies()
         self.clock_rules = self.case["clock"]
         self._resolved = {v: resolve_variant(self.case, v) for v in self.case["variants"]}
@@ -655,6 +656,13 @@ class Engine:
             retry = any(event["action"] == "accuse" for event in game.history)
             return lines["accuse_retry" if retry and self.time_left(game) > ACCUSE_NOW_MINUTES else "accuse_time"]
         return lines.get(step["do"], step["text"])
+
+    def key_fact(self, game, clue_id):
+        """The card's one-line summary, for an open card: what it shows, never what it means.
+        None in hard mode (no tips) or for a card that is not open yet."""
+        if self.hard(game) or clue_id not in game.opened:
+            return None
+        return self.keyfacts.get(game.variant, {}).get(clue_id) or self.keyfacts["base"].get(clue_id)
 
     def lie_meaning(self, game, claim_id):
         """What a caught lie tells you: what is now known, and the question it opens. Never who
