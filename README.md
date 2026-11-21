@@ -62,6 +62,32 @@ wrong ones, or at 09:00, the case goes cold.
 
 All characters, the course and the companies in the game are fictional.
 
+### How one question travels
+
+```mermaid
+flowchart LR
+    P([Player]) -->|tap or typed question| A[app.py<br/>screens]
+    A -->|check_secret, ask, present| E[game/engine.py<br/>rules]
+    E -->|reads| C[(data/case.json<br/>story)]
+    A -->|character_brief only| AI[game/ai.py]
+    AI -->|one request| R{{Requesty<br/>model}}
+    R -.->|fails, slow or bad JSON| F[scripted lines<br/>from the brief]
+    AI -->|reply and topic tag| E
+    E -->|cost, unlocks, contradictions| A
+    A -->|save after every action| D[(db.py<br/>SQLite)]
+    A -->|board HTML| B[board.py]
+```
+
+1. The player taps a card or types a question in `app.py`.
+2. A typed question goes through `Engine.check_secret()` first, so a password never reaches the model.
+3. `game/ai.py` sends only the suspect's brief and the question. The model answers in character and
+   picks a topic tag from the list in `case.json`.
+4. If the call fails, the suspect answers with scripted lines and the game goes on.
+5. `game/engine.py` accepts the tag only if it is on the list, then moves the clock and opens any
+   clue it unlocks. The model never decides this.
+6. `db.py` saves the game, and `board.py` draws the new board from what the engine returns.
+
+
 ## Where things are
 
 | Part | File | What it does |
