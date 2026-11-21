@@ -143,7 +143,7 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span><small>tries left</small></div>'
         f'<div class="stat zapstat" title="Lies caught">{icon("bolt")}<b>{caught}</b><small>{"lie" if caught == 1 else "lies"} caught</small></div>'
         '<div class="tools">'
-        f'<button data-act="home" title="Leads">{icon("search")}</button>'
+        f'<button data-act="home" title="The case so far and your leads">{icon("search")}</button>'
         f'<button data-act="sheet" title="Notebook">{icon("sheet")}</button>'
         f'<button data-act="intro" title="Story and rules">{icon("book")}</button>'
         f'<button class="mute" type="button" title="Sound on or off">{icon("sound", "ic on")}{icon("mute", "ic off")}</button>'
@@ -374,7 +374,9 @@ def suspects_html(suspects, picked=None, goal=None):
                 f'<span class="short">{esc(TINY_NAME.get(s["id"], short_name(s["name"])))}</span>')
         classes = "sus" + (" picked" if s["id"] == picked else "") + (" out" if s["ruled_out"] else "") + (" goal" if s["id"] == goal else "")
         marks = ""
-        if s["questioned"]:
+        if s.get("done"):
+            marks += f'<span class="tick all" title="Nothing left to ask">{icon("check")}</span>'
+        elif s["questioned"]:
             marks += '<span class="tick" title="Questioned">✓</span>'
         if s["caught"]:
             marks += f'<span class="zap" title="Caught lying">{icon("bolt")}{s["caught"]}</span>'
@@ -648,6 +650,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .marks { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; }
 .sus .tick, .sus .zap { font: 400 11px var(--type); border-radius: 10px; padding: 1px 5px; }
 .sus .tick { background: var(--gold); color: #14100e; }
+.sus .tick.all { display: inline-flex; align-items: center; padding: 1px 3px; background: #2f6b46; color: #fff; }
+.sus .tick.all .ic { width: 12px; height: 12px; }
 .sus .zap { background: var(--red); color: #fff; }
 .sus .nv { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(58,46,40,.9); }
 .sus .nv b { display: block; height: 100%; background: linear-gradient(90deg, #e8c27a, #e0645a); transition: width .6s; }

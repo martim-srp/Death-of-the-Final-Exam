@@ -356,6 +356,37 @@ class Engine:
             result["cracked"] = cracked
         return result
 
+    # ---- Progress -------------------------------------------------------------
+
+    def topics_for(self, suspect):
+        """The questions a player can put to a suspect. Nobody asks the TA about the TA."""
+        self._check_suspect_id(suspect)
+        return [t for t in self.case["topics"] if not (t == "teaching_assistant" and suspect == "ta")]
+
+    def _check_suspect_id(self, suspect):
+        if suspect not in self.case["suspects"]:
+            raise GameError(f"There is no suspect called {suspect}.")
+
+    def suspect_progress(self, game, suspect):
+        """How much of a suspect you have covered, so a player knows when they are done.
+
+        "asked" of "questions": the different questions asked. "shown" of "cards": the opened
+        evidence cards already shown to them. "done" once both are complete: they have nothing
+        new to say until you find another card. It comes only from what the player did,
+        never from who is guilty or which card breaks a story.
+        """
+        self._check_suspect(game, suspect)
+        topics = self.topics_for(suspect)
+        asked = {e["topic"] for e in game.history if e.get("action") == "ask" and e.get("suspect") == suspect}
+        opened = set(game.opened)
+        shown = {clue for s, clue in game.presented if s == suspect and clue in opened}
+        result = {
+            "asked": len(asked & set(topics)), "questions": len(topics),
+            "shown": len(shown), "cards": len(opened),
+        }
+        result["done"] = result["asked"] == result["questions"] and result["shown"] == result["cards"]
+        return result
+
     # ---- Nerves ---------------------------------------------------------------
 
     def nerves(self, game, suspect):
