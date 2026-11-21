@@ -87,9 +87,28 @@ def data_uri(path):
     return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode("ascii")
 
 
+# Pictures that give nothing away (the map, the portraits) are also in static/, which Streamlit
+# serves at app/static/ (enableStaticServing in .streamlit/config.toml). The browser downloads
+# them once and caches them, instead of receiving them again inside every redraw. Evidence
+# pictures stay data URIs, sent only once their card is open: a static file could be fetched
+# while the card is still locked.
+STATIC = ROOT / "static"
+STATIC_FOLDERS = ("suspects", "detectives")
+
+
+def static_url(relative):
+    """The served URL of a file in static/, relative to the page, or None if it is not there."""
+    return f"app/static/{relative}" if (STATIC / relative).is_file() else None
+
+
 def find_picture(folder, name):
-    """The first <name>.<webp|png|jpg|jpeg|svg> in an assets folder, as a data URI."""
+    """The first <name>.<webp|png|jpg|jpeg|svg> in an assets folder: its static URL for a
+    portrait (see STATIC), otherwise a data URI."""
     for extension in MIME:
+        if folder in STATIC_FOLDERS and (ASSETS / folder / f"{name}{extension}").is_file():
+            served = static_url(f"{folder}/{name}{extension}")
+            if served:
+                return served
         uri = data_uri(str(ASSETS / folder / f"{name}{extension}"))
         if uri:
             return uri
