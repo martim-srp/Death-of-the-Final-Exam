@@ -7,6 +7,14 @@
     "question_cost": 10
   },
   "max_strikes": 3,
+  "night_events": [
+    {"at": 60, "text": "The storm takes out the lights in the faculty. For a minute the corridors are black, then the generators cough back on."},
+    {"at": 180, "text": "Two of the suspects ask to go home. The Dean refuses: nobody leaves the building before nine."},
+    {"at": 300, "text": "The class group chat passes 400 new messages. Someone has started a poll on who did it."},
+    {"at": 360, "text": "The Dean calls. \"Three hours, Detective. At nine I need a name, or I cancel the exam.\""},
+    {"at": 450, "text": "The first students reach the exam hall, soaked and furious. The doors open at half past eight."},
+    {"at": 510, "text": "Half an hour left. The Dean is waiting in the boardroom."}
+  ],
   "cold_ending": "Your investigation ended without a correct accusation. The case remains unsolved, and the culprit remains unidentified.\n\nWith the investigation unresolved, the Dean cancels the exam. The suspects leave.",
   "badges": {
     "spy_password": {
