@@ -17,15 +17,15 @@ def phone_rules(css, width=640):
     raise AssertionError("unclosed @media block")
 
 
-def test_pop_ups_slide_in_at_the_bottom_not_over_the_top_of_the_game():
+def test_pop_ups_appear_at_the_top_of_the_screen():
     css = page(start())
     rule = re.search(r'\[data-testid="stToastContainer"\] \{([^}]*)\}', css).group(1)
-    assert "top: auto !important" in rule and "bottom:" in rule
+    assert "top: 1rem !important" in rule and "bottom: auto !important" in rule
 
 
 def test_on_a_phone_pop_ups_span_the_screen_and_pills_are_easy_to_tap():
     phone = phone_rules(page(start()))
-    assert '[data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; bottom: 0.5rem; }' in phone
+    assert '[data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; top: 0.5rem !important; }' in phone
     assert '[data-testid="stButtonGroup"] button { min-height: 40px; }' in phone
 
 
