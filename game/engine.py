@@ -121,12 +121,17 @@ def case_vocabulary(case):
     """Every word that appears in the case file's text, lowercased.
 
     Players copy these words from clues into their questions, so they are never secrets.
+    A file name also counts without its extension (INV_Final_v3.pdf gives inv_final_v3).
     """
     words = set()
 
     def walk(value):
         if isinstance(value, str):
-            words.update(w.lower() for w in _words(value))
+            for word in _words(value):
+                words.add(word.lower())
+                file_name = _FILE_NAME.fullmatch(word)
+                if file_name:  # players often drop the extension: "Did you print INV_Final_v3?"
+                    words.add(file_name.group(1).lower())
         elif isinstance(value, dict):
             for item in value.values():
                 walk(item)
