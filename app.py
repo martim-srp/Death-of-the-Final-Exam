@@ -367,7 +367,8 @@ header[data-testid="stHeader"] { display: none; }
 .whos-who li { display: flex; align-items: center; gap: 0.55rem; margin: 0; font-size: 0.8rem; line-height: 1.25; color: #cdbfa8; }
 .whos-who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; flex: 0 0 auto; border: 1px solid #3a2e28; }
 .whos-who b { display: block; font-family: var(--display); font-size: 0.9rem; color: #efe6d8; }
-.clock-rule { display: flex; gap: 0.6rem; align-items: flex-start; margin: 0 0 0.6rem; padding: 0.6rem 0.75rem; border: 1px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.08); font-size: 0.95rem; line-height: 1.45; }
+.clock-rule { display: flex; flex-direction: column; gap: 0.3rem; margin: 0 0 0.9rem; padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); font-size: 1.05rem; line-height: 1.45; }
+.clock-rule .headline { font-family: var(--display); font-size: 1.2rem; color: #e8c27a; }
 .how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
 .how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
 .how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
@@ -1030,11 +1031,11 @@ def whos_who_html():
 
 HOURS = case["clock"]["limit_minutes"] // 60
 CLOCK_RULE = (
-    f'<div class="clock-rule"><span>You have <b>{HOURS} hours</b>, from midnight to 09:00. '
-    "Every search and every question moves the clock forward. "
+    f'<div class="clock-rule"><b class="headline">Every action costs time. Use your {HOURS} hours well.</b>'
+    "<span>The clock runs from midnight to 09:00, and every search and every question moves it forward. "
     "At 09:00 you can no longer search or ask: you can only accuse.</span></div>"
 )
-HOW_TO_PLAY = CLOCK_RULE + (
+HOW_TO_PLAY = (
     '<ol class="how-to">'
     f'<li>{board.icon("search")}<span><b>Search</b> a new place or document</span><em>−{case["clock"]["clue_cost"]} min</em></li>'
     f'<li>{board.icon("ask")}<span><b>Question</b> the five suspects</span><em>−{case["clock"]["question_cost"]} min</em></li>'
@@ -1065,7 +1066,7 @@ def intro_dialog():
         brief = st.container()
     with brief:
         st.markdown(f'<div class="kicker">{esc(TITLE)}</div>', unsafe_allow_html=True)
-        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + whos_who_html() + HOW_TO_PLAY, unsafe_allow_html=True)
+        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + CLOCK_RULE + whos_who_html() + HOW_TO_PLAY, unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
         # Each portrait is its own button (keyboard and screen readers get "Play as her/him").
