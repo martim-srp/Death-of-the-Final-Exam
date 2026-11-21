@@ -70,7 +70,7 @@ def test_the_confrontation_is_open_and_above_the_rank():
     game = engine.new_game(seed=1, variant="A")
     engine.accuse(game, **CASE["variants"]["A"]["solution"])
     at = start(game)
-    scene = next(e for e in at.expander if e.label.startswith("Half past seven"))
+    scene = next(e for e in at.expander if e.label == "Read the confrontation")
     assert scene.proto.expanded
     source = (ROOT / "app.py").read_text(encoding="utf-8").split("def finale", 1)[1]
     assert source.index("scene = denouement(game)") < source.index("rank_card(game)")

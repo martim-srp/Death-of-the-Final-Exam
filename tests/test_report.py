@@ -51,7 +51,7 @@ def test_report_gives_the_answer_and_the_scene_of_that_variant(variant):
     for column, option in solution.items():
         name = next(o["label"] for o in CASE["accusation"][column] if o["id"] == option)
         assert name.replace("'", "'") in text.replace("\\", "")
-    assert "## Half past seven, the boardroom" in text
+    assert "## The boardroom confrontation" in text
     assert "{" not in text  # every placeholder is filled
 
 
