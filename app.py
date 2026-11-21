@@ -188,7 +188,7 @@ def sound(name):
 
 def new_case():
     start_new_game()
-    for key in [k for k in st.session_state if str(k).startswith(("sheet_", "accuse_"))]:
+    for key in [k for k in st.session_state if str(k).startswith(("sheet_", "crossed_", "accuse_"))]:
         del st.session_state[key]
     for key in ("chats", "focus", "suspect", "verdict", "fresh", "sfx"):
         st.session_state.pop(key, None)
@@ -247,8 +247,26 @@ def proven_out(column):
 
 def crossed(column):
     """The options crossed off: the player's own notes, plus what the evidence has ruled out."""
-    mine = list(st.session_state.get(f"sheet_{column}") or [])
+    # Kept under its own key: Streamlit drops a widget's value once the notebook is closed.
+    live = st.session_state.get(f"sheet_{column}")
+    mine = list(live if live is not None else st.session_state.get(f"crossed_{column}") or [])
     return mine + [o for o in proven_out(column) if o not in mine]
+
+
+def case_columns():
+    """For the case strip: each question, how many options are still possible, and the answer once one is left."""
+    columns = []
+    for column in COLUMNS:
+        options = [o["id"] for o in case["accusation"][column]]
+        left = [o for o in options if o not in crossed(column)]
+        only = label(column, left[0]).removeprefix("The ") if len(left) == 1 else None
+        columns.append((column, len(left), len(options), only))
+    return columns
+
+
+def keep_crossed(column):
+    """Save the notebook's cross-offs where they outlive the notebook panel."""
+    st.session_state[f"crossed_{column}"] = list(st.session_state.get(f"sheet_{column}") or [])
 
 
 def ruled_out(suspect):
@@ -266,9 +284,78 @@ def set_focus(kind, value=None):
         st.session_state.suspect = value
 
 
+# ---- The first-minute tutorial ----------------------------------------------------------
+# A new player's first case (normal mode) starts with three guided steps that end in a caught
+# lie: search the faculty corridor, show it to the Companion, see the lie break. The same in
+# every variant, and a caught lie is not a confession, so it never points at the culprit.
+
+TUTORIAL_CLUE, TUTORIAL_SUSPECT = "L4", "companion"
+
+
+def tutorial_step(game):
+    """1: search Evidence 12. 2: show it to the Companion. 3: a lie is caught. None once over or off."""
+    if not st.session_state.get("tutorial") or st.session_state.get("tutorial_done"):
+        return None
+    if engine.hard(game) or game.status != "playing":
+        return None
+    if game.contradictions:
+        return 3
+    if TUTORIAL_CLUE not in game.opened:
+        ready = engine.clue_state(game, TUTORIAL_CLUE) == "available" and engine.can_afford(game, case["clock"]["clue_cost"])
+        return 1 if ready else None
+    shown = any(e.get("action") == "present" and e.get("suspect") == TUTORIAL_SUSPECT and e.get("clue") == TUTORIAL_CLUE
+                for e in game.history)
+    return None if shown or not engine.can_afford(game, case["clock"]["question_cost"]) else 2
+
+
+def guide(game):
+    """The next step the board points at: the tutorial's while it runs, then the engine's."""
+    number = tutorial_step(game)
+    if number == 1:
+        return {"do": "search", "clue": TUTORIAL_CLUE, "text": f"Tutorial 1 of 3 · Search {engine.label(TUTORIAL_CLUE)}"}
+    if number == 2:
+        name = case["suspects"][TUTORIAL_SUSPECT]["name"]
+        return {"do": "show", "clue": TUTORIAL_CLUE, "suspect": TUTORIAL_SUSPECT,
+                "text": f"Tutorial 2 of 3 · Show Evidence {engine.number(TUTORIAL_CLUE)} to {mid_sentence(name)}."}
+    return engine.next_step(game)
+
+
+def end_tutorial():
+    st.session_state.tutorial_done = True
+
+
+def coach_card(game):
+    """What the tutorial step is for, under the suspects. The guide strip says what to tap."""
+    number = tutorial_step(game)
+    if not number:
+        return
+    search, ask = case["clock"]["clue_cost"], case["clock"]["question_cost"]
+    if number == 1:
+        title = "Tutorial · 1 of 3 · Search"
+        body = (f"Evidence is hidden around campus. Searching a place turns its card over and costs {search} minutes "
+                "of your night. Start with the faculty corridor: tap the glowing Faculty pin or card 12, then <b>Search it</b>.")
+    elif number == 2:
+        title = "Tutorial · 2 of 3 · Show"
+        body = ("Every suspect has a story. Your job is to find the card that breaks it. The Companion says "
+                "<b>“I never went to his office door.”</b> Card 12 says otherwise. Show it to her: tap the "
+                f"Companion under <b>Show this card to</b>, or tap her face ({ask} min).")
+    else:
+        title = "Tutorial · 3 of 3 · That is the game"
+        body = ("You caught a lie: the story and the evidence did not match. Keep doing this: search places, question "
+                "suspects and show each one the card that breaks their story. A liar is not always the culprit, so ask "
+                "yourself why they lied. When you know <b>who</b>, <b>how</b>, <b>where</b> and <b>why</b>, accuse.")
+    with st.container(key="coach"):
+        st.markdown(f'<div class="coach"><div class="kicker">{esc(title)}</div><p>{body}</p></div>', unsafe_allow_html=True)
+        if number == 3:
+            st.button("Got it, I'll take it from here", key="tutorial_ok", type="primary", icon=":material/check:",
+                      on_click=end_tutorial, use_container_width=True)
+        else:
+            st.button("Skip the tutorial", key="tutorial_skip", type="tertiary", on_click=end_tutorial)
+
+
 def go_next():
     """The phone's next-step button: open what the next step points at."""
-    step = engine.next_step(current_game())
+    step = guide(current_game())
     parsed = board.parse_act(board.goal_act(step), case["suspects"], case["clues"]) if step else None
     if parsed:
         set_focus(*parsed)
@@ -276,7 +363,7 @@ def go_next():
 
 def next_step_button(game):
     """On phones the strip above the map scrolls out of sight, so the panel ends with the next step too."""
-    step = engine.next_step(game)
+    step = guide(game)
     if step:
         st.button(step["text"], key="next_phone", icon=":material/arrow_forward:", on_click=go_next, use_container_width=True)
 
@@ -362,6 +449,13 @@ header[data-testid="stHeader"] { display: none; }
 .caught.cracked b { border-color: #e8c27a; color: #e8c27a; transform: rotate(3deg); }
 .nerves.broke { color: #e0645a; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
+.keyfact { margin: 0.2rem 0 0.7rem; padding: 0.6rem 0.8rem; border-left: 4px solid #e8c27a; border-radius: 6px;
+  background: rgba(232, 194, 122, 0.1); font-size: 1.02rem; font-weight: 600; line-height: 1.4; }
+.keyfact small { display: block; font: 600 0.68rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
+.caught .means, .lie .means { display: block; max-width: 30rem; margin: 0.45rem auto 0; padding: 0.45rem 0.7rem; border-radius: 8px;
+  background: rgba(232, 194, 122, 0.1); border-left: 3px solid #e8c27a; text-align: left; font-size: 0.92rem; line-height: 1.4; }
+.caught .means b, .lie .means b { display: inline; border: 0; padding: 0; transform: none; color: #e8c27a;
+  font: 600 0.92rem var(--prose); letter-spacing: 0; text-transform: none; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
 .evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
   background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
@@ -379,6 +473,9 @@ header[data-testid="stHeader"] { display: none; }
 .lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
 .lead b { font-family: var(--label); color: #e8c27a; }
+.coach { padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); }
+.coach p { margin: 0.35rem 0 0; font-size: 0.98rem; line-height: 1.45; }
+.coach b { color: #e8c27a; }
 .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
 .tips div span { display: block; font-size: 1.6rem; }
@@ -502,12 +599,11 @@ header[data-testid="stHeader"] { display: none; }
 .st-key-mode_pick { gap: 0.8rem; margin: 0.5rem 0 1.4rem; }
 .st-key-mode_pick [data-testid="stButtonGroup"] button { min-height: 48px; padding: 0.6rem 1.6rem; font-size: 1rem; }
 .st-key-mode_pick [data-testid="stCaptionContainer"] { line-height: 1.55; }
-/* Pop-ups (a new card unlocked, a refused move) slide in at the bottom, so they never cover the
-   suspects, the clock or the answer you just got at the top of the screen. */
-[data-testid="stToastContainer"] { top: auto !important; bottom: 1rem; }
+/* Pop-ups (a new card unlocked, a refused move) appear at the top of the screen, where the eye is. */
+[data-testid="stToastContainer"] { top: 1rem !important; bottom: auto !important; }
 @media (max-width: 640px) {
   [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1rem; }
-  [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; bottom: 0.5rem; }
+  [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; top: 0.5rem !important; }
   [data-testid="stButtonGroup"] button { min-height: 40px; }
   .st-key-mode_pick [data-testid="stElementContainer"], .st-key-mode_pick [data-testid="stButtonGroup"],
   .st-key-mode_pick [data-testid="stButtonGroup"] > div { width: 100% !important; max-width: none !important; }
@@ -571,7 +667,7 @@ def draw_board(game, clues, fresh):
     picked = value if kind == "clue" else None
     avatar = board.find_picture("detectives", player_avatar())
     map_uri, size = map_picture()
-    step = engine.next_step(game)
+    step = guide(game)
     goal = board.goal_target(step)
     markup = (
         board.hud_html(
@@ -581,6 +677,7 @@ def draw_board(game, clues, fresh):
         )
         # In calm mode the next step is one plain line, without the detective's musing.
         + board.goal_html(step, None if calm() else engine.thought(game, step))
+        + board.case_html(case_columns())
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
@@ -607,7 +704,7 @@ def show_tour(game):
 def draw_suspects(game):
     kind, value = focus()
     picked = value if kind == "suspect" else None
-    goal = board.goal_target(engine.next_step(game))
+    goal = board.goal_target(guide(game))
     deck(data=board.suspects_html(suspect_status(game), picked, goal) + board.calm_html(calm()), key="suspect_row",
          on_act_change=functools.partial(on_act, "suspect_row"))
 
@@ -640,14 +737,14 @@ def panel_home(game):
     if leads:
         st.markdown("### Leads")
         st.markdown(
-            "".join(f'<div class="lead"><b>{esc(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
+            "".join(f'<div class="lead"><b>Evidence {engine.number(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
             unsafe_allow_html=True,
         )
     elif game.history:
         step = engine.next_step(game)
         if step:
             st.markdown(f"### {step['text']}")  # the next step, once the first move is made
-    else:
+    elif not tutorial_step(game):  # the tutorial's coach card already says where to start
         st.markdown("### Where to start")
         st.markdown(
             f'<div class="tips"><div><span>{board.icon("search")}</span>Tap a red evidence card or pin to search it</div>'
@@ -666,7 +763,7 @@ def panel_home(game):
         st.markdown(
             "".join(
                 f'<div class="lie"><b>{esc(board.short_name(case["suspects"][c["suspect"]]["name"]))}</b> said '
-                f'“{esc(c["text"])}” · broken by <b>{esc(c["clue"] or "a clue")}</b></div>'
+                f'“{esc(c["text"])}” · broken by <b>{esc(proof_name(c["clue"]) if c["clue"] else "a clue")}</b></div>'
                 for c in caught
             ),
             unsafe_allow_html=True,
@@ -731,6 +828,7 @@ def panel_lies(game):
         st.markdown(
             f'<div class="lie"><b>{esc(name)}</b> said “{esc(item["text"].rstrip("."))}” · broken by '
             f'<b>{esc(proof_name(item["clue"]) if item["clue"] else "a clue")}</b>'
+            f'{lie_meaning_html(item)}'
             f'<span class="nerves-mini">Nerves {engine.nerves(game, item["suspect"])} of {NERVES_MAX}{broke}</span></div>',
             unsafe_allow_html=True,
         )
@@ -819,6 +917,12 @@ def cloud_key():
         return None
 
 
+def lie_meaning_html(item):
+    """Under a caught lie: what it tells you, so the stamp leads somewhere."""
+    meaning = engine.lie_meaning(current_game(), item.get("claim"))
+    return f'<span class="means"><b>What it means:</b> {esc(meaning)}</span>' if meaning else ""
+
+
 def chat_html(log, suspect):
     """The conversation as speech bubbles: the suspect on the left, you on the right."""
     them = board.suspect_picture(suspect, rattled(current_game(), suspect)) or ""
@@ -839,7 +943,8 @@ def chat_html(log, suspect):
         for item in entry.get("caught", []):
             rows.append(
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
-                f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small></div>'
+                f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small>'
+                f'{lie_meaning_html(item)}</div>'
             )
         if entry.get("cracked"):
             after = "Their story broke. Write down what slipped out."
@@ -910,7 +1015,7 @@ def panel_suspect(game, suspect):
             st.markdown(f'<div class="empty-chat">Ask {esc(brief["name"])} something, or show them an evidence card.</div>',
                         unsafe_allow_html=True)
     cost = case["clock"]["question_cost"]
-    step = engine.next_step(game) or {}
+    step = guide(game) or {}
     tip = step if step.get("suspect") == suspect else {}
     asked = {e["topic"] for e in game.history if e.get("action") == "ask" and e.get("suspect") == suspect}
     st.markdown(progress_html(engine.suspect_progress(game, suspect)), unsafe_allow_html=True)
@@ -1018,6 +1123,9 @@ def panel_clue(game, clue_id, fresh):
     for hunch in hunches:
         if hunch["mark"] and hunch["mark"] in clue["text"]:
             body = body.replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
+    fact = engine.key_fact(game, clue_id)
+    if fact:
+        st.markdown(f'<div class="keyfact"><small>In short</small>{esc(fact)}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{body}</div></div>', unsafe_allow_html=True)
     if hunches:
         st.markdown(hunch_html(hunches, clue["log"]), unsafe_allow_html=True)
@@ -1115,7 +1223,8 @@ def panel_sheet():
             st.session_state[f"sheet_{column}"] = crossed(column)  # proven ones stay crossed off
             left = len(options) - len(crossed(column))
             st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()} · {left} left", [o["id"] for o in options],
-                     format_func=lambda o, c=column: label(c, o), selection_mode="multi", key=f"sheet_{column}")
+                     format_func=lambda o, c=column: label(c, o), selection_mode="multi", key=f"sheet_{column}",
+                     on_change=keep_crossed, args=(column,))
             if proven:
                 st.markdown(
                     '<div class="proof">' + "".join(
@@ -1294,7 +1403,7 @@ def finale(game):
 
 STORY_HTML = (
     "Thursday, 23:47, a storm over Carcavelos. An anonymous number posts tomorrow's <b>Investments exam</b> "
-    "in the class group chat, to all 212 students. The exam is at <b>09:00</b>. Find out who leaked it before then."
+    "in the class group chat, to all 212 students. The exam is at <b>09:00</b>. Before then, find out <b>who</b> leaked it, <b>how</b>, <b>where</b> and <b>why</b>."
 )
 
 
@@ -1348,6 +1457,10 @@ def pick_detective(avatar):
 
 def finish_intro():
     st.session_state.intro_done = True
+    game = current_game()
+    if not game.history and not engine.hard(game) and "tutorial" not in st.session_state:
+        st.session_state.tutorial = True  # the guided first minute teaches by doing, so it replaces the tour
+        st.session_state.tour_done = True
 
 
 @st.dialog("The exam has leaked", width="large", on_dismiss=finish_intro)
@@ -1399,18 +1512,20 @@ st.markdown(PAGE_CSS, unsafe_allow_html=True)
 if calm():
     st.markdown(CALM_CSS, unsafe_allow_html=True)
 
+# Pop-ups stay long enough to read (Streamlit's default is 4 seconds); the cross closes them sooner.
+TOAST_SECONDS = 9
 flash = st.session_state.pop("flash", None)
 if flash:
     getattr(st, flash[0])(flash[1])
 toast = st.session_state.pop("toast", None)
 if toast:
-    st.toast(toast[0], icon=toast[1])
+    st.toast(toast[0], icon=toast[1], duration=TOAST_SECONDS)
 night = st.session_state.pop("night_toast", None)
 if night:
-    st.toast(night, icon=":material/thunderstorm:")
+    st.toast(night, icon=":material/thunderstorm:", duration=TOAST_SECONDS)
 refusal = st.session_state.pop("refusal", None)
 if refusal:
-    st.toast(refusal, icon=":material/warning:")
+    st.toast(refusal, icon=":material/warning:", duration=TOAST_SECONDS)
 fresh = st.session_state.pop("fresh", [])
 
 if game.status != "playing":
@@ -1424,6 +1539,7 @@ with board_column:
 with side_column:
     draw_suspects(game)
     with st.container(key="panel"):
+        coach_card(game)  # first in the panel, which every tap scrolls into view on phones
         kind, value = focus()
         if kind == "suspect" and value in case["suspects"]:
             panel_suspect(game, value)
