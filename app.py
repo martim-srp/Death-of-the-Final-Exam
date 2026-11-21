@@ -599,12 +599,11 @@ header[data-testid="stHeader"] { display: none; }
 .st-key-mode_pick { gap: 0.8rem; margin: 0.5rem 0 1.4rem; }
 .st-key-mode_pick [data-testid="stButtonGroup"] button { min-height: 48px; padding: 0.6rem 1.6rem; font-size: 1rem; }
 .st-key-mode_pick [data-testid="stCaptionContainer"] { line-height: 1.55; }
-/* Pop-ups (a new card unlocked, a refused move) slide in at the bottom, so they never cover the
-   suspects, the clock or the answer you just got at the top of the screen. */
-[data-testid="stToastContainer"] { top: auto !important; bottom: 1rem; }
+/* Pop-ups (a new card unlocked, a refused move) appear at the top of the screen, where the eye is. */
+[data-testid="stToastContainer"] { top: 1rem !important; bottom: auto !important; }
 @media (max-width: 640px) {
   [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1rem; }
-  [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; bottom: 0.5rem; }
+  [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; top: 0.5rem !important; }
   [data-testid="stButtonGroup"] button { min-height: 40px; }
   .st-key-mode_pick [data-testid="stElementContainer"], .st-key-mode_pick [data-testid="stButtonGroup"],
   .st-key-mode_pick [data-testid="stButtonGroup"] > div { width: 100% !important; max-width: none !important; }
@@ -1513,18 +1512,20 @@ st.markdown(PAGE_CSS, unsafe_allow_html=True)
 if calm():
     st.markdown(CALM_CSS, unsafe_allow_html=True)
 
+# Pop-ups stay long enough to read (Streamlit's default is 4 seconds); the cross closes them sooner.
+TOAST_SECONDS = 9
 flash = st.session_state.pop("flash", None)
 if flash:
     getattr(st, flash[0])(flash[1])
 toast = st.session_state.pop("toast", None)
 if toast:
-    st.toast(toast[0], icon=toast[1])
+    st.toast(toast[0], icon=toast[1], duration=TOAST_SECONDS)
 night = st.session_state.pop("night_toast", None)
 if night:
-    st.toast(night, icon=":material/thunderstorm:")
+    st.toast(night, icon=":material/thunderstorm:", duration=TOAST_SECONDS)
 refusal = st.session_state.pop("refusal", None)
 if refusal:
-    st.toast(refusal, icon=":material/warning:")
+    st.toast(refusal, icon=":material/warning:", duration=TOAST_SECONDS)
 fresh = st.session_state.pop("fresh", [])
 
 if game.status != "playing":
