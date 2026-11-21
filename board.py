@@ -347,7 +347,8 @@ TINY_NAME = {"class_rep": "Class Rep", "ta": "TA", "exchange": "Exchange", "prof
 
 
 def suspects_html(suspects, picked=None, goal=None):
-    """The five suspects as big cards. Each item: id, name, questioned, caught, ruled_out."""
+    """The five suspects as big cards. Each item: id, name, questioned, caught, ruled_out,
+    and optionally nerves (0 to 100), drawn as a thin bar along the bottom of the card."""
     cards = []
     for s in suspects:
         uri = find_picture("suspects", s["id"])
@@ -361,9 +362,15 @@ def suspects_html(suspects, picked=None, goal=None):
             marks += f'<span class="zap" title="Caught lying">{icon("bolt")}{s["caught"]}</span>'
         stamp = '<span class="stamp">RULED OUT</span>' if s["ruled_out"] else ""
         picture = f'<img src="{uri}" alt="{esc(s["name"])}">' if uri else f'<div class="noimg">{icon("user")}</div>'
+        nerves = s.get("nerves")
+        bar = ""
+        if nerves is not None:
+            level = max(0, min(100, int(nerves)))
+            full = " full" if level >= 100 else ""
+            bar = f'<i class="nv{full}" title="Nerves {level}%"><b style="width:{level}%"></b></i>'
         cards.append(
             f'<button class="{classes}" data-act="suspect:{s["id"]}" aria-label="Question {esc(s["name"])}">'
-            f'{picture}<div class="marks">{marks}</div>{stamp}<div class="nm">{name}</div></button>'
+            f'{picture}<div class="marks">{marks}</div>{stamp}<div class="nm">{name}</div>{bar}</button>'
         )
     return '<div class="suspects">' + "".join(cards) + "</div>"
 
@@ -601,6 +608,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .tick, .sus .zap { font: 400 11px var(--type); border-radius: 10px; padding: 1px 5px; }
 .sus .tick { background: var(--gold); color: #14100e; }
 .sus .zap { background: var(--red); color: #fff; }
+.sus .nv { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(58,46,40,.9); }
+.sus .nv b { display: block; height: 100%; background: linear-gradient(90deg, #e8c27a, #e0645a); transition: width .6s; }
+.sus .nv.full b { background: #e0645a; animation: throb 1.2s infinite; }
 .sus .stamp { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-16deg); border: 2px solid #e0645a;
   color: #e0645a; background: rgba(20,16,14,.7); padding: 1px 4px; font: 400 11px var(--type); white-space: nowrap; }
 /* First-play tour */

@@ -454,13 +454,14 @@ def map_picture():
 
 
 def suspect_status(game):
-    """For each suspect: whether you have questioned them, and how many lies you caught."""
+    """For each suspect: whether you have questioned them, how many lies you caught, and their nerves."""
     questioned = {event["suspect"] for event in game.history if "suspect" in event}
     caught = {}
     for suspect, _claim in game.contradictions:
         caught[suspect] = caught.get(suspect, 0) + 1
     return [
-        {"id": s, "name": d["name"], "questioned": s in questioned, "caught": caught.get(s, 0), "ruled_out": ruled_out(s)}
+        {"id": s, "name": d["name"], "questioned": s in questioned, "caught": caught.get(s, 0), "ruled_out": ruled_out(s),
+         "nerves": engine.nerves(game, s)}
         for s, d in case["suspects"].items()
     ]
 
