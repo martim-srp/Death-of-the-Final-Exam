@@ -816,4 +816,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .sus .nm .short { display: inline; }
   .sus .marks { top: 3px; right: 3px; }
 }
+/* A tablet held upright (about 768px): the side column is so narrow that each face is ~50px wide. */
+@container (max-width: 300px) {
+  .suspects { gap: 3px; }
+  .sus .nm { font-size: 8px; letter-spacing: 0; padding: 10px 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+}
 """
