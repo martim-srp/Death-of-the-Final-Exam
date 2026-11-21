@@ -1,7 +1,6 @@
 """Every database call closes its connection, and a failed write leaves the save untouched."""
 
 import sqlite3
-import warnings
 
 import pytest
 
@@ -39,16 +38,6 @@ def test_create_save_and_load_close_their_connections(tracked):
     assert db.load_game("x" * 30) is None
     assert len(tracked) == 4
     assert all(is_closed(conn) for conn in tracked)
-
-
-def test_no_unclosed_database_warning():
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", ResourceWarning)
-        game_id = db.create_game(Engine().new_game(seed=2))
-        assert db.load_game(game_id) is not None
-        import gc
-
-        gc.collect()
 
 
 def test_a_failed_write_rolls_back_and_still_closes(tracked):
