@@ -96,6 +96,11 @@ def find_picture(folder, name):
     return None
 
 
+def suspect_picture(suspect, nervous=False):
+    """A suspect's portrait. Once they are caught lying (or crack), the nervous one, if there is one."""
+    return (nervous and find_picture("suspects", f"{suspect}_nervous")) or find_picture("suspects", suspect)
+
+
 def esc(text):
     return html.escape(str(text), quote=True)
 
@@ -370,7 +375,7 @@ def suspects_html(suspects, picked=None, goal=None):
     and optionally nerves (0 to 100), drawn as a thin bar along the bottom of the card."""
     cards = []
     for s in suspects:
-        uri = find_picture("suspects", s["id"])
+        uri = suspect_picture(s["id"], s.get("nervous", False))
         name = (f'<span class="long">{esc(short_name(s["name"]))}</span>'
                 f'<span class="short">{esc(TINY_NAME.get(s["id"], short_name(s["name"])))}</span>')
         classes = "sus" + (" picked" if s["id"] == picked else "") + (" out" if s["ruled_out"] else "") + (" goal" if s["id"] == goal else "")

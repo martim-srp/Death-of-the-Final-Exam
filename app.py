@@ -510,6 +510,11 @@ def map_picture():
     return board.data_uri(str(CAMPUS_MAP)), size
 
 
+def rattled(game, suspect):
+    """Caught in a lie, or cracked: from then on the suspect shows their nervous portrait."""
+    return any(s == suspect for s, _claim in game.contradictions) or suspect in game.cracked
+
+
 def suspect_status(game):
     """For each suspect: whether you have questioned them, how many lies you caught, and their nerves."""
     questioned = {event["suspect"] for event in game.history if "suspect" in event}
@@ -518,7 +523,7 @@ def suspect_status(game):
         caught[suspect] = caught.get(suspect, 0) + 1
     return [
         {"id": s, "name": d["name"], "questioned": s in questioned, "caught": caught.get(s, 0), "ruled_out": ruled_out(s),
-         "nerves": engine.nerves(game, s), "done": engine.suspect_progress(game, s)["done"]}
+         "nerves": engine.nerves(game, s), "done": engine.suspect_progress(game, s)["done"], "nervous": rattled(game, s)}
         for s, d in case["suspects"].items()
     ]
 
@@ -760,7 +765,7 @@ def cloud_key():
 
 def chat_html(log, suspect):
     """The conversation as speech bubbles: the suspect on the left, you on the right."""
-    them = board.find_picture("suspects", suspect) or ""
+    them = board.suspect_picture(suspect, rattled(current_game(), suspect)) or ""
     you = board.find_picture("detectives", player_avatar()) or ""
     rows = []
     for number, entry in enumerate(log):
@@ -826,7 +831,7 @@ def panel_suspect(game, suspect):
     from game import ai
 
     brief = engine.character_brief(game, suspect)
-    uri = board.find_picture("suspects", suspect) or ""
+    uri = board.suspect_picture(suspect, rattled(game, suspect)) or ""
     persona = brief["persona"].split(";")[0].split(". ")[0].rstrip(".") + "."
     nerves = nerve_level(game, suspect)
     broke = " broke" if suspect in game.cracked else ""
