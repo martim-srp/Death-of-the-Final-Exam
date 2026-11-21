@@ -337,7 +337,7 @@ def card_html(item, picked=None, fresh=(), goal=None):
     else:
         art = f'<div class="art back locked"><span>{icon("lock")}</span></div>'
     return (
-        f'<button class="{classes}" data-act="clue:{item["id"]}" title="Evidence {item["number"]}. {esc(item["title"])}">'
+        f'<button class="{classes}" data-act="clue:{item["id"]}" aria-label="Evidence {item["number"]}. {esc(item["title"])}">'
         f'{art}<div class="lbl"><b>{item["number"]}</b><span>{name}</span></div></button>'
     )
 
@@ -573,7 +573,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @keyframes beckon { 0%,70%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); } 35% { box-shadow: 0 0 0 6px rgba(192,57,43,.35); } }
 @keyframes throb { 50% { opacity: .55; } }
 /* Map */
-.map { width: min(100%, calc((100vh - 300px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
+.map { width: min(100%, calc((100vh - 390px) * 1.5)); min-width: min(100%, 420px); height: auto; display: block; margin: 0 auto;
   border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .pin { cursor: pointer; }
 .pin .ring { fill: none; stroke-width: 6; }
@@ -611,6 +611,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .card .lbl b { font: 400 10px var(--type); opacity: .75; }
 .card .lbl span { font: 600 11px var(--prose); height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
   -webkit-box-orient: vertical; overflow-wrap: normal; word-break: normal; hyphens: auto; }
+/* Wider boards: shorter cards (the pictures are 16:9) with the number beside the name, so both rows
+   fit on screen under the map. Phones keep the taller cards. */
+@container (min-width: 521px) {
+  .card .art { aspect-ratio: 16 / 9; }
+  .card .art.back, .card .art.icon { font-size: 22px; }
+  .card .lbl { flex-direction: row; align-items: baseline; gap: 4px; padding: 3px 6px 4px; }
+  .card .lbl b { flex: 0 0 auto; }
+  .card .lbl span { height: auto; max-height: 2.4em; }
+}
+/* A medium board (a 1280px laptop): the "9h 00m left" note would run over the tries; the fuse bar still shows it. */
+@container (max-width: 820px) {
+  .hud .clock small { display: none; }
+}
 .card.locked { background: #2a221e; color: #8d7f72; border-color: #3a2e28; }
 .card.available { border-color: var(--red); animation: glow 1.8s infinite; }
 .card.picked { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 0 0 3px rgba(232,194,122,.45); }
@@ -643,7 +656,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: #e0645a; background: rgba(20,16,14,.7); padding: 1px 4px; font: 400 11px var(--type); white-space: nowrap; }
 /* First-play tour */
 .tour { position: fixed; z-index: 1000; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(360px, calc(100vw - 32px));
-  background: #1c1613; color: var(--ink); border: 1px solid #3a2e28; border-left: 3px solid var(--gold); border-radius: 14px;
+  background: #1c1613; color: var(--ink); border: 1px solid #3a2e28; border-radius: 14px;
   padding: 14px 16px 12px; box-shadow: 0 18px 50px rgba(0,0,0,.7);
   animation: rise .35s ease-out; }
 .tour .step { display: none; }
