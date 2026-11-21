@@ -57,3 +57,11 @@ def test_a_new_case_clears_the_cross_offs():
     at.run()
     at.button(key="new_case").click().run()
     assert "crossed_why" not in at.session_state
+
+
+def test_the_strip_text_wraps_to_two_lines_instead_of_cutting_words_and_is_smaller_on_phones():
+    css = board.BOARD_CSS
+    rule = css[css.index(".case-strip .cq b {"):].split("}")[0]
+    assert "-webkit-line-clamp: 2" in rule and "nowrap" not in rule
+    phone = css[css.rindex("@media (max-width: 640px) {"):]
+    assert ".case-strip .cq { padding: 4px 6px; font-size: 12px; }" in phone

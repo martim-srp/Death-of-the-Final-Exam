@@ -28,8 +28,9 @@ def test_step_one_points_the_guide_at_the_faculty_corridor():
     at = start(tutorial=True)
     markup = board_markup(at)
     assert 'class="goal-bar" data-act="next:clue:L4"' in markup
-    assert "Tutorial 1 of 3" in markup
-    assert "Tutorial · 1 of 3" in coach(at) and "Search it" in coach(at)
+    assert "Tutorial 1 of 3 · Tap the glowing Faculty pin, then Search it." in markup
+    assert "<em>" not in markup.split('class="goal-bar"')[1].split("</button>")[0]  # one sentence, no musing
+    assert coach(at) == ""  # the strip says it; the panel only offers to skip
     assert not any("Where to start" in m.value for m in at.markdown)  # the coach card says it once
 
 
@@ -38,11 +39,11 @@ def test_step_two_points_at_the_companion_then_step_three_explains_the_game():
     at.button(key="open_L4").click().run()
     markup = board_markup(at)
     assert 'data-act="next:suspect:companion"' in markup and "Tutorial 2 of 3" in markup
-    assert "I never went to his office door." in coach(at)
+    assert "never went to his office door" in markup
     at.pills(key="show_to_L4").set_value("companion").run()
     assert not at.exception
-    assert "That is the game" in coach(at)
-    assert "A liar is not always the culprit" in coach(at)
+    assert "Caught her lying! That is the game:" in coach(at)
+    assert len(coach(at)) < 200  # one line, not a paragraph
     at.button(key="tutorial_ok").click().run()
     assert coach(at) == ""
     assert 'data-act="next:clue:D1"' in board_markup(at)  # the usual guide takes over
@@ -59,8 +60,8 @@ def test_no_tutorial_in_hard_mode_or_when_not_started():
     engine = Engine()
     game = engine.new_game(seed=1, variant="A")
     engine.set_mode(game, "hard")
-    assert coach(start(game=game, tutorial=True)) == ""
-    assert coach(start()) == ""
+    assert "Tutorial 1 of 3" not in board_markup(start(game=game, tutorial=True))
+    assert "Tutorial 1 of 3" not in board_markup(start())
 
 
 def test_starting_a_new_case_starts_the_tutorial_in_place_of_the_tour():

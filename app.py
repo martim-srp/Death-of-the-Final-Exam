@@ -312,11 +312,10 @@ def guide(game):
     """The next step the board points at: the tutorial's while it runs, then the engine's."""
     number = tutorial_step(game)
     if number == 1:
-        return {"do": "search", "clue": TUTORIAL_CLUE, "text": f"Tutorial 1 of 3 · Search {engine.label(TUTORIAL_CLUE)}"}
+        return {"do": "search", "clue": TUTORIAL_CLUE, "text": "Tutorial 1 of 3 · Tap the glowing Faculty pin, then Search it."}
     if number == 2:
-        name = case["suspects"][TUTORIAL_SUSPECT]["name"]
         return {"do": "show", "clue": TUTORIAL_CLUE, "suspect": TUTORIAL_SUSPECT,
-                "text": f"Tutorial 2 of 3 · Show Evidence {engine.number(TUTORIAL_CLUE)} to {mid_sentence(name)}."}
+                "text": "Tutorial 2 of 3 · Show card 12 to the Companion. She says she never went to his office door."}
     return engine.next_step(game)
 
 
@@ -325,29 +324,16 @@ def end_tutorial():
 
 
 def coach_card(game):
-    """What the tutorial step is for, under the suspects. The guide strip says what to tap."""
+    """The tutorial in the side panel: a skip link while it runs (the guide strip says what to tap),
+    then one line once the lie is caught."""
     number = tutorial_step(game)
     if not number:
         return
-    search, ask = case["clock"]["clue_cost"], case["clock"]["question_cost"]
-    if number == 1:
-        title = "Tutorial · 1 of 3 · Search"
-        body = (f"Evidence is hidden around campus. Searching a place turns its card over and costs {search} minutes "
-                "of your night. Start with the faculty corridor: tap the glowing Faculty pin or card 12, then <b>Search it</b>.")
-    elif number == 2:
-        title = "Tutorial · 2 of 3 · Show"
-        body = ("Every suspect has a story. Your job is to find the card that breaks it. The Companion says "
-                "<b>“I never went to his office door.”</b> Card 12 says otherwise. Show it to her: tap the "
-                f"Companion under <b>Show this card to</b>, or tap her face ({ask} min).")
-    else:
-        title = "Tutorial · 3 of 3 · That is the game"
-        body = ("You caught a lie: the story and the evidence did not match. Keep doing this: search places, question "
-                "suspects and show each one the card that breaks their story. A liar is not always the culprit, so ask "
-                "yourself why they lied. When you know <b>who</b>, <b>how</b>, <b>where</b> and <b>why</b>, accuse.")
     with st.container(key="coach"):
-        st.markdown(f'<div class="coach"><div class="kicker">{esc(title)}</div><p>{body}</p></div>', unsafe_allow_html=True)
         if number == 3:
-            st.button("Got it, I'll take it from here", key="tutorial_ok", type="primary", icon=":material/check:",
+            st.markdown('<div class="coach"><p><b>Caught her lying! That is the game:</b> '
+                        "find the card that breaks each story.</p></div>", unsafe_allow_html=True)
+            st.button("Got it", key="tutorial_ok", type="primary", icon=":material/check:",
                       on_click=end_tutorial, use_container_width=True)
         else:
             st.button("Skip the tutorial", key="tutorial_skip", type="tertiary", on_click=end_tutorial)
@@ -431,13 +417,13 @@ header[data-testid="stHeader"] { display: none; }
 .who-head .line { font-size: 0.85rem; opacity: 0.75; line-height: 1.3; }
 .chat { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.2rem 0.1rem; }
 .bubble { display: flex; gap: 0.5rem; align-items: flex-end; max-width: 92%; animation: rise 0.35s ease-out both; }
-.bubble img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; object-position: top; flex: none; }
+.bubble .face { width: 30px; height: 30px; border-radius: 50%; background: #2b221d center top / cover no-repeat; flex: none; }
 .bubble .say { padding: 0.5rem 0.75rem; border-radius: 16px; font-family: var(--prose); font-size: 0.95rem; line-height: 1.35; }
 .bubble.them .say { background: #2b221d; border: 1px solid #3f322b; border-bottom-left-radius: 4px; }
 .bubble.you { margin-left: auto; flex-direction: row-reverse; }
 .bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
 .bubble.think { margin-left: auto; flex-direction: row-reverse; max-width: 86%; }
-.bubble.think img { width: 24px; height: 24px; opacity: 0.85; }
+.bubble.think .face { width: 24px; height: 24px; opacity: 0.85; }
 .bubble.think .say { background: transparent; border: 0; border-right: 2px solid var(--gold); border-radius: 0; padding: 0.15rem 0.6rem;
   font: italic 0.88rem/1.35 var(--display); color: #cdbfa8; text-align: right; }
 .bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
@@ -474,7 +460,7 @@ header[data-testid="stHeader"] { display: none; }
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
 .lead b { font-family: var(--label); color: #e8c27a; }
 .coach { padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); }
-.coach p { margin: 0.35rem 0 0; font-size: 0.98rem; line-height: 1.45; }
+.coach p { margin: 0; font-size: 1.05rem; line-height: 1.45; }
 .coach b { color: #e8c27a; }
 .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
@@ -655,7 +641,7 @@ def map_picture():
 
     with Image.open(CAMPUS_MAP) as picture:
         size = picture.size
-    return board.data_uri(str(CAMPUS_MAP)), size
+    return board.static_url(CAMPUS_MAP.name) or board.data_uri(str(CAMPUS_MAP)), size
 
 
 def rattled(game, suspect):
@@ -691,7 +677,7 @@ def draw_board(game, clues, fresh):
             calm=calm(),
         )
         # In calm mode the next step is one plain line, without the detective's musing.
-        + board.goal_html(step, None if calm() else engine.thought(game, step))
+        + board.goal_html(step, None if calm() or tutorial_step(game) in (1, 2) else engine.thought(game, step))
         + board.case_html(case_columns())
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
@@ -944,19 +930,20 @@ def chat_html(log, suspect):
     """The conversation as speech bubbles: the suspect on the left, you on the right."""
     them = board.suspect_picture(suspect, rattled(current_game(), suspect)) or ""
     you = board.find_picture("detectives", player_avatar()) or ""
-    rows = []
+    # Each face is sent once, as a CSS background, not once per bubble: a long chat stays light on a phone.
+    rows = [f'<style>.chat .face.them {{ background-image: url("{them}"); }} .chat .face.you {{ background-image: url("{you}"); }}</style>']
     for number, entry in enumerate(log):
         style = "" if number >= len(log) - 2 else ' style="animation:none"'  # only the newest lines animate
         if entry["who"] == "you":
             act = " act" if entry.get("act") else ""
-            rows.append(f'<div class="bubble you"{style}><img src="{you}" alt=""><div class="say{act}">{esc(entry["text"])}</div></div>')
+            rows.append(f'<div class="bubble you"{style}><i class="face you"></i><div class="say{act}">{esc(entry["text"])}</div></div>')
             continue
         unlock = ""
         if entry.get("unlocked"):
             unlock = '<span class="unlock">' + board.icon("unlock") + " Unlocked: " + esc(", ".join(engine.label(i) for i in entry["unlocked"])) + "</span>"
         note = FALLBACK_NOTES.get(entry.get("fallback"))
         note = f'<span class="note">{esc(note)}</span>' if note else ""
-        rows.append(f'<div class="bubble them"{style}><img src="{them}" alt=""><div class="say">{esc(entry["text"])}{unlock}{note}</div></div>')
+        rows.append(f'<div class="bubble them"{style}><i class="face them"></i><div class="say">{esc(entry["text"])}{unlock}{note}</div></div>')
         for item in entry.get("caught", []):
             rows.append(
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
@@ -967,7 +954,7 @@ def chat_html(log, suspect):
             after = "Their story broke. Write down what slipped out."
             rows.append(f'<div class="caught cracked"{style}><b>{board.icon("bolt")} Cracked</b><small>{after}</small></div>')
         if entry.get("think"):
-            rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
+            rows.append(f'<div class="bubble think"{style}><i class="face you"></i><div class="say">{esc(entry["think"])}</div></div>')
     return '<div class="chat">' + "".join(rows) + "</div>"
 
 
