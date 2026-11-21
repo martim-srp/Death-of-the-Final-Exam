@@ -722,7 +722,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 1px solid rgba(232,194,122,.3); background: rgba(36,28,24,.85); color: var(--ink); font: 13px/1.25 var(--prose); }
 .case-strip .cq:hover { border-color: var(--gold); }
 .case-strip .cq small { display: block; font: 600 10px var(--type); letter-spacing: .16em; color: var(--gold); }
-.case-strip .cq b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.case-strip .cq b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-weight: 600; }  /* up to two lines, never cut mid-word */
 .case-strip .cq.solved { border-color: var(--gold); background: rgba(232,194,122,.14); }
 /* Next step: one objective, always visible */
 .goal-bar { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 10px; padding: 8px 12px; text-align: left;
@@ -758,6 +758,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 @media (max-width: 640px) {
   .goal-bar { font-size: 14px; padding: 7px 10px; }
+  .case-strip { gap: 4px; }
+  .case-strip .cq { padding: 4px 6px; font-size: 12px; }
 }
 /* Line icons */
 .ic { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; flex: 0 0 auto; }
