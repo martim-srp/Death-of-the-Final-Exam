@@ -362,6 +362,9 @@ header[data-testid="stHeader"] { display: none; }
 .caught.cracked b { border-color: #e8c27a; color: #e8c27a; transform: rotate(3deg); }
 .nerves.broke { color: #e0645a; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
+.keyfact { margin: 0.2rem 0 0.7rem; padding: 0.6rem 0.8rem; border-left: 4px solid #e8c27a; border-radius: 6px;
+  background: rgba(232, 194, 122, 0.1); font-size: 1.02rem; font-weight: 600; line-height: 1.4; }
+.keyfact small { display: block; font: 600 0.68rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
 .evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
   background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
@@ -379,9 +382,6 @@ header[data-testid="stHeader"] { display: none; }
 .lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
 .lead b { font-family: var(--label); color: #e8c27a; }
-.keyfact { margin: 0.2rem 0 0.7rem; padding: 0.6rem 0.8rem; border-left: 4px solid #e8c27a; border-radius: 6px;
-  background: rgba(232, 194, 122, 0.1); font-size: 1.02rem; font-weight: 600; line-height: 1.4; }
-.keyfact small { display: block; font: 600 0.68rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
 .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
 .tips div span { display: block; font-size: 1.6rem; }
