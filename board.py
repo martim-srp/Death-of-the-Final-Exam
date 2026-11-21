@@ -733,6 +733,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .zap .ic { width: 11px; height: 11px; }
 .sus .noimg .ic { width: 40px; height: 40px; color: #8a7a6a; }
 .goal-bar .gi .ic { width: 24px; height: 24px; color: var(--gold); display: block; }
+/* With the calm button the tool row is wider: below this width the "left" text would run into the next stat. */
+@container (max-width: 1240px) { .hud .clock small { display: none; } }
 /* Narrow boards (a small laptop window, a tablet): lay out by the board's own width, not the screen's */
 @container (max-width: 700px) {
   .hud { flex-wrap: wrap; gap: 8px 10px; padding: 8px; }
