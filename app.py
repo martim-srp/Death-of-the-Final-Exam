@@ -15,6 +15,7 @@ import functools
 import html
 import re
 from pathlib import Path
+from urllib.parse import quote, urlsplit, urlunsplit
 
 import streamlit as st
 
@@ -34,6 +35,7 @@ AVATARS = {"she": "Play as her", "he": "Play as him"}
 DEFAULT_AVATAR = "she"
 COLUMNS = ("who", "how", "where", "why")
 APP_URL = "https://carcavelos-paper.streamlit.app"
+PUBLIC_URL = APP_URL
 COLUMN_ICONS = {"who": ":material/person:", "how": ":material/build:", "where": ":material/location_on:", "why": ":material/psychology_alt:"}
 # Shown under a free-text answer when the suspect gave a scripted line instead of the AI's.
 # Keys are the reasons game/ai.py records in the game's history.
@@ -116,6 +118,24 @@ def save(game):
     st.session_state.game = game.to_dict()
     if "game_id" in st.session_state:
         db.save_game(st.session_state.game_id, game)
+
+
+def resume_link(game_id):
+    """Build the current case's shareable resume URL without carrying other query values."""
+    current_url = st.context.url
+    if current_url:
+        parts = urlsplit(current_url)
+        base = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    else:
+        base = PUBLIC_URL
+    return f"{base}?game={quote(str(game_id), safe='')}"
+
+
+def save_game_mailto(link):
+    """Open the player's own mail app with a resume link, without collecting an address."""
+    subject = quote("My Death of the Final Exam case", safe="")
+    body = quote(f"Pick up where I left off: {link}", safe="")
+    return f"mailto:?subject={subject}&body={body}"
 
 
 def run(action, *args):
@@ -657,13 +677,27 @@ def panel_home(game):
                     unsafe_allow_html=True)
     st.caption(
         f"Searching costs {case['clock']['clue_cost']} min, a question {case['clock']['question_cost']} min. "
-        "Bookmark this page to come back to this case."
+        "Your case saves itself. Use Save game to keep the link."
     )
-    with st.popover("New case", icon=":material/refresh:"):
-        st.write("Start over with a new culprit? This case will be lost.")
-        if st.button("Yes, new case", type="primary", key="new_case"):
-            new_case()
-            st.rerun()
+    new_case_col, save_game_col = st.columns(2)
+    with new_case_col:
+        with st.popover("New case", icon=":material/refresh:"):
+            st.write("Start over with a new culprit? This case will be lost.")
+            if st.button("Yes, new case", type="primary", key="new_case"):
+                new_case()
+                st.rerun()
+    with save_game_col:
+        with st.popover("Save game", icon=":material/bookmark:"):
+            st.write("Your case saves itself after every move. Keep this link to come back to it.")
+            game_id = st.session_state.get("game_id")
+            if game_id:
+                link = resume_link(game_id)
+                st.code(link, language=None)
+                st.link_button("Send to my email", save_game_mailto(link), icon=":material/mail:",
+                               use_container_width=True)
+            else:
+                st.caption("Saving is not available for this case.")
+            st.caption("Anyone with this link can open this case. The free server can restart and clear saved games.")
 
 
 # ---- Panel: lies caught (the lightning in the status bar) ---------------------------------
