@@ -118,7 +118,7 @@ def parse_act(act, suspects, clues):
         return ("clue", value)
     if kind == "spot" and value in MAP_SPOTS:
         return ("spot", value)
-    if kind in ("home", "sheet", "accuse", "intro", "tour_done", "calm") and not value:
+    if kind in ("home", "sheet", "lies", "accuse", "intro", "tour_done", "calm") and not value:
         return (kind, None)
     return None
 
@@ -141,7 +141,8 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'<div class="clock"><b>{esc(clock)}</b><div class="fuse"><i style="width:{burnt:.1f}%"></i></div>'
         f'<small>{hours}h {minutes:02d}m left</small></div>'
         f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span><small>tries left</small></div>'
-        f'<div class="stat zapstat" title="Lies caught">{icon("bolt")}<b>{caught}</b><small>{"lie" if caught == 1 else "lies"} caught</small></div>'
+        f'<button class="stat zapstat" type="button" data-act="lies" title="Lies caught: what they mean">'
+        f'{icon("bolt")}<b>{caught}</b><small>{"lie" if caught == 1 else "lies"} caught</small></button>'
         '<div class="tools">'
         f'<button data-act="home" title="The case so far and your leads">{icon("search")}</button>'
         f'<button data-act="sheet" title="Notebook">{icon("sheet")}</button>'
@@ -742,6 +743,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .mute.muted .off { display: inline-block; }
 .hud .stat .ic { width: 20px; height: 20px; color: #cdbfa8; }
 .hud .zapstat .ic { color: var(--gold); }
+.hud button.zapstat { background: none; border: 1px solid transparent; border-radius: 8px; color: inherit; font: inherit;
+  padding: 4px 6px; margin: -4px -6px; min-height: 36px; cursor: pointer; }
+.hud button.zapstat:hover, .hud button.zapstat:focus-visible { border-color: var(--gold); outline: none; }
+.hud button.zapstat small { text-decoration: underline dotted; text-underline-offset: 3px; }
 .card .art.icon { color: #3a2e28; }
 .card .art.icon .ic { width: 30px; height: 30px; }
 .card .art.back.locked { color: #8a7a6a; }

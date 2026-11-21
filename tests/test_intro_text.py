@@ -55,3 +55,19 @@ def test_the_time_box_comes_first_right_after_the_story():
     assert f"Every action costs time. Use your {hours} hours well." in page
     story, box, whos_who = page.find("class=\"story\""), page.find('<div class="clock-rule">'), page.find("Who's who")
     assert -1 < story < box < whos_who
+
+
+def test_look_closer_explains_the_ai_trap():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    engine.open_clue(game, "D1")
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=15)
+    at.session_state["game"] = game.to_dict()
+    at.session_state["intro_done"] = True
+    at.session_state["tour_done"] = True
+    at.session_state["focus"] = ("clue", "D1")
+    at.run()
+    at.toggle(key="hidden_D1").set_value(True).run()
+    assert not at.exception
+    captions = " ".join(c.value for c in at.caption)
+    assert "prompt injection" in captions and "never the evidence" in captions

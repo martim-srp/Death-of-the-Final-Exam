@@ -30,8 +30,24 @@ _HINT_TOPICS = {"alibi": "their alibi", "exam": "the exam", "report": "the repor
 
 # Things that look like a password or an API key. Used for the Companion's password trap.
 _KEY_PATTERN = re.compile(r"\b(sk|pk|rk|ghp|gho|xoxb|xoxp)[-_][A-Za-z0-9_-]{8,}", re.IGNORECASE)
+# "my password hunter2": with no "is" or ":", the next word counts only if it has a digit or a
+# symbol, so "the password written on the card" stays an ordinary question.
 _PASSWORD_WORDS = re.compile(
-    r"\b(password|passwd|pwd|passcode|senha|palavra-passe)\b\s*(is|=|:|é)?\s*\S{4,}", re.IGNORECASE
+    r"\b(password|passwd|pwd|passcode|senha|palavra-passe)\s+(?=\S*[\d!@#$%^&*+=/\\|~])\S{4,}", re.IGNORECASE
+)
+# "password is X", "my pin: X", "pw = X": once someone says what their password IS, the value
+# counts however short or weak it looks (cat, 1234, hunter2). The separator is required here,
+# so "I forgot my password" and "did you pass the exam" stay ordinary questions.
+_PASSWORD_GIVEN = re.compile(
+    r"\b(password|passwd|pwd|passcode|passphrase|pw|pin|senha|palavra-passe)\b"
+    r"((?:\s*(?:is|was|=|:|é|era))+)\s*[\"'“‘]?([^\s\"'”’?]+)",
+    re.IGNORECASE,
+)
+# Words that can follow "password is" without being the password ("the password is in the safe").
+_NOT_A_VALUE = frozenset(
+    "a an the in on at under not no never what which where who whom why how that this it its my your "
+    "his her their our somewhere written stored kept still also too same secret wrong right correct "
+    "weak strong long short safe private missing gone lost changed different new old there here".split()
 )
 # A whole word that is a card number (STU-2291, staff-0417, STU-2291's). Matched against the
 # whole word, so a password with a card number glued on (Lisboa2026/STU-2291) is not exempt.
@@ -78,12 +94,17 @@ def _looks_like_password(word, known_words):
 def looks_like_secret(text, known_words=frozenset()):
     """True if the text contains something that looks like a password or an API key.
 
-    Explicit keys (sk-..., ghp_...) and phrases like "my password is ..." always count.
+    Explicit keys (sk-..., ghp_...) and phrases like "my password is ..." always count, even
+    when the value is short ("my pin is 1234", "Password is: cat").
     Otherwise any word that looks like a password counts (see _looks_like_password).
     known_words is the vocabulary of the case file.
     """
     if _KEY_PATTERN.search(text) or _PASSWORD_WORDS.search(text):
         return True
+    for given in _PASSWORD_GIVEN.finditer(text):
+        value = given.group(3).strip(_STRIP).lower()
+        if value and value not in _NOT_A_VALUE and any(c.isalnum() for c in value):
+            return True
     return any(_looks_like_password(word, known_words) for word in _words(text))
 
 
@@ -404,24 +425,21 @@ class Engine:
     def _crack(self, game, suspect):
         """At full nerves a suspect breaks, once. Returns what they blurt out, or None.
 
-        The culprit lets their motive slip. An innocent suspect swears they did not do
-        it (and is ruled out) and says where the paper really left from. Either way it
-        is one part of the answer, never the whole of it.
+        Every suspect who cracks says the same kind of thing: they swear they did not do
+        it and say where the paper really left from. The culprit cracks exactly like an
+        innocent and nobody is ruled out, so cracking never shows who is guilty (showing
+        cards at random would otherwise find the culprit). It gives one part of the answer.
         """
         if suspect in game.cracked or self.nerves(game, suspect) < NERVES_MAX:
             return None
         game.cracked.append(suspect)
-        guilty = suspect == self._resolved[game.variant]["solution"]["who"]
-        return {"suspect": suspect, "line": self._crack_line(game, suspect), "cleared": not guilty}
+        return {"suspect": suspect, "line": self._crack_line(game, suspect)}
 
     def _crack_line(self, game, suspect):
         """What a suspect blurted out when they cracked, or None if they have not cracked."""
         if suspect not in game.cracked:
             return None
-        solution = self._resolved[game.variant]["solution"]
-        if suspect == solution["who"]:
-            return self.crack_lines["guilty"][solution["why"]]
-        return self.crack_lines["innocent"][solution["where"]]
+        return self.crack_lines["where"][self._resolved[game.variant]["solution"]["where"]]
 
     def _catch_contradictions(self, game, suspect, clue_id):
         """Record each claim of the suspect that this clue breaks. Each claim counts once."""
@@ -701,11 +719,11 @@ class Engine:
     def eliminated(self, game):
         """Options the evidence has already ruled out, for the case sheet and the accusation.
 
-        Three sources, all proven: an opened clue's "rules_out" list in the case file
-        ({column: [option ids]}, per variant), an innocent suspect who cracked (see
-        _crack), and the parts of a wrong accusation that were wrong. The solution is
-        never listed. Returns a list of {"column", "option", "by"}, where "by" is a clue
-        id, "crack" or "accusation", oldest first.
+        Two sources, both proven: an opened clue's "rules_out" list in the case file
+        ({column: [option ids]}, per variant), and the parts of a wrong accusation that
+        were wrong. A crack rules nobody out (see _crack). The solution is never listed.
+        Returns a list of {"column", "option", "by"}, where "by" is a clue id or
+        "accusation", oldest first.
         """
         solution = self._resolved[game.variant]["solution"]
         clues = self._clues(game)
@@ -721,8 +739,6 @@ class Engine:
                 for column, options in clues[event["clue"]].get("rules_out", {}).items():
                     for option in options:
                         add(column, option, event["clue"])
-            elif event["action"] == "present" and event.get("cracked") and not self.hard(game):
-                add("who", event["suspect"], "crack")
             elif event["action"] == "accuse" and "choice" in event:
                 for column in COLUMNS:
                     if column not in event.get("right", []):

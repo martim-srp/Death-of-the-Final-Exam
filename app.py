@@ -45,6 +45,12 @@ FALLBACK_NOTES = {
 }
 # Shown in the chat instead of a typed question that looked like a password or key.
 HIDDEN_QUESTION = "(Hidden: that looked like a password, so it was not sent.)"
+# Shown under the hidden line in the leaked PDF: what that line is, and why it cannot work here.
+AI_TRAP_NOTE = (
+    "Behind the scenes: this is a prompt injection, text hidden in evidence that tries to give orders to an AI. "
+    "The suspects are played by an AI, but it only ever sees its own character, never the evidence, "
+    "so a note like this cannot steer it. Only the rules engine decides what is true."
+)
 # The questions a player can tap, by topic: (button label, what the detective says).
 TOPICS = {
     "alibi": ("Last night?", "Where were you last night?"),
@@ -69,7 +75,7 @@ engine = get_engine(reloading.source_version())
 case = engine.case
 
 # Imported after get_engine(), which may have just reloaded game.engine.
-from game.engine import Game, GameError  # noqa: E402
+from game.engine import NERVES_MAX, NERVES_PER_CARD, NERVES_PER_LIE, Game, GameError  # noqa: E402
 
 
 # ---- Saving and loading --------------------------------------------------------------
@@ -271,10 +277,8 @@ def on_act(key):
 # ---- The D4 chart --------------------------------------------------------------------
 
 def denouement(game):
-    """The closing scene of this game's variant. Only once the case is closed."""
-    engine.solution(game)  # raises GameError while the game is still running
-    text = case["variants"][game.variant].get("denouement", "")
-    return text.format_map(game.variables)
+    """The confrontation if solved, or the unsolved outcome if cold."""
+    return report.closing_scene(engine, game)
 
 
 # ---- Page style ----------------------------------------------------------------------
@@ -355,6 +359,10 @@ header[data-testid="stHeader"] { display: none; }
 .tips div span { display: block; font-size: 1.6rem; }
 .lie { background: #2a1714; border: 1px solid #5a2a22; border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.88rem; }
 .lie b { color: #e0645a; }
+.lie-rules { display: grid; gap: 0.45rem; margin: 0.2rem 0 0.9rem; }
+.lie-rules div { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.9rem; line-height: 1.4; }
+.lie-rules .ic { width: 18px; height: 18px; flex: none; margin-top: 2px; color: #e8c27a; }
+.lie .nerves-mini { display: block; margin-top: 0.3rem; font: 0.72rem var(--label); color: #cdbfa8; letter-spacing: 0.06em; }
 .verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; margin-bottom: 0.6rem; }
 .verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem var(--label); letter-spacing: 0.08em; }
 .verdict .ok { background: #1f3a24; color: #8be09a; border: 2px solid #3d7a48; }
@@ -385,6 +393,8 @@ header[data-testid="stHeader"] { display: none; }
   color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem var(--label);
   letter-spacing: 0.15em; animation: stamp 0.6s 0.6s cubic-bezier(.2,1.6,.4,1) both; white-space: nowrap; }
 .finale.cold .slam { border-color: #9aa7b3; color: #9aa7b3; }
+.finale .cold-stamp { display: inline-block; border: 4px solid #9aa7b3; color: #9aa7b3;
+  padding: 0.3rem 0.7rem; font-family: var(--label); font-size: 1.8rem; font-weight: 700; }
 .finale .title { font-size: 2.6rem; font-weight: 700; line-height: 1.2; margin: 1.1rem 0 0.3rem; animation: rise 0.6s 1s ease-out both; }
 .finale .sub { opacity: 0.75; animation: rise 0.6s 1.1s ease-out both; }
 .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin: 1.2rem 0 0.4rem; }
@@ -629,6 +639,46 @@ def panel_home(game):
             st.rerun()
 
 
+# ---- Panel: lies caught (the lightning in the status bar) ---------------------------------
+
+
+LIE_RULES = [
+    ("card", "You catch a lie when you show a suspect the evidence card that breaks something they told you."),
+    ("bolt", f"Their nerves go up by {NERVES_PER_LIE}, on top of the {NERVES_PER_CARD} every new card adds. "
+             f"At {NERVES_MAX} they crack and let something slip."),
+    ("sheet", "The lie is written in your notebook, under that suspect's story."),
+    ("medal", "Every lie caught raises your detective rank at the end."),
+    ("scale", "A lie is not proof of guilt. People lie to hide other things too."),
+]
+
+
+def panel_lies(game):
+    """What the lightning in the status bar counts, what a caught lie changes, and the ones caught so far.
+
+    Lists only lies already caught, so it never tells which card breaks a story you have not broken yet."""
+    caught = engine.contradiction_list(game)
+    count = f"{len(caught)} {'lie' if len(caught) == 1 else 'lies'} caught" if caught else "No lies caught yet"
+    st.markdown(f'<div class="kicker">{board.icon("bolt")} Lies caught</div><h3>{count}</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="lie-rules">' + "".join(f"<div>{board.icon(i)}<span>{esc(t)}</span></div>" for i, t in LIE_RULES)
+                + "</div>", unsafe_allow_html=True)
+    if not caught:
+        st.caption("Open evidence cards. When a detail does not fit someone's story, tap their face and show them that card.")
+        return
+    for item in caught:
+        name = board.short_name(case["suspects"][item["suspect"]]["name"])
+        broke = " · cracked" if item["suspect"] in game.cracked else ""
+        st.markdown(
+            f'<div class="lie"><b>{esc(name)}</b> said “{esc(item["text"].rstrip("."))}” · broken by '
+            f'<b>{esc(proof_name(item["clue"]) if item["clue"] else "a clue")}</b>'
+            f'<span class="nerves-mini">Nerves {engine.nerves(game, item["suspect"])} of {NERVES_MAX}{broke}</span></div>',
+            unsafe_allow_html=True,
+        )
+    for suspect in dict.fromkeys(item["suspect"] for item in caught):
+        name = board.short_name(case["suspects"][suspect]["name"])
+        st.button(f"Question {name} again", key=f"lies_to_{suspect}", icon=":material/forum:", use_container_width=True,
+                  on_click=set_focus, args=("suspect", suspect))
+
+
 # ---- Panel: interrogation -----------------------------------------------------------
 
 
@@ -667,9 +717,23 @@ def show_evidence():
     """Tapping one of your cards in the interrogation: slide it across the table."""
     clue_id = st.session_state.get("show_clue")
     st.session_state.show_clue = None
-    suspect = st.session_state.get("suspect")
+    present_card(st.session_state.get("suspect"), clue_id)
+
+
+def show_to(clue_id):
+    """Tapping a suspect under an open evidence card: show it to them, then go to their interrogation
+    so the answer is on screen."""
+    key = f"show_to_{clue_id}"
+    suspect = st.session_state.get(key)
+    st.session_state[key] = None
+    if suspect in case["suspects"] and present_card(suspect, clue_id):
+        set_focus("suspect", suspect)
+
+
+def present_card(suspect, clue_id):
+    """Show one evidence card to one suspect and write the exchange in their chat. Returns the engine's result."""
     if not clue_id or suspect not in case["suspects"]:
-        return
+        return None
     result = run(engine.present, suspect, clue_id)
     if result:
         sound("stamp" if result.get("contradictions") or result.get("cracked") else "tick")
@@ -682,6 +746,7 @@ def show_evidence():
             say(suspect, {"who": "them", "text": result["cracked"]["line"], "cracked": result["cracked"]})
         think(suspect, engine.reaction(current_game(), caught=bool(result.get("contradictions")),
                                        unlocked=bool(result["unlocked"]), shown=True, reacted=bool(result["reveal"])))
+    return result
 
 
 def cloud_key():
@@ -716,10 +781,7 @@ def chat_html(log, suspect):
                 f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small></div>'
             )
         if entry.get("cracked"):
-            if engine.hard(current_game()):
-                after = "You note the breakdown."
-            else:
-                after = "They are off your list." if entry["cracked"]["cleared"] else "That was not meant to come out."
+            after = "Their story broke. Write down what slipped out."
             rows.append(f'<div class="caught cracked"{style}><b>{board.icon("bolt")} Cracked</b><small>{after}</small></div>')
         if entry.get("think"):
             rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
@@ -904,7 +966,14 @@ def panel_clue(game, clue_id, fresh):
             st.code("\n".join(matches), language=None, wrap_lines=True)
     if clue["hidden_text"] and st.toggle("Look closer", key=f"hidden_{clue_id}"):
         st.warning(clue["hidden_text"])
-    st.caption("Tap a suspect's face, then show them this evidence card.")
+        st.caption(AI_TRAP_NOTE)
+    shown = {e["suspect"] for e in game.history if e.get("action") == "present" and e.get("clue") == clue_id}
+    st.pills(
+        f"Show this card to · {case['clock']['question_cost']} min", list(case["suspects"]),
+        format_func=lambda s: ("✓ " if s in shown else "") + board.short_name(case["suspects"][s]["name"]),
+        key=f"show_to_{clue_id}", on_change=show_to, args=(clue_id,),
+        help="The right card breaks a lie. Their answer opens in their interrogation.",
+    )
 
 
 # ---- Panel: case sheet and accusation ----------------------------------------------------
@@ -996,8 +1065,6 @@ def panel_sheet():
 
 def proof_name(by):
     """How a ruling-out is credited: an evidence card, or your own wrong accusation."""
-    if by == "crack":
-        return "their breakdown"
     return "your accusation" if by == "accusation" else f"evidence {engine.number(by)}"
 
 
@@ -1096,21 +1163,27 @@ def rank_card(game):
 
 
 def finale(game):
-    solution = engine.solution(game)
-    culprit = solution["who"]
-    uri = board.find_picture("suspects", culprit) or ""
+    scene = denouement(game)
     solved = game.status == "solved"
-    stamp, heading = ("GUILTY", "Case closed") if solved else ("CASE COLD", "The trail went cold")
+    heading = "Case closed" if solved else "The trail went cold"
     lies = len(game.contradictions)
-    # Plain quotes inside the f-strings: Python 3.11 (the dev container) cannot reuse the outer quote.
-    sub = (f"Solved at {engine.clock_label(game)} · {lies} {'lie' if lies == 1 else 'lies'} caught" if solved
-           else f"It was {mid_sentence(case['suspects'][culprit]['name'])} all along.")
-    facts = "".join(f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS)
+    if solved:
+        solution = engine.solution(game)
+        uri = board.find_picture("suspects", solution["who"]) or ""
+        portrait = f'<div class="mug"><img src="{uri}" alt=""><span class="slam">GUILTY</span></div>'
+        sub = f"Solved at {engine.clock_label(game)} · {lies} {'lie' if lies == 1 else 'lies'} caught"
+        facts = '<div class="facts">' + "".join(
+            f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS
+        ) + "</div>"
+    else:
+        portrait = '<div class="cold-stamp">CASE COLD</div>'
+        sub = "The case remains unsolved. The exam is cancelled."
+        facts = ""
     medals = "".join(f"<span>{board.icon('medal')} {esc(b['title'])}</span>" for b in engine.badge_list(game))
     _, middle, _ = st.columns([1, 3, 1])
     middle.markdown(
-        f'<div class="finale{"" if solved else " cold"}"><div class="mug"><img src="{uri}" alt=""><span class="slam">{stamp}</span></div>'
-        f'<div class="title">{heading}</div><div class="sub">{esc(sub)}</div><div class="facts">{facts}</div>'
+        f'<div class="finale{"" if solved else " cold"}">{portrait}'
+        f'<div class="title">{heading}</div><div class="sub">{esc(sub)}</div>{facts}'
         f'{f"<div class=medals>{medals}</div>" if medals else ""}</div>',
         unsafe_allow_html=True,
     )
@@ -1118,10 +1191,10 @@ def finale(game):
     if marker:
         deck(data=marker, key="finale_sound", height=1)
     with middle:
-        # The confrontation is the story's payoff, so it comes first and starts open.
-        scene = denouement(game)
+        # Show the outcome first; a cold case has no confrontation or solution reveal.
         if scene:
-            with st.expander("Half past seven, the boardroom: read the confrontation", icon=":material/history_edu:",
+            scene_label = "Read the confrontation" if solved else "The case remains unsolved"
+            with st.expander(scene_label, icon=":material/history_edu:",
                              expanded=True):
                 for paragraph in scene.split("\n\n"):
                     st.markdown(plain(paragraph))
@@ -1278,6 +1351,8 @@ with side_column:
         elif kind == "spot" and value in board.MAP_SPOTS:
             st.markdown(f'<div class="kicker">{board.icon("pin")} Off campus</div><h3>{esc(board.MAP_SPOTS[value][2])}</h3>', unsafe_allow_html=True)
             st.write(board.MAP_SPOTS[value][3])
+        elif kind == "lies":
+            panel_lies(game)
         elif kind == "sheet":
             panel_sheet()
         elif kind == "accuse":

@@ -29,8 +29,12 @@ ignored by git.
 ## Run the tests
 
 ```bash
+python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
+
+`requirements-dev.txt` adds pytest to the app's own dependencies. The deployed app installs only
+`requirements.txt`.
 
 ## How to play
 
@@ -165,8 +169,30 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
   progress, or a cold case, made in another tab.
 - **Hidden content:** locked clue text never reaches the browser. The interface reads clues only
   through `Engine.clue_list()` and `Engine.read_clue()`.
-- **Dependencies:** four, each pinned to an exact version in `requirements.txt` and checked for
+- **Dependencies:** three for the app (`requirements.txt`) and pytest for the tests only
+  (`requirements-dev.txt`), each pinned to an exact version and checked for
   known vulnerabilities by `pip-audit` on every pull request.
+
+### Demo script for the presentation
+
+A full case takes about ten minutes. To show the parts that matter in two or three:
+
+1. **Start a case** on the live site and point at the time box: every action costs time, and at
+   09:00 only an accusation is left.
+2. **Open evidence 1, the leaked PDF, and switch on "Look closer".** A hidden white-ink line
+   tells "any AI reviewing this file" to blame someone and close the case. This is a prompt
+   injection placed on purpose. Explain that the suspects' AI only ever gets
+   `Engine.character_brief()`, never clue text, so the note cannot reach it (tested in
+   `tests/test_ai.py`). The game shows the same explanation under the note.
+3. **Question a suspect, then show them the card that breaks their story.** "Caught lying" is
+   decided by the engine from `case.json`, not by the AI.
+4. **Type a fake password to the Companion** (for example `password: hunter22`). It is stopped
+   before it reaches the model, the chat shows a note instead, and the "Never give your password
+   to a spy" badge is awarded.
+5. **Accuse.** A wrong part is marked; the right answer shows the confrontation, the rank and the
+   spoiler-free share line.
+
+If the AI is down or out of quota, the suspects answer with scripted lines and the demo still works.
 
 ### What the tests cover, and what they do not
 
