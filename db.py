@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -27,15 +28,25 @@ def _path():
     return os.environ.get("DATABASE_PATH", str(DEFAULT_PATH))
 
 
+@contextmanager
 def _connect():
-    conn = sqlite3.connect(_path())
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS games ("
-        " id TEXT PRIMARY KEY,"
-        " state TEXT NOT NULL,"
-        " updated_at TEXT NOT NULL)"
-    )
-    return conn
+    """A connection that commits on success, rolls back on error, and is always closed.
+
+    sqlite3's own "with conn" only commits; it never closes, so every save left an open
+    file handle until garbage collection (Python warns: "unclosed database").
+    """
+    conn = sqlite3.connect(_path(), timeout=10)
+    try:
+        with conn:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS games ("
+                " id TEXT PRIMARY KEY,"
+                " state TEXT NOT NULL,"
+                " updated_at TEXT NOT NULL)"
+            )
+            yield conn
+    finally:
+        conn.close()
 
 
 def _now():
