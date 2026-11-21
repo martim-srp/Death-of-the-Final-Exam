@@ -1,0 +1,27 @@
+{
+  "_about": "One line at the top of each open evidence card: the fact that matters, in plain words, never the conclusion. 'base' is the shared story (variant A); a variant lists only the cards whose facts differ. Hidden in hard mode.",
+  "base": {
+    "D1": "Printed on the library printer (LIB-1), then scanned with a phone at 19:20.",
+    "D2": "Who released print job 88213, with which card, and when? Search the log.",
+    "D3": "The real exam is version 4. The leak is an old draft, v3, with secret Project Lantern figures.",
+    "D4": "If the exam is annulled, grades come from other work, and the Class Representative is first by 0.1.",
+    "D5": "The posting SIM was switched on at 20:21 near Carcavelos. Only the two group admins could see the invite link.",
+    "D6": "When was the report email first written? Compare it with 23:47, when the exam was posted.",
+    "D7": "The \"consultant\" waited in the faculty lobby from 18:40 to 19:35. Visitors cannot enter the library.",
+    "D8": "The Companion appears in a spy scandal. Project Lantern is the Professor's real, secret deal.",
+    "L1": "Every card that entered the library on Thursday evening. Whose cards, and at what time?",
+    "L2": "A student with a class representative lanyard picked something up by the TA's table.",
+    "L3": "When the Class Representative's room door opened and closed that evening.",
+    "L4": "At 19:40 a well-dressed woman tried the Professor's locked office door.",
+    "L5": "The Exchange Student was at the beach café from 18:00 to 20:30. Six people there paid them."
+  },
+  "B": {
+    "D1": "Printed on the library printer (LIB-1), then scanned with a phone at 17:55.",
+    "L2": "The Cashier saw the TA put their card back in the wallet. Nothing was dropped."
+  },
+  "C": {
+    "D1": "Never printed: saved from an email attachment on an iPad at 22:14.",
+    "D5": "The posting SIM was switched on at 23:40 in Chiado, Lisbon. Only the two group admins could see the invite link.",
+    "L2": "The Cashier saw the TA put their card back in the wallet. Nothing was dropped."
+  }
+}
