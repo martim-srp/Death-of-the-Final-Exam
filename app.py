@@ -922,7 +922,9 @@ def panel_clue(game, clue_id, fresh):
     if item["state"] == "locked":
         st.markdown(f'<div class="facedown locked">{board.icon("lock")}</div>', unsafe_allow_html=True)
         hints = engine.hint_list(game)
-        if clue_id in hints:
+        if engine.hard(game):
+            st.caption("Locked. Hard mode: no hints. Question suspects and show them evidence cards to unlock it.")
+        elif clue_id in hints:
             st.info(hints[clue_id], icon=":material/lightbulb:")
         else:
             st.caption("Locked. Question suspects and show them evidence cards to unlock it.")
@@ -1142,7 +1144,8 @@ def share_text(game, rank):
     if game.status != "solved":
         return f"The trail went cold on me in Death of the Final Exam ({lies_text}). Can you name who leaked the exam? {APP_URL}"
     wrong = f", {game.strikes} wrong {'guess' if game.strikes == 1 else 'guesses'}" if game.strikes else ""
-    return (f"I solved Death of the Final Exam at {engine.clock_label(game)} as {rank['title']} "
+    mode = " in hard mode" if engine.hard(game) else ""
+    return (f"I solved Death of the Final Exam{mode} at {engine.clock_label(game)} as {rank['title']} "
             f"({rank['score']}/100), {lies_text}{wrong}. Can you beat it? {APP_URL}")
 
 
@@ -1244,6 +1247,20 @@ HOW_TO_PLAY = (
 SHOW_COVER = True  # the cover picture beside the briefing on the start screen (hidden on phones)
 
 
+MODE_LABELS = {"normal": "Normal mode", "hard": "Hard mode"}
+MODE_NOTE = ("Hard mode is the same case with one difference: no tips. No next step, no hints, "
+             "no highlighted details and nothing crossed off for you. Normal mode keeps them all.")
+
+
+def pick_mode():
+    """Normal or hard, chosen on the start screen before the first move."""
+    game = current_game()
+    choice = st.session_state.get("mode_choice") or "normal"
+    if not game.history and game.mode != choice:
+        engine.set_mode(game, choice)
+        save(game)
+
+
 def calm_switch():
     st.session_state.calm = bool(st.session_state.get("calm_switch"))
 
@@ -1269,6 +1286,14 @@ def intro_dialog():
     with brief:
         st.markdown(f'<div class="kicker">{esc(TITLE)}</div>', unsafe_allow_html=True)
         st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + CLOCK_RULE + whos_who_html() + HOW_TO_PLAY, unsafe_allow_html=True)
+        st.markdown('<div class="kicker">Choose your mode</div>', unsafe_allow_html=True)
+        game = current_game()
+        if game.history:
+            st.caption(f"{MODE_LABELS[game.mode]}. The mode is chosen before the first move.")
+        else:
+            st.segmented_control("Mode", list(MODE_LABELS), format_func=MODE_LABELS.get, default=game.mode,
+                                 key="mode_choice", on_change=pick_mode, label_visibility="collapsed")
+            st.caption(MODE_NOTE)
         st.markdown('<div class="kicker">Choose your detective</div>', unsafe_allow_html=True)
         chosen = player_avatar()
         # Each portrait is its own button (keyboard and screen readers get "Play as her/him").
