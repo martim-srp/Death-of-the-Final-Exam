@@ -14,10 +14,13 @@ import re
 import secrets
 from dataclasses import asdict, dataclass, field, fields
 
-from game.case import load_case, load_hunches, load_voice, option_ids, resolve_variant
+from game.case import load_case, load_cracks, load_hunches, load_voice, option_ids, resolve_variant
 
 COLUMNS = ("who", "how", "where", "why")
 HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
+# Nerves (Engine.nerves): where every suspect starts, what each different card shown
+# and each lie caught adds, and the top, where they crack.
+NERVES_START, NERVES_PER_CARD, NERVES_PER_LIE, NERVES_MAX = 10, 15, 35, 100
 ACCUSE_NOW_MINUTES = 30  # with this little time left, the next step is to accuse
 # How a hint names a topic: "Ask the Professor about the exam."
 _HINT_TOPICS = {"alibi": "their alibi", "exam": "the exam", "report": "the report", "work": "their work"}
@@ -123,6 +126,7 @@ class Game:
     badges: list = field(default_factory=list)
     contradictions: list = field(default_factory=list)  # [suspect, claim_id], in the order caught
     hints: list = field(default_factory=list)  # clue ids the player bought a hint for
+    cracked: list = field(default_factory=list)  # suspects whose nerves broke, in order
 
     def to_dict(self):
         return asdict(self)
@@ -138,10 +142,11 @@ class Game:
 class Engine:
     """Applies the rules of one case file to games."""
 
-    def __init__(self, case=None, hunches=None, voice=None):
+    def __init__(self, case=None, hunches=None, voice=None, cracks=None):
         self.case = case if case is not None else load_case()
         self.hunch_lines = hunches if hunches is not None else load_hunches()
         self.voice = voice if voice is not None else load_voice()
+        self.crack_lines = cracks if cracks is not None else load_cracks()
         self.clock_rules = self.case["clock"]
         self._resolved = {v: resolve_variant(self.case, v) for v in self.case["variants"]}
         # Players see evidence as 1 to 13, in case-file order; the ids (D1, L4) stay internal.
@@ -337,11 +342,51 @@ class Engine:
         event = {"action": "present", "suspect": suspect, "clue": clue_id, "clock": game.clock}
         if caught:
             event["contradictions"] = [item["claim"] for item in caught]
+        cracked = self._crack(game, suspect)
+        if cracked:
+            event["cracked"] = True
         game.history.append(event)
         result = {"unlocked": unlocked, "reveal": self._fill(game, reveal)}
         if caught:
             result["contradictions"] = caught
+        if cracked:
+            result["cracked"] = cracked
         return result
+
+    # ---- Nerves ---------------------------------------------------------------
+
+    def nerves(self, game, suspect):
+        """How rattled a suspect is, 0 to 100: up with each different card shown to them,
+        more with each of their lies caught. Showing the same card twice adds nothing.
+
+        It comes only from what the player has done, never from who is guilty.
+        """
+        self._check_suspect(game, suspect)
+        shown = sum(1 for presented_to, _clue in game.presented if presented_to == suspect)
+        caught = sum(1 for s, _claim in game.contradictions if s == suspect)
+        return min(NERVES_MAX, NERVES_START + NERVES_PER_CARD * shown + NERVES_PER_LIE * caught)
+
+    def _crack(self, game, suspect):
+        """At full nerves a suspect breaks, once. Returns what they blurt out, or None.
+
+        The culprit lets their motive slip. An innocent suspect swears they did not do
+        it (and is ruled out) and says where the paper really left from. Either way it
+        is one part of the answer, never the whole of it.
+        """
+        if suspect in game.cracked or self.nerves(game, suspect) < NERVES_MAX:
+            return None
+        game.cracked.append(suspect)
+        guilty = suspect == self._resolved[game.variant]["solution"]["who"]
+        return {"suspect": suspect, "line": self._crack_line(game, suspect), "cleared": not guilty}
+
+    def _crack_line(self, game, suspect):
+        """What a suspect blurted out when they cracked, or None if they have not cracked."""
+        if suspect not in game.cracked:
+            return None
+        solution = self._resolved[game.variant]["solution"]
+        if suspect == solution["who"]:
+            return self.crack_lines["guilty"][solution["why"]]
+        return self.crack_lines["innocent"][solution["where"]]
 
     def _catch_contradictions(self, game, suspect, clue_id):
         """Record each claim of the suspect that this clue breaks. Each claim counts once."""
@@ -592,10 +637,11 @@ class Engine:
     def eliminated(self, game):
         """Options the evidence has already ruled out, for the case sheet and the accusation.
 
-        Two sources, both proven: an opened clue's "rules_out" list in the case file
-        ({column: [option ids]}, per variant), and the parts of a wrong accusation that
-        were wrong. The solution is never listed. Returns a list of
-        {"column", "option", "by"}, where "by" is a clue id or "accusation", oldest first.
+        Three sources, all proven: an opened clue's "rules_out" list in the case file
+        ({column: [option ids]}, per variant), an innocent suspect who cracked (see
+        _crack), and the parts of a wrong accusation that were wrong. The solution is
+        never listed. Returns a list of {"column", "option", "by"}, where "by" is a clue
+        id, "crack" or "accusation", oldest first.
         """
         solution = self._resolved[game.variant]["solution"]
         clues = self._clues(game)
@@ -611,6 +657,8 @@ class Engine:
                 for column, options in clues[event["clue"]].get("rules_out", {}).items():
                     for option in options:
                         add(column, option, event["clue"])
+            elif event["action"] == "present" and event.get("cracked"):
+                add("who", event["suspect"], "crack")
             elif event["action"] == "accuse" and "choice" in event:
                 for column in COLUMNS:
                     if column not in event.get("right", []):
@@ -643,8 +691,11 @@ class Engine:
         """What the AI needs to play one suspect, and nothing more.
 
         Contains the suspect's persona, mood, cover story, topic lines and only
-        the reveals the player has earned by presenting clues to them. It never
-        contains the solution or the text of any clue.
+        the reveals the player has earned by presenting clues to them. Once they
+        have cracked, "broke_down" holds what they blurted out (one part of the
+        answer the player has already heard), so the AI does not deny it later;
+        otherwise it is None. It never contains the rest of the solution or the
+        text of any clue.
         """
         self._check_suspect(game, suspect)
         s = self._suspects(game)[suspect]
@@ -660,5 +711,6 @@ class Engine:
             "cover": self._fill(game, s["cover"]),
             "topic_lines": {k: self._fill(game, v) for k, v in s.get("topic_lines", {}).items()},
             "earned_reveals": earned,
+            "broke_down": self._crack_line(game, suspect),
             "asks_password": bool(s.get("asks_password")),
         }

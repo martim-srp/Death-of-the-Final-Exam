@@ -301,6 +301,8 @@ header[data-testid="stHeader"] { display: none; }
 .caught { margin: 0.2rem auto 0.3rem; text-align: center; animation: slam 0.5s cubic-bezier(.2,1.6,.4,1) both; }
 .caught b { display: inline-block; border: 3px solid #e0645a; color: #e0645a; padding: 0.1rem 0.6rem; transform: rotate(-4deg);
   font: 800 1.15rem var(--label); letter-spacing: 0.12em; text-transform: uppercase; }
+.caught.cracked b { border-color: #e8c27a; color: #e8c27a; transform: rotate(3deg); }
+.nerves.broke { color: #e0645a; }
 .caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
 .empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
 .evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
@@ -596,12 +598,14 @@ def show_evidence():
         return
     result = run(engine.present, suspect, clue_id)
     if result:
-        sound("stamp" if result.get("contradictions") else "tick")
+        sound("stamp" if result.get("contradictions") or result.get("cracked") else "tick")
         say(suspect, {"who": "you", "text": f"You slide {engine.label(clue_id)} across the table.", "act": True})
         say(suspect, {
             "who": "them", "text": result["reveal"] or "They look at it and shrug.",
             "unlocked": result["unlocked"], "caught": result.get("contradictions", []),
         })
+        if result.get("cracked"):
+            say(suspect, {"who": "them", "text": result["cracked"]["line"], "cracked": result["cracked"]})
         think(suspect, engine.reaction(current_game(), caught=bool(result.get("contradictions")),
                                        unlocked=bool(result["unlocked"]), shown=True))
 
@@ -637,19 +641,17 @@ def chat_html(log, suspect):
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
                 f'{esc(proof_name(item["clue"]).capitalize() if item["clue"] else "Your evidence")} says otherwise.</small></div>'
             )
+        if entry.get("cracked"):
+            after = "They are off your list." if entry["cracked"]["cleared"] else "That was not meant to come out."
+            rows.append(f'<div class="caught cracked"{style}><b>{board.icon("bolt")} Cracked</b><small>{after}</small></div>')
         if entry.get("think"):
             rows.append(f'<div class="bubble think"{style}><img src="{you}" alt=""><div class="say">{esc(entry["think"])}</div></div>')
     return '<div class="chat">' + "".join(rows) + "</div>"
 
 
 def nerve_level(game, suspect):
-    """How rattled a suspect looks, 0 to 100: up with each card shown to them, more with each lie caught.
-
-    Only for show. It comes from what the player has done, never from who is guilty.
-    """
-    shown = sum(1 for e in game.history if e.get("action") == "present" and e.get("suspect") == suspect)
-    caught = sum(1 for s, _claim in game.contradictions if s == suspect)
-    return min(100, 10 + 15 * shown + 35 * caught)
+    """How rattled a suspect looks, 0 to 100. The engine decides it (Engine.nerves); at 100 they crack."""
+    return engine.nerves(game, suspect)
 
 
 def topic_label(topic, asked, tip=None):
@@ -677,10 +679,12 @@ def panel_suspect(game, suspect):
     uri = board.find_picture("suspects", suspect) or ""
     persona = brief["persona"].split(";")[0].split(". ")[0].rstrip(".") + "."
     nerves = nerve_level(game, suspect)
+    broke = " broke" if suspect in game.cracked else ""
     st.markdown(
         f'<div class="who-head"><img src="{uri}" alt="{esc(brief["name"])}"><div>'
         f'<div class="kicker">Interrogation</div><h3>{esc(brief["name"])}</h3><div class="line">{esc(persona)}</div>'
-        f'<div class="nerves" title="Show them evidence and catch their lies to rattle them">Nerves <i><b style="width:{nerves}%"></b></i></div>'
+        f'<div class="nerves{broke}" title="Show them different evidence and catch their lies. At full nerves they crack.">'
+        f'Nerves <i><b style="width:{nerves}%"></b></i>{" Cracked" if broke else ""}</div>'
         "</div></div>",
         unsafe_allow_html=True,
     )
@@ -899,6 +903,8 @@ def panel_sheet():
 
 def proof_name(by):
     """How a ruling-out is credited: an evidence card, or your own wrong accusation."""
+    if by == "crack":
+        return "their breakdown"
     return "your accusation" if by == "accusation" else f"evidence {engine.number(by)}"
 
 

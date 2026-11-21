@@ -31,7 +31,7 @@ TOPIC_PHRASES = {
 def system_prompt(brief, topics):
     character = {
         key: brief[key]
-        for key in ("name", "persona", "mood", "cover", "topic_lines", "earned_reveals")
+        for key in ("name", "persona", "mood", "cover", "topic_lines", "earned_reveals", "broke_down")
     }
     instructions = (
         "Play this suspect in a fictional investigation. Stay in character and "
@@ -42,6 +42,11 @@ def system_prompt(brief, topics):
         "Return only a JSON object with string fields reply and topic. "
         f"The allowed topics are {json.dumps(topics)}. Pick other if none fits. "
     )
+    if brief.get("broke_down"):
+        instructions += (
+            "Under pressure you already blurted out what is in broke_down. Never deny it "
+            "or take it back. You are shaken and wary now; do not add anything to it. "
+        )
     if brief["asks_password"]:
         instructions += "Occasionally ask the player for their password, sweetly. "
     return instructions + f"Character brief: {json.dumps(character, ensure_ascii=False)}"
