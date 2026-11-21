@@ -130,6 +130,7 @@ class Game:
     contradictions: list = field(default_factory=list)  # [suspect, claim_id], in the order caught
     hints: list = field(default_factory=list)  # clue ids the player bought a hint for
     cracked: list = field(default_factory=list)  # suspects whose nerves broke, in order
+    mode: str = "normal"  # "normal" or "hard": hard mode gives no tips (see Engine.set_mode)
 
     def to_dict(self):
         return asdict(self)
@@ -462,6 +463,25 @@ class Engine:
 
     # ---- Hints ----------------------------------------------------------------
 
+    # ---- Mode ----------------------------------------------------------------
+
+    MODES = ("normal", "hard")
+
+    def hard(self, game):
+        """Hard mode: the same case with no tips. No next step, no leads, no hints, no
+        highlighted details, and evidence crosses nothing off the notebook for you
+        (a wrong accusation still does)."""
+        return getattr(game, "mode", "normal") == "hard"
+
+    def set_mode(self, game, mode):
+        """Choose normal or hard mode. Only before the first move, so it cannot be switched
+        mid-case to buy a tip."""
+        if mode not in self.MODES:
+            raise GameError(f"Unknown mode: {mode}")
+        if game.history:
+            raise GameError("The mode is chosen before the first move.")
+        game.mode = mode
+
     def hint_cost(self):
         return self.clock_rules.get("hint_cost", HINT_COST)
 
@@ -492,6 +512,8 @@ class Engine:
 
     def hint(self, game, clue_id):
         """Say how to unlock a locked clue. Costs hint_cost minutes the first time; free to read again."""
+        if self.hard(game):
+            raise GameError("There are no hints in hard mode.")
         if self.clue_state(game, clue_id) != "locked":
             raise GameError("That clue is not locked.")
         if clue_id not in game.hints:
@@ -507,7 +529,10 @@ class Engine:
         a lead says so. Built from the unlock rules, which are the same in every
         variant, so a lead never gives away the culprit. Returns a list of
         {"clue": locked clue id, "from": opened clue id, "text": ...}, in case order.
+        None in hard mode.
         """
+        if self.hard(game):
+            return []
         result = []
         for clue_id, clue in self._clues(game).items():
             rule = clue["unlock"].get("present")
@@ -521,8 +546,9 @@ class Engine:
         One per suspect story this clue breaks in this variant (from the claims'
         broken_by lists), until that lie is caught. The line hints; it never names
         the liar. Returns a list of {"line", "mark"}, with the case's variables filled in.
+        None in hard mode: the player has to spot the detail alone.
         """
-        if self.clue_state(game, clue_id) != "open":
+        if self.hard(game) or self.clue_state(game, clue_id) != "open":
             return []
         result = []
         for suspect, data in self._suspects(game).items():
@@ -541,7 +567,7 @@ class Engine:
         Shown instead of a hunch. The same in every variant, so it never points at anyone.
         Returns a line, or None if the clue is not open or a hunch is showing.
         """
-        if self.clue_state(game, clue_id) != "open" or self.hunches(game, clue_id):
+        if self.hard(game) or self.clue_state(game, clue_id) != "open" or self.hunches(game, clue_id):
             return None
         return self.voice.get("clues", {}).get(clue_id)
 
@@ -596,8 +622,9 @@ class Engine:
         "text": ..., and the ids it needs: "clue", "suspect", "topic"}, or None once
         the case is closed. Order: search what is open to you, then show a card that
         opens a lead, then ask the question that opens a locked clue, then accuse.
+        None in hard mode, where the player finds their own way.
         """
-        if game.status != "playing":
+        if game.status != "playing" or self.hard(game):
             return None
         clues = self._clues(game)
         left = self.time_left(game)
@@ -623,6 +650,8 @@ class Engine:
 
     def hint_list(self, game):
         """The hints bought so far for clues that are still locked, as {clue_id: text}."""
+        if self.hard(game):
+            return {}
         return {
             clue_id: self._hint_text(game, clue_id)
             for clue_id in game.hints
@@ -688,7 +717,7 @@ class Engine:
                 result.append({"column": column, "option": option, "by": by})
 
         for event in game.history:
-            if event["action"] == "open":
+            if event["action"] == "open" and not self.hard(game):
                 for column, options in clues[event["clue"]].get("rules_out", {}).items():
                     for option in options:
                         add(column, option, event["clue"])
