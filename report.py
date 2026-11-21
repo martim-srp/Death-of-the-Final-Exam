@@ -1,13 +1,21 @@
 """The honour council report: a Markdown file the player can download when the case closes.
 
-It sums up the player's investigation (time, the evidence they opened, the lies they caught,
-their wrong guesses, badges) and ends with the case's answer and the boardroom scene.
-It is built only from what the engine returns, and only once the case is closed:
-`engine.solution()` raises while the game is still running, so the report can never
-give away the answer during play.
+It sums up the player's investigation and ends with the outcome. Only solved cases
+include the answer and confrontation; cold cases remain unsolved in the report too.
 """
 
+from game.engine import GameError
+
 COLUMNS = ("who", "how", "where", "why")
+
+
+def closing_scene(engine, game):
+    """The same outcome on screen and in the report, only after the case closes."""
+    if game.status == "playing":
+        raise GameError("The ending is only shown when the case is closed.")
+    if game.status == "cold":
+        return engine.case["cold_ending"]
+    return engine.case["variants"][game.variant].get("denouement", "").format_map(game.variables)
 
 
 def _label(case, column, option_id):
@@ -23,7 +31,8 @@ def _plain(text):
 
 def build(engine, game, examiner="Detective"):
     """The report as Markdown text. Raises GameError while the case is still open."""
-    solution = engine.solution(game)
+    scene = closing_scene(engine, game)
+    solution = engine.solution(game) if game.status == "solved" else None
     case = engine.case
     title = case.get("title", "The case")
     examiner = _plain((examiner or "Detective").strip()[:24] or "Detective")
@@ -37,7 +46,7 @@ def build(engine, game, examiner="Detective"):
     if game.status == "solved":
         outcome = f"**Case solved** at {engine.clock_label(game)}, Friday morning."
     else:
-        outcome = "**The case went cold.** No name reached the Dean before nine."
+        outcome = "**The case went cold.** The culprit remains unidentified. The Dean cancels the exam."
 
     lines = [
         f"# Honour council report: {_plain(title)}",
@@ -72,12 +81,15 @@ def build(engine, game, examiner="Detective"):
         lines += [f"- {_plain(b['title'])}: {_plain(b['description'])}" for b in badges]
 
     lines += ["", "## Finding of the council", ""]
-    lines += [f"- **{c.capitalize()}:** {_plain(_label(case, c, solution[c]))}" for c in COLUMNS]
+    if solution:
+        lines += [f"- **{c.capitalize()}:** {_plain(_label(case, c, solution[c]))}" for c in COLUMNS]
+    else:
+        lines += ["The case remains unsolved. No culprit has been identified."]
 
-    scene = case["variants"][game.variant].get("denouement", "")
     if scene:
-        lines += ["", "## Half past seven, the boardroom", ""]
-        lines += [_plain(p) + "\n" for p in scene.format_map(game.variables).split("\n\n")]
+        heading = "The boardroom confrontation" if solution else "The case remains unsolved"
+        lines += ["", f"## {heading}", ""]
+        lines += [_plain(p) + "\n" for p in scene.split("\n\n")]
 
     lines += ["", f"*{_plain(title)}. All characters, the course and the companies are fictional.*", ""]
     return "\n".join(lines)

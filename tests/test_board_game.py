@@ -323,15 +323,16 @@ def test_the_right_accusation_closes_the_case_with_the_reveal():
     assert "GUILTY" in page(at) and "Case closed" in page(at)
     assert board.find_picture("suspects", solution()["who"]) in page(at)
     assert not any('class="hud' in m for m in markups(at))  # the board is gone
-    assert any(e.label.startswith("Half past seven") for e in at.expander)
+    assert any(e.label == "Read the confrontation" for e in at.expander)
 
 
-def test_a_cold_case_names_the_culprit():
+def test_a_cold_case_stays_unsolved_and_cancels_the_exam():
     game = Engine().new_game(seed=1, variant="B")
     game.status = "cold"
     at = start(game=game)
     assert "CASE COLD" in page(at)
-    assert "It was the Teaching Assistant all along." in page(at)
+    assert "The case remains unsolved. The exam is cancelled." in page(at)
+    assert "It was the Teaching Assistant all along." not in page(at)
 
 
 def test_new_case_after_the_reveal_starts_over_and_clears_notes():
@@ -470,12 +471,13 @@ def test_d4_has_no_chart_any_more():
     assert "Article 14" in page(at)
 
 
-def test_a_cold_case_also_offers_the_confrontation():
+def test_a_cold_case_offers_the_unsolved_outcome_instead_of_a_confrontation():
     game = Engine().new_game(seed=1, variant="C")
     game.status = "cold"
     at = start(game=game)
-    scene = next(e for e in at.expander if e.label.startswith("Half past seven"))
-    assert scene.markdown
+    scene = next(e for e in at.expander if e.label == "The case remains unsolved")
+    assert "the Dean cancels the exam" in "\n".join(m.value for m in scene.markdown)
+    assert not any(e.label == "Read the confrontation" for e in at.expander)
 
 
 def test_an_irrelevant_card_catches_no_one():
