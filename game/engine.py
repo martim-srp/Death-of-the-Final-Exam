@@ -276,6 +276,18 @@ class Engine:
     def time_left(self, game):
         return self.clock_rules["limit_minutes"] - game.clock
 
+    def night_events(self, game, since=0):
+        """What happens around the building as the night goes on: story only, the same in
+        every variant, so it never points at anyone and changes no rule. Returns the events
+        whose time is after `since` (minutes) and no later than the clock now, oldest first,
+        each as {"at", "time", "text"}."""
+        result = []
+        for event in self.case.get("night_events", []):
+            if since < event["at"] <= game.clock:
+                hours, minutes = divmod(event["at"], 60)
+                result.append({"at": event["at"], "time": f"{hours:02d}:{minutes:02d}", "text": event["text"]})
+        return result
+
     def clock_label(self, game):
         """The in-game time, starting at 00:00."""
         hours, minutes = divmod(game.clock, 60)
