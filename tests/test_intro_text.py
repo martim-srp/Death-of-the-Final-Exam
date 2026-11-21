@@ -29,8 +29,10 @@ def test_the_exam_is_the_investments_exam_everywhere():
 def test_the_start_screen_explains_that_time_runs_out():
     page = intro_page()
     hours = CASE["clock"]["limit_minutes"] // 60
-    assert f"You have <b>{hours} hours</b>" in page
-    assert "Every search and every question moves the clock forward" in page
+    box = page[page.find('<div class="clock-rule">'):]
+    box = box[:box.find("</div>")]
+    assert f"{hours} hours" in box and box.count("hours") == 1  # said once, in the headline
+    assert "every search and every question moves it forward" in box
     assert f'−{CASE["clock"]["clue_cost"]} min' in page and f'−{CASE["clock"]["question_cost"]} min' in page
     assert f'no time · {CASE["max_strikes"]} tries' in page
 
@@ -45,3 +47,11 @@ def test_the_status_bar_names_its_counters_without_hovering():
     hud = board.hud_html("00:00", 540, 540, 3, 3, 0, None, "Detective")
     assert "tries left</small>" in hud and "0</b><small>lies caught</small>" in hud
     assert "1</b><small>lie caught</small>" in board.hud_html("01:00", 480, 540, 2, 3, 1, None, "Detective")
+
+
+def test_the_time_box_comes_first_right_after_the_story():
+    page = intro_page()
+    hours = CASE["clock"]["limit_minutes"] // 60
+    assert f"Every action costs time. Use your {hours} hours well." in page
+    story, box, whos_who = page.find("class=\"story\""), page.find('<div class="clock-rule">'), page.find("Who's who")
+    assert -1 < story < box < whos_who
