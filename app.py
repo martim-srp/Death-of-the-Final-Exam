@@ -849,6 +849,9 @@ def progress_html(progress):
     return line
 
 
+OUT_OF_TIME = "It is 09:00. No more questions or searches: make your accusation."
+
+
 def panel_suspect(game, suspect):
     from game import ai
 
@@ -877,6 +880,8 @@ def panel_suspect(game, suspect):
     tip = step if step.get("suspect") == suspect else {}
     asked = {e["topic"] for e in game.history if e.get("action") == "ask" and e.get("suspect") == suspect}
     st.markdown(progress_html(engine.suspect_progress(game, suspect)), unsafe_allow_html=True)
+    if engine.out_of_time(game):  # every question would be refused now: say so before the pills
+        st.warning(OUT_OF_TIME, icon=":material/gavel:")
     # Nobody asks the Teaching Assistant about the Teaching Assistant.
     topics = [t for t in TOPICS if t in engine.topics_for(suspect)]
     st.pills(f"Ask · {cost} min", topics, format_func=lambda t: topic_label(t, asked, tip.get("topic")),
@@ -961,6 +966,8 @@ def panel_clue(game, clue_id, fresh):
         return
     if item["state"] == "available":
         st.markdown('<div class="facedown">?</div>', unsafe_allow_html=True)
+        if not engine.can_afford(game, case["clock"]["clue_cost"]):
+            st.caption(f"Not enough time left to {verb.lower()} before 09:00. Make your accusation.")
         if st.button(f"{verb} · {case['clock']['clue_cost']} min", key=f"open_{clue_id}", type="primary", icon=":material/search:",
                      use_container_width=True):
             if run(engine.open_clue, clue_id):
@@ -994,6 +1001,8 @@ def panel_clue(game, clue_id, fresh):
     if clue["hidden_text"] and st.toggle("Look closer", key=f"hidden_{clue_id}"):
         st.warning(clue["hidden_text"])
         st.caption(AI_TRAP_NOTE)
+    if engine.out_of_time(game):
+        st.caption(OUT_OF_TIME)
     shown = {e["suspect"] for e in game.history if e.get("action") == "present" and e.get("clue") == clue_id}
     st.pills(
         f"Show this card to · {case['clock']['question_cost']} min", list(case["suspects"]),
