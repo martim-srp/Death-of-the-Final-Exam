@@ -197,14 +197,56 @@ def test_no_crack_line_says_how_it_was_done():
 
 
 @pytest.mark.parametrize("variant", VARIANTS)
-def test_the_ai_never_sees_the_crack_line(variant):
+def test_after_cracking_the_ai_knows_what_they_blurted_out(variant):
+    engine = Engine()
+    for suspect in SUSPECTS:
+        game = all_open(variant)
+        assert engine.character_brief(game, suspect)["broke_down"] is None
+        for clue in cards_without_lies(engine, game, suspect)[:6]:
+            result = engine.present(game, suspect, clue)
+        assert engine.character_brief(game, suspect)["broke_down"] == result["cracked"]["line"]
+        others = [s for s in SUSPECTS if s != suspect]
+        assert all(engine.character_brief(game, s)["broke_down"] is None for s in others)
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_the_brief_after_cracking_holds_no_more_of_the_solution(variant):
     engine = Engine()
     game = all_open(variant)
-    who = culprit(variant)
-    for clue in cards_without_lies(engine, game, who)[:6]:
-        result = engine.present(game, who, clue)
-    line = result["cracked"]["line"]
-    assert line not in json.dumps(engine.character_brief(game, who), ensure_ascii=False)
+    solution = CASE["variants"][variant]["solution"]
+    for suspect in SUSPECTS:
+        for clue in cards_without_lies(engine, game, suspect)[:6]:
+            engine.present(game, suspect, clue)
+    for suspect in SUSPECTS:
+        brief = json.dumps(engine.character_brief(game, suspect), ensure_ascii=False)
+        assert "solution" not in brief
+        for column in ("how", "why", "where"):
+            for option in CASE["accusation"][column]:
+                assert option["label"] not in brief
+
+
+def test_the_prompt_tells_the_ai_not_to_deny_the_crack():
+    from game import ai
+
+    engine = Engine()
+    game = all_open("C")
+    for clue in cards_without_lies(engine, game, "companion")[:6]:
+        engine.present(game, "companion", clue)
+    prompt = ai.system_prompt(engine.character_brief(game, "companion"), CASE["topics"])
+    assert "Never deny it" in prompt
+    character = json.loads(prompt.split("Character brief: ", 1)[1])
+    assert character["broke_down"] == CRACKS["guilty"]["foreign_power"]
+    calm = ai.system_prompt(engine.character_brief(game, "professor"), CASE["topics"])
+    assert "Never deny it" not in calm
+
+
+def test_a_resumed_game_keeps_the_crack_in_the_brief():
+    engine = Engine()
+    game = all_open("B")
+    for clue in cards_without_lies(engine, game, "ta")[:6]:
+        engine.present(game, "ta", clue)
+    resumed = Game.from_dict(json.loads(json.dumps(game.to_dict())))
+    assert engine.character_brief(resumed, "ta")["broke_down"] == CRACKS["guilty"]["humiliate_professor"]
 
 
 def test_a_change_to_the_crack_lines_rebuilds_the_engine():

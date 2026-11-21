@@ -376,10 +376,17 @@ class Engine:
         if suspect in game.cracked or self.nerves(game, suspect) < NERVES_MAX:
             return None
         game.cracked.append(suspect)
+        guilty = suspect == self._resolved[game.variant]["solution"]["who"]
+        return {"suspect": suspect, "line": self._crack_line(game, suspect), "cleared": not guilty}
+
+    def _crack_line(self, game, suspect):
+        """What a suspect blurted out when they cracked, or None if they have not cracked."""
+        if suspect not in game.cracked:
+            return None
         solution = self._resolved[game.variant]["solution"]
-        guilty = suspect == solution["who"]
-        line = self.crack_lines["guilty"][solution["why"]] if guilty else self.crack_lines["innocent"][solution["where"]]
-        return {"suspect": suspect, "line": line, "cleared": not guilty}
+        if suspect == solution["who"]:
+            return self.crack_lines["guilty"][solution["why"]]
+        return self.crack_lines["innocent"][solution["where"]]
 
     def _catch_contradictions(self, game, suspect, clue_id):
         """Record each claim of the suspect that this clue breaks. Each claim counts once."""
@@ -684,8 +691,11 @@ class Engine:
         """What the AI needs to play one suspect, and nothing more.
 
         Contains the suspect's persona, mood, cover story, topic lines and only
-        the reveals the player has earned by presenting clues to them. It never
-        contains the solution or the text of any clue.
+        the reveals the player has earned by presenting clues to them. Once they
+        have cracked, "broke_down" holds what they blurted out (one part of the
+        answer the player has already heard), so the AI does not deny it later;
+        otherwise it is None. It never contains the rest of the solution or the
+        text of any clue.
         """
         self._check_suspect(game, suspect)
         s = self._suspects(game)[suspect]
@@ -701,5 +711,6 @@ class Engine:
             "cover": self._fill(game, s["cover"]),
             "topic_lines": {k: self._fill(game, v) for k, v in s.get("topic_lines", {}).items()},
             "earned_reveals": earned,
+            "broke_down": self._crack_line(game, suspect),
             "asks_password": bool(s.get("asks_password")),
         }
