@@ -69,7 +69,7 @@ engine = get_engine(reloading.source_version())
 case = engine.case
 
 # Imported after get_engine(), which may have just reloaded game.engine.
-from game.engine import Game, GameError  # noqa: E402
+from game.engine import NERVES_MAX, NERVES_PER_CARD, NERVES_PER_LIE, Game, GameError  # noqa: E402
 
 
 # ---- Saving and loading --------------------------------------------------------------
@@ -355,6 +355,10 @@ header[data-testid="stHeader"] { display: none; }
 .tips div span { display: block; font-size: 1.6rem; }
 .lie { background: #2a1714; border: 1px solid #5a2a22; border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.88rem; }
 .lie b { color: #e0645a; }
+.lie-rules { display: grid; gap: 0.45rem; margin: 0.2rem 0 0.9rem; }
+.lie-rules div { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.9rem; line-height: 1.4; }
+.lie-rules .ic { width: 18px; height: 18px; flex: none; margin-top: 2px; color: #e8c27a; }
+.lie .nerves-mini { display: block; margin-top: 0.3rem; font: 0.72rem var(--label); color: #cdbfa8; letter-spacing: 0.06em; }
 .verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; margin-bottom: 0.6rem; }
 .verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem var(--label); letter-spacing: 0.08em; }
 .verdict .ok { background: #1f3a24; color: #8be09a; border: 2px solid #3d7a48; }
@@ -627,6 +631,46 @@ def panel_home(game):
         if st.button("Yes, new case", type="primary", key="new_case"):
             new_case()
             st.rerun()
+
+
+# ---- Panel: lies caught (the lightning in the status bar) ---------------------------------
+
+
+LIE_RULES = [
+    ("card", "You catch a lie when you show a suspect the evidence card that breaks something they told you."),
+    ("bolt", f"Their nerves go up by {NERVES_PER_LIE}, on top of the {NERVES_PER_CARD} every new card adds. "
+             f"At {NERVES_MAX} they crack and let something slip."),
+    ("sheet", "The lie is written in your notebook, under that suspect's story."),
+    ("medal", "Every lie caught raises your detective rank at the end."),
+    ("scale", "A lie is not proof of guilt. People lie to hide other things too."),
+]
+
+
+def panel_lies(game):
+    """What the lightning in the status bar counts, what a caught lie changes, and the ones caught so far.
+
+    Lists only lies already caught, so it never tells which card breaks a story you have not broken yet."""
+    caught = engine.contradiction_list(game)
+    count = f"{len(caught)} {'lie' if len(caught) == 1 else 'lies'} caught" if caught else "No lies caught yet"
+    st.markdown(f'<div class="kicker">{board.icon("bolt")} Lies caught</div><h3>{count}</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="lie-rules">' + "".join(f"<div>{board.icon(i)}<span>{esc(t)}</span></div>" for i, t in LIE_RULES)
+                + "</div>", unsafe_allow_html=True)
+    if not caught:
+        st.caption("Open evidence cards. When a detail does not fit someone's story, tap their face and show them that card.")
+        return
+    for item in caught:
+        name = board.short_name(case["suspects"][item["suspect"]]["name"])
+        broke = " · cracked" if item["suspect"] in game.cracked else ""
+        st.markdown(
+            f'<div class="lie"><b>{esc(name)}</b> said “{esc(item["text"].rstrip("."))}” · broken by '
+            f'<b>{esc(proof_name(item["clue"]) if item["clue"] else "a clue")}</b>'
+            f'<span class="nerves-mini">Nerves {engine.nerves(game, item["suspect"])} of {NERVES_MAX}{broke}</span></div>',
+            unsafe_allow_html=True,
+        )
+    for suspect in dict.fromkeys(item["suspect"] for item in caught):
+        name = board.short_name(case["suspects"][suspect]["name"])
+        st.button(f"Question {name} again", key=f"lies_to_{suspect}", icon=":material/forum:", use_container_width=True,
+                  on_click=set_focus, args=("suspect", suspect))
 
 
 # ---- Panel: interrogation -----------------------------------------------------------
@@ -1250,6 +1294,8 @@ with side_column:
         elif kind == "spot" and value in board.MAP_SPOTS:
             st.markdown(f'<div class="kicker">{board.icon("pin")} Off campus</div><h3>{esc(board.MAP_SPOTS[value][2])}</h3>', unsafe_allow_html=True)
             st.write(board.MAP_SPOTS[value][3])
+        elif kind == "lies":
+            panel_lies(game)
         elif kind == "sheet":
             panel_sheet()
         elif kind == "accuse":
