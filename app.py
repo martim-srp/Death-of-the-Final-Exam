@@ -717,9 +717,23 @@ def show_evidence():
     """Tapping one of your cards in the interrogation: slide it across the table."""
     clue_id = st.session_state.get("show_clue")
     st.session_state.show_clue = None
-    suspect = st.session_state.get("suspect")
+    present_card(st.session_state.get("suspect"), clue_id)
+
+
+def show_to(clue_id):
+    """Tapping a suspect under an open evidence card: show it to them, then go to their interrogation
+    so the answer is on screen."""
+    key = f"show_to_{clue_id}"
+    suspect = st.session_state.get(key)
+    st.session_state[key] = None
+    if suspect in case["suspects"] and present_card(suspect, clue_id):
+        set_focus("suspect", suspect)
+
+
+def present_card(suspect, clue_id):
+    """Show one evidence card to one suspect and write the exchange in their chat. Returns the engine's result."""
     if not clue_id or suspect not in case["suspects"]:
-        return
+        return None
     result = run(engine.present, suspect, clue_id)
     if result:
         sound("stamp" if result.get("contradictions") or result.get("cracked") else "tick")
@@ -732,6 +746,7 @@ def show_evidence():
             say(suspect, {"who": "them", "text": result["cracked"]["line"], "cracked": result["cracked"]})
         think(suspect, engine.reaction(current_game(), caught=bool(result.get("contradictions")),
                                        unlocked=bool(result["unlocked"]), shown=True, reacted=bool(result["reveal"])))
+    return result
 
 
 def cloud_key():
@@ -950,7 +965,13 @@ def panel_clue(game, clue_id, fresh):
     if clue["hidden_text"] and st.toggle("Look closer", key=f"hidden_{clue_id}"):
         st.warning(clue["hidden_text"])
         st.caption(AI_TRAP_NOTE)
-    st.caption("Tap a suspect's face, then show them this evidence card.")
+    shown = {e["suspect"] for e in game.history if e.get("action") == "present" and e.get("clue") == clue_id}
+    st.pills(
+        f"Show this card to · {case['clock']['question_cost']} min", list(case["suspects"]),
+        format_func=lambda s: ("✓ " if s in shown else "") + board.short_name(case["suspects"][s]["name"]),
+        key=f"show_to_{clue_id}", on_change=show_to, args=(clue_id,),
+        help="The right card breaks a lie. Their answer opens in their interrogation.",
+    )
 
 
 # ---- Panel: case sheet and accusation ----------------------------------------------------
