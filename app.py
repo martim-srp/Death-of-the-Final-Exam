@@ -1061,7 +1061,8 @@ def accusation_confirmation():
     st.write(f"{strikes_left} {tries} left. A wrong accusation costs one. Accuse?")
     if st.button("Yes, accuse", type="primary", key="confirm_accuse", icon=":material/gavel:"):
         st.session_state.pop("pending_accusation", None)
-        result = run(engine.accuse, *(choice[c] for c in COLUMNS))
+        proofs = {c: st.session_state.get(f"accuse_proof_{c}") for c in COLUMNS}
+        result = run(engine.accuse, *(choice[c] for c in COLUMNS), {c: v for c, v in proofs.items() if v})
         if result:
             sound("thud" if result["status"] == "playing" else "stamp")
         if result and result["status"] == "playing":
@@ -1080,10 +1081,15 @@ def panel_accuse(game):
     if verdict is not None:
         st.markdown(verdict_html(verdict), unsafe_allow_html=True)
         st.caption(f"{len(verdict)} of 4 right. Keep the ✓ parts and rethink the ✗ ones.")
+    opened = [c["id"] for c in engine.clue_list(game) if c["state"] == "open"]
     for column in COLUMNS:
         out = set(crossed(column))
         st.pills(f"{COLUMN_ICONS[column]} {column.capitalize()}", [o["id"] for o in case["accusation"][column]],
                  format_func=lambda o, c=column, out=out: label(c, o) + (" ✗" if o in out else ""), key=f"accuse_{column}")
+        if opened:
+            st.selectbox("Proof (optional)", [None] + opened, key=f"accuse_proof_{column}",
+                         format_func=lambda i: "No proof" if i is None else f"{engine.number(i)} · {board.CARD_NAMES.get(i, case['clues'][i]['title'])}",
+                         help="The evidence card that proves this answer. A right proof adds 5 to your rank if you solve the case.")
     if st.button("Accuse", type="primary", icon=":material/balance:", use_container_width=True, key="accuse_go"):
         choice = {c: st.session_state.get(f"accuse_{c}") for c in COLUMNS}
         missing = [c for c in COLUMNS if choice[c] is None]
@@ -1132,8 +1138,12 @@ def rank_card(game):
     st.markdown(f'<div class="rank{"" if solved else " cold"}"><small>YOUR RANK</small><b>{esc(rank["title"])}</b>{score}</div>',
                 unsafe_allow_html=True)
     if solved:
-        st.caption("50 for solving, up to 25 for time left, 5 per lie caught (up to 20); "
-                   "minus 3 per hint and 10 per wrong accusation.")
+        st.caption("50 for solving, up to 25 for time left, 5 per lie caught (up to 20), 5 per answer proved "
+                   "with the right evidence (up to 20); minus 3 per hint and 10 per wrong accusation.")
+        proven = engine.proven(game)
+        if proven:
+            st.caption("Your proofs: " + " · ".join(
+                f"{c.capitalize()} {'✓' if proven[c] else '✗'}" if c in proven else f"{c.capitalize()} –" for c in COLUMNS))
     st.caption("Share the game")
     st.code(share_text(game, rank), language=None, wrap_lines=True)
 
