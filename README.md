@@ -38,6 +38,10 @@ python -m pytest
 
 ## How to play
 
+On the start screen you choose your detective and a mode. **Normal mode** gives tips; **Hard mode**
+is the same case with no tips: no next step, no leads, no hints, no highlighted details, and evidence
+crosses nothing off your notebook.
+
 The screen is laid out like a board game. The campus map is the board, the clues are a hand of evidence
 cards, and the five suspects sit across the top. Tap anything to open it in the side panel. A new case
 starts with a four-step tour, and the **Next step** strip above the map always names one useful thing
@@ -46,15 +50,23 @@ sound effects on or off.
 
 It is midnight. Every action costs time: searching a place or opening a document costs 30 minutes, and
 each question to a suspect (or showing them a card) costs 10. Tap a red **?** card or pin to search it.
-Tap a face to interrogate: pick a question, show them a card, or type your own. Show a suspect the card
-that breaks their story and you catch them lying. Stuck on a locked card? A hint costs 15 minutes,
+Tap a face to interrogate: pick a question, show them a card, or type your own. You can also show an
+open card straight from the card itself. Show a suspect the card that breaks their story and you catch
+them lying; their portrait turns nervous. Tap the lightning in the status bar to see what a caught lie
+means and the lies you have caught. Every new card shown raises a suspect's nerves; at full nerves
+they crack and let slip where the paper left from. A crack never shows who is guilty: the culprit
+cracks exactly like an innocent. Stuck on a locked card? A hint costs 15 minutes,
 and the magnifier shows your free leads. Cross off what it cannot be on the case sheet; the game
 crosses off what a wrong accusation has proved. When a card breaks someone's story, your detective notices: the odd detail is
 highlighted and a short thought hints at who to show it to.
 
-When you are ready, press **Accuse** and pick who, how, where and why. You must accuse before 09:00,
-so you have 540 minutes. A wrong accusation shows which of the four parts are right. After three
-wrong ones, or at 09:00, the case goes cold.
+As the clock runs, the night moves on without you: the storm cuts the lights, the Dean calls, students
+arrive. These events are story only and change no rules.
+
+When you are ready, press **Accuse** and pick who, how, where and why. Under each answer you can add
+an evidence card as proof; on a solved case each right proof raises your rank. You must accuse before
+09:00, so you have 540 minutes. A wrong accusation shows which of the four parts are right. After three
+wrong ones, or at 09:00, the case goes cold and stays unsolved: the game never tells you who did it.
 
 ## How it works
 
