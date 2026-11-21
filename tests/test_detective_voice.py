@@ -136,3 +136,16 @@ def test_an_opened_clue_panel_shows_the_thought():
     at = start(game=game, focus=("clue", "D4"))
     assert 'class="hunch"' in page(at)
     assert html.escape(VOICE["clues"]["D4"], quote=False) in page(at).replace("&#x27;", "'")
+
+
+@pytest.mark.parametrize("clue_id", ["D4", "L4"])
+def test_evidence_quotes_wrap_both_thoughts_and_hunches(clue_id):
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    engine.open_clue(game, clue_id)
+    hunches = engine.hunches(game, clue_id)
+    lines = [item["line"] for item in hunches] or [engine.musing(game, clue_id)]
+    at = start(game=game, focus=("clue", clue_id))
+    markup = html.unescape(page(at))
+    for line in lines:
+        assert f'<p>"{line}"</p>' in markup

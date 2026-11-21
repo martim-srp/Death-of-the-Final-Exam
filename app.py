@@ -748,7 +748,7 @@ def hunch_html(hunches, log):
         if line:
             marked = esc(line.strip()).replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
             quote = f"<code>{marked}</code>"
-        rows.append(f'<div class="hunch"><img src="{face}" alt=""><div><p>{esc(hunch["line"])}</p>{quote}</div></div>')
+        rows.append(f'<div class="hunch"><img src="{face}" alt=""><div><p>"{esc(hunch["line"])}"</p>{quote}</div></div>')
     return "".join(rows)
 
 
