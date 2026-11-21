@@ -514,11 +514,12 @@ class Engine:
             return None
         return self.voice.get("clues", {}).get(clue_id)
 
-    def reaction(self, game, topic=None, caught=False, unlocked=False, shown=False):
+    def reaction(self, game, topic=None, caught=False, unlocked=False, shown=False, reacted=False):
         """A short thought after a suspect answers. Free, and no AI call.
 
-        Picked by what just happened (a lie caught, a clue unlocked, a card shown, the
-        question's topic, or a typed question), never by who is talking, so it gives
+        Picked by what just happened (a lie caught, a clue unlocked, a card the suspect
+        answered or shrugged at, the question's topic, or a typed question), never by
+        who is talking, so it gives
         nothing away. Rotates through the lines so it does not repeat every time.
         """
         replies = self.voice.get("replies", {})
@@ -527,7 +528,7 @@ class Engine:
         elif unlocked:
             kind = "unlocked"
         elif shown:
-            kind = "shown"
+            kind = "reacted" if reacted and replies.get("reacted") else "shown"
         else:
             kind = topic if topic in replies else "typed"
         lines = replies.get(kind) or []

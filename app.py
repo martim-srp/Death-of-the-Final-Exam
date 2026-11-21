@@ -340,9 +340,15 @@ header[data-testid="stHeader"] { display: none; }
 .st-key-panel [data-testid="stButtonGroup"] button { font-size: 0.85rem; height: auto; min-height: 2rem; max-width: 100%; }
 .st-key-panel [data-testid="stButtonGroup"] button * { white-space: normal !important; overflow: visible !important;
   text-overflow: clip !important; text-align: left; }
-[class*="st-key-sheet_"] button[kind="pillsActive"] {
+[class*="st-key-sheet_"] button[kind="pillsActive"], [class*="st-key-sheet_"] button[aria-checked="true"] {
   text-decoration: line-through; text-decoration-color: #e0645a; text-decoration-thickness: 2px; opacity: 0.6;
   background: #2a1714 !important; border-color: #5a2a22 !important; color: #efe6d8 !important; }
+/* The accusation: a chosen option is filled, so the four picks stand out before you accuse. */
+.st-key-accuse_who button[aria-checked="true"], .st-key-accuse_how button[aria-checked="true"],
+.st-key-accuse_where button[aria-checked="true"], .st-key-accuse_why button[aria-checked="true"] {
+  background: #c0392b !important; border-color: #e8c27a !important; color: #fff !important; font-weight: 700; }
+.st-key-accuse_who button[aria-checked="true"] *, .st-key-accuse_how button[aria-checked="true"] *,
+.st-key-accuse_where button[aria-checked="true"] *, .st-key-accuse_why button[aria-checked="true"] * { color: #fff !important; }
 .st-key-case_summary [data-testid="stMetricValue"] { font-size: 1.4rem; }
 .st-key-accuse_go button, .st-key-to_accuse button { padding: 0.7rem; }
 .st-key-to_accuse { margin-top: 0.6rem; }
@@ -623,7 +629,7 @@ def show_evidence():
         if result.get("cracked"):
             say(suspect, {"who": "them", "text": result["cracked"]["line"], "cracked": result["cracked"]})
         think(suspect, engine.reaction(current_game(), caught=bool(result.get("contradictions")),
-                                       unlocked=bool(result["unlocked"]), shown=True))
+                                       unlocked=bool(result["unlocked"]), shown=True, reacted=bool(result["reveal"])))
 
 
 def cloud_key():
@@ -1042,6 +1048,13 @@ def finale(game):
     if marker:
         deck(data=marker, key="finale_sound", height=1)
     with middle:
+        # The confrontation is the story's payoff, so it comes first and starts open.
+        scene = denouement(game)
+        if scene:
+            with st.expander("Half past seven, the boardroom: read the confrontation", icon=":material/history_edu:",
+                             expanded=True):
+                for paragraph in scene.split("\n\n"):
+                    st.markdown(plain(paragraph))
         rank_card(game)
         case_summary(game)
         st.download_button(
@@ -1052,11 +1065,6 @@ def finale(game):
             icon=":material/description:",
             use_container_width=True,
         )
-        scene = denouement(game)
-        if scene:
-            with st.expander("Half past seven, the boardroom: read the confrontation", icon=":material/history_edu:"):
-                for paragraph in scene.split("\n\n"):
-                    st.markdown(plain(paragraph))
         if st.button("Play a new case", type="primary", icon=":material/refresh:", use_container_width=True):
             new_case()
             st.rerun()

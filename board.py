@@ -427,7 +427,9 @@ function tour(root, setTriggerValue) {
     if (!box) return;
     const steps = [...box.querySelectorAll(".step")];
     const dots = box.querySelector(".dots");
-    let i = 0;
+    // The board is redrawn whenever Streamlit reruns, which rebuilds the tour. Keep the step
+    // on the window so a redraw in the middle of the tour resumes it instead of restarting.
+    let i = Math.min(window.__dfeTourStep || 0, steps.length - 1);
     const ring = document.createElement("div");
     ring.className = "tour-ring";
     root.appendChild(ring);
@@ -439,24 +441,30 @@ function tour(root, setTriggerValue) {
         }
         return root.querySelector({ map: ".map", hand: ".hand", accuse: ".accuse" }[name]);
     };
+    // The ring follows its target on every frame, so it stays on it while the page scrolls.
+    const place = () => {
+        if (box.hidden || !ring.isConnected) return;
+        const el = target(steps[i].dataset.target);
+        if (el) {
+            const r = el.getBoundingClientRect();
+            Object.assign(ring.style, { left: r.left - 6 + "px", top: r.top - 6 + "px", width: r.width + 12 + "px", height: r.height + 12 + "px" });
+        }
+        requestAnimationFrame(place);
+    };
     const show = () => {
+        window.__dfeTourStep = i;
         steps.forEach((s, n) => s.classList.toggle("on", n === i));
         dots.textContent = steps.map((_, n) => (n === i ? "●" : "○")).join(" ");
         box.querySelector(".next").textContent = i === steps.length - 1 ? "Play" : "Next";
         const el = target(steps[i].dataset.target);
-        if (el) {
-            el.scrollIntoView({ block: "center", behavior: "smooth" });
-            setTimeout(() => {
-                const r = el.getBoundingClientRect();
-                Object.assign(ring.style, { left: r.left - 6 + "px", top: r.top - 6 + "px", width: r.width + 12 + "px", height: r.height + 12 + "px" });
-            }, 350);
-        }
+        if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
     };
-    const done = () => { box.hidden = true; ring.remove(); setTriggerValue("act", "tour_done"); };
+    const done = () => { box.hidden = true; ring.remove(); window.__dfeTourStep = 0; setTriggerValue("act", "tour_done"); };
     box.querySelector(".next").addEventListener("click", () => { if (i < steps.length - 1) { i += 1; show(); } else done(); });
     box.querySelector(".skip").addEventListener("click", done);
     box.hidden = false;
     show();
+    requestAnimationFrame(place);
 }
 
 // What a tap opens shows in the panel. When the columns stack (phones, narrow windows) the
@@ -633,7 +641,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tour-nav button { border-radius: 8px; padding: 6px 14px; border: 1px solid #4a3a31; background: transparent; color: var(--ink); font: 500 14px var(--ui); }
 .tour-nav .next { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
 .tour-ring { position: fixed; z-index: 999; border: 3px solid var(--gold); border-radius: 14px; pointer-events: none;
-  box-shadow: 0 0 0 9999px rgba(8,6,5,.6); transition: all .35s ease; }
+  box-shadow: 0 0 0 9999px rgba(8,6,5,.6); }  /* no transition: it follows its target every frame */
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @media (max-width: 640px) {
   .hud { flex-wrap: wrap; gap: 8px 10px; padding: 8px; }
