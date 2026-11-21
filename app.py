@@ -1015,7 +1015,7 @@ def rank_card(game):
     if solved:
         st.caption("50 for solving, up to 25 for time left, 5 per lie caught (up to 20); "
                    "minus 3 per hint and 10 per wrong accusation.")
-    st.caption("Share it (no spoilers):")
+    st.caption("Share the game")
     st.code(share_text(game, rank), language=None, wrap_lines=True)
 
 
