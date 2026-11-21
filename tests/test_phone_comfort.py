@@ -35,3 +35,16 @@ def test_status_bar_buttons_are_44_px_on_narrow_boards():
     assert ".tools button { flex-basis: 44px; height: 44px; }" in narrow
     # Desktop keeps the compact 38 px row.
     assert ".tools button { background: #2b221d; border: 1px solid #4a3a31; border-radius: 10px; width: 38px; height: 38px;" in board.BOARD_CSS
+
+
+def test_the_mode_choice_is_roomy_and_says_just_normal_or_hard():
+    at = start(intro_done=False)
+    picker = at.segmented_control(key="mode_choice")
+    assert [picker.format_func(o) for o in ("normal", "hard")] == ["Normal", "Hard"]
+    css = page(at)
+    assert ".st-key-mode_pick { gap: 0.8rem; margin: 0.5rem 0 1.4rem; }" in css
+    assert '.st-key-mode_pick [data-testid="stButtonGroup"] button { min-height: 48px;' in css
+    # On a phone the two buttons share the full width, so neither label is cut.
+    phone = phone_rules(css)
+    assert '.st-key-mode_pick [data-testid="stButtonGroup"] button { flex: 1 1 0;' in phone
+    assert "max-width: none !important" in phone
