@@ -271,10 +271,8 @@ def on_act(key):
 # ---- The D4 chart --------------------------------------------------------------------
 
 def denouement(game):
-    """The closing scene of this game's variant. Only once the case is closed."""
-    engine.solution(game)  # raises GameError while the game is still running
-    text = case["variants"][game.variant].get("denouement", "")
-    return text.format_map(game.variables)
+    """The confrontation if solved, or the unsolved outcome if cold."""
+    return report.closing_scene(engine, game)
 
 
 # ---- Page style ----------------------------------------------------------------------
@@ -385,6 +383,8 @@ header[data-testid="stHeader"] { display: none; }
   color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem var(--label);
   letter-spacing: 0.15em; animation: stamp 0.6s 0.6s cubic-bezier(.2,1.6,.4,1) both; white-space: nowrap; }
 .finale.cold .slam { border-color: #9aa7b3; color: #9aa7b3; }
+.finale .cold-stamp { display: inline-block; border: 4px solid #9aa7b3; color: #9aa7b3;
+  padding: 0.3rem 0.7rem; font-family: var(--label); font-size: 1.8rem; font-weight: 700; }
 .finale .title { font-size: 2.6rem; font-weight: 700; line-height: 1.2; margin: 1.1rem 0 0.3rem; animation: rise 0.6s 1s ease-out both; }
 .finale .sub { opacity: 0.75; animation: rise 0.6s 1.1s ease-out both; }
 .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin: 1.2rem 0 0.4rem; }
@@ -1090,21 +1090,27 @@ def rank_card(game):
 
 
 def finale(game):
-    solution = engine.solution(game)
-    culprit = solution["who"]
-    uri = board.find_picture("suspects", culprit) or ""
+    scene = denouement(game)
     solved = game.status == "solved"
-    stamp, heading = ("GUILTY", "Case closed") if solved else ("CASE COLD", "The trail went cold")
+    heading = "Case closed" if solved else "The trail went cold"
     lies = len(game.contradictions)
-    # Plain quotes inside the f-strings: Python 3.11 (the dev container) cannot reuse the outer quote.
-    sub = (f"Solved at {engine.clock_label(game)} · {lies} {'lie' if lies == 1 else 'lies'} caught" if solved
-           else f"It was {mid_sentence(case['suspects'][culprit]['name'])} all along.")
-    facts = "".join(f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS)
+    if solved:
+        solution = engine.solution(game)
+        uri = board.find_picture("suspects", solution["who"]) or ""
+        portrait = f'<div class="mug"><img src="{uri}" alt=""><span class="slam">GUILTY</span></div>'
+        sub = f"Solved at {engine.clock_label(game)} · {lies} {'lie' if lies == 1 else 'lies'} caught"
+        facts = '<div class="facts">' + "".join(
+            f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS
+        ) + "</div>"
+    else:
+        portrait = '<div class="cold-stamp">CASE COLD</div>'
+        sub = "The case remains unsolved. The exam is cancelled."
+        facts = ""
     medals = "".join(f"<span>{board.icon('medal')} {esc(b['title'])}</span>" for b in engine.badge_list(game))
     _, middle, _ = st.columns([1, 3, 1])
     middle.markdown(
-        f'<div class="finale{"" if solved else " cold"}"><div class="mug"><img src="{uri}" alt=""><span class="slam">{stamp}</span></div>'
-        f'<div class="title">{heading}</div><div class="sub">{esc(sub)}</div><div class="facts">{facts}</div>'
+        f'<div class="finale{"" if solved else " cold"}">{portrait}'
+        f'<div class="title">{heading}</div><div class="sub">{esc(sub)}</div>{facts}'
         f'{f"<div class=medals>{medals}</div>" if medals else ""}</div>',
         unsafe_allow_html=True,
     )
@@ -1112,10 +1118,10 @@ def finale(game):
     if marker:
         deck(data=marker, key="finale_sound", height=1)
     with middle:
-        # The confrontation is the story's payoff, so it comes first and starts open.
-        scene = denouement(game)
+        # Show the outcome first; a cold case has no confrontation or solution reveal.
         if scene:
-            with st.expander("Half past seven, the boardroom: read the confrontation", icon=":material/history_edu:",
+            scene_label = "Read the confrontation" if solved else "The case remains unsolved"
+            with st.expander(scene_label, icon=":material/history_edu:",
                              expanded=True):
                 for paragraph in scene.split("\n\n"):
                     st.markdown(plain(paragraph))
