@@ -137,6 +137,18 @@ def run(action, *args):
     return result
 
 
+def calm():
+    """Calm mode: no animations and no sounds anywhere, and the next step in one plain line.
+    Off by default; switched from the status bar or the start screen."""
+    return bool(st.session_state.get("calm"))
+
+
+def toggle_calm():
+    st.session_state.calm = not calm()
+    st.session_state.toast = (
+        ("Calm mode on: no animations, no sounds." if calm() else "Calm mode off."), ":material/dark_mode:")
+
+
 def sound(name):
     """Ask the board to play one short sound on the next draw (see board.sfx_html)."""
     st.session_state.sfx = name
@@ -250,6 +262,8 @@ def on_act(key):
         st.session_state.intro_done = False
     elif kind == "tour_done":
         st.session_state.tour_done = True
+    elif kind == "calm":
+        toggle_calm()
     else:
         set_focus(kind, value)
 
@@ -459,6 +473,11 @@ header[data-testid="stHeader"] { display: none; }
 </style>
 """
 
+# Calm mode on the page itself: chat bubbles, stamps and the finale appear at once instead of animating.
+CALM_CSS = """<style>
+body *, body *::before, body *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+</style>"""
+
 deck = st.components.v2.component("deck", js=board.BOARD_JS, css=board.BOARD_CSS)
 
 
@@ -497,20 +516,25 @@ def draw_board(game, clues, fresh):
         board.hud_html(
             engine.clock_label(game), engine.time_left(game), case["clock"]["limit_minutes"],
             case["max_strikes"] - game.strikes, case["max_strikes"], len(game.contradictions), avatar, player_name(),
+            calm=calm(),
         )
-        + board.goal_html(step, engine.thought(game, step))
+        # In calm mode the next step is one plain line, without the detective's musing.
+        + board.goal_html(step, None if calm() else engine.thought(game, step))
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
         + pending_sound()
         + (board.tutorial_html() if show_tour(game) else "")
+        + board.calm_html(calm())
     )
     deck(data=markup, key="board", on_act_change=functools.partial(on_act, "board"))
 
 
 def pending_sound():
-    """The sound asked for by the last action, once."""
+    """The sound asked for by the last action, once. None in calm mode."""
     name = st.session_state.pop("sfx", None)
+    if calm():
+        return ""
     return board.sfx_html(name, st.session_state.get("sfx_n", 0)) if name else ""
 
 
@@ -523,7 +547,7 @@ def draw_suspects(game):
     kind, value = focus()
     picked = value if kind == "suspect" else None
     goal = board.goal_target(engine.next_step(game))
-    deck(data=board.suspects_html(suspect_status(game), picked, goal), key="suspect_row",
+    deck(data=board.suspects_html(suspect_status(game), picked, goal) + board.calm_html(calm()), key="suspect_row",
          on_act_change=functools.partial(on_act, "suspect_row"))
 
 
@@ -1104,6 +1128,10 @@ HOW_TO_PLAY = (
 SHOW_COVER = True  # the cover picture beside the briefing on the start screen (hidden on phones)
 
 
+def calm_switch():
+    st.session_state.calm = bool(st.session_state.get("calm_switch"))
+
+
 def pick_detective(avatar):
     st.session_state.player_avatar = avatar
 
@@ -1138,6 +1166,8 @@ def intro_dialog():
                     st.button(text, key=f"pick_{avatar}", type="primary" if avatar == chosen else "secondary",
                               help=None, on_click=pick_detective, args=(avatar,))
         st.text_input("Your name", key="player_name", placeholder="Detective", max_chars=24)
+        st.toggle("Calm mode: no animations, no sounds", value=calm(), key="calm_switch", on_change=calm_switch,
+                  help="Nothing moves, blinks or plays. You can switch it any time with the moon button at the top.")
         if st.button("Start the investigation", type="primary", icon=":material/search:", use_container_width=True):
             finish_intro()
             st.rerun()
@@ -1147,6 +1177,8 @@ def intro_dialog():
 
 game = current_game()
 st.markdown(PAGE_CSS, unsafe_allow_html=True)
+if calm():
+    st.markdown(CALM_CSS, unsafe_allow_html=True)
 
 flash = st.session_state.pop("flash", None)
 if flash:

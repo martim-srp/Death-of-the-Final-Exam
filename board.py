@@ -51,6 +51,7 @@ ICONS = {
     "medal": '<circle cx="12" cy="15" r="5"/><path d="M8.5 3.5l3.5 6.5 3.5-6.5"/>',
     "map": '<path d="M3 6.5l6-3 6 3 6-3v14l-6 3-6-3-6 3z"/><path d="M9 3.5v14M15 6.5v14"/>',
     "check": '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    "calm": '<path d="M19.5 14.5A8 8 0 1 1 9.5 4.5a6.5 6.5 0 0 0 10 10z"/>',
 }
 
 
@@ -117,7 +118,7 @@ def parse_act(act, suspects, clues):
         return ("clue", value)
     if kind == "spot" and value in MAP_SPOTS:
         return ("spot", value)
-    if kind in ("home", "sheet", "accuse", "intro", "tour_done") and not value:
+    if kind in ("home", "sheet", "accuse", "intro", "tour_done", "calm") and not value:
         return (kind, None)
     return None
 
@@ -125,8 +126,10 @@ def parse_act(act, suspects, clues):
 # ---- Status bar --------------------------------------------------------------------
 
 
-def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avatar_uri, name):
-    """Time, the fuse burning down to 09:00, accusations left as pips, lies caught, and the buttons."""
+def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avatar_uri, name, calm=False):
+    """Time, the fuse burning down to 09:00, accusations left as pips, lies caught, and the buttons.
+
+    calm: whether calm mode is on (no animations, no sounds), shown on its button."""
     hours, minutes = divmod(max(minutes_left, 0), 60)
     burnt = 100 * (1 - max(minutes_left, 0) / limit)
     urgent = " urgent" if minutes_left <= 120 else ""
@@ -144,6 +147,8 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'<button data-act="sheet" title="Notebook">{icon("sheet")}</button>'
         f'<button data-act="intro" title="Story and rules">{icon("book")}</button>'
         f'<button class="mute" type="button" title="Sound on or off">{icon("sound", "ic on")}{icon("mute", "ic off")}</button>'
+        f'<button class="calmbtn{" on" if calm else ""}" data-act="calm" aria-pressed="{"true" if calm else "false"}" '
+        f'title="Calm mode: no animations, no sounds{" (on)" if calm else ""}">{icon("calm")}</button>'
         '<button class="accuse" data-act="accuse">Accuse</button></div></div>'
     )
 
@@ -153,6 +158,13 @@ def sfx_html(sound, nonce):
     if sound not in ("flip", "tick", "stamp", "thud"):
         return ""
     return f'<i class="sfx" hidden data-sfx="{sound}" data-n="{int(nonce)}"></i>'
+
+
+def calm_html(on):
+    """An invisible marker that switches the board to calm mode: nothing moves, nothing plays.
+
+    For players who find motion, blinking and sound distracting."""
+    return '<i class="calm-on" hidden></i>' if on else ""
 
 
 def tutorial_html():
@@ -457,7 +469,7 @@ function tour(root, setTriggerValue) {
         dots.textContent = steps.map((_, n) => (n === i ? "●" : "○")).join(" ");
         box.querySelector(".next").textContent = i === steps.length - 1 ? "Play" : "Next";
         const el = target(steps[i].dataset.target);
-        if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+        if (el) el.scrollIntoView({ block: "center", behavior: root.classList.contains("calm") ? "auto" : "smooth" });
     };
     const done = () => { box.hidden = true; ring.remove(); window.__dfeTourStep = 0; setTriggerValue("act", "tour_done"); };
     box.querySelector(".next").addEventListener("click", () => { if (i < steps.length - 1) { i += 1; show(); } else done(); });
@@ -495,16 +507,18 @@ export default function(component) {
     const before = root.querySelector(".det");
     const from = before ? before.getAttribute("transform") : null;
     root.innerHTML = data;
+    const calm = !!root.querySelector(".calm-on");
+    root.classList.toggle("calm", calm);
     const det = root.querySelector(".det");
     const to = det ? det.getAttribute("transform") : null;
-    if (det && from && to && from !== to) {
+    if (det && from && to && from !== to && !calm) {
         const css = (t) => t.replace(/translate\(([-\d.]+) ([-\d.]+)\)/, "translate($1px, $2px)");
         try { det.animate([{ transform: css(from) }, { transform: css(to) }], { duration: 800, easing: "ease-in-out" }); } catch (e) {}
     }
     const sfx = root.querySelector(".sfx");
     if (sfx && window.__dfeLastSfx !== sfx.dataset.n) {
         window.__dfeLastSfx = sfx.dataset.n;
-        play(sfx.dataset.sfx);
+        if (!calm) play(sfx.dataset.sfx);
     }
     const mute = root.querySelector(".mute");
     if (mute) {
@@ -513,7 +527,7 @@ export default function(component) {
         mute.addEventListener("click", () => {
             try { localStorage.setItem("dfe-muted", muted() ? "0" : "1"); } catch (e) {}
             label();
-            play("tick");
+            if (!calm) play("tick");
         });
     }
     root.querySelectorAll("[data-act]").forEach((el) => {
@@ -704,6 +718,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tools button .ic { width: 19px; height: 19px; }
 .tools button:hover { color: var(--gold); }
 .mute .off, .mute.muted .on { display: none; }
+.tools .calmbtn.on { border-color: var(--gold); color: var(--gold); background: #3a2e1c; }
+/* Calm mode: nothing moves or blinks, the drifting mist is gone. Locked places keep their (still) fog. */
+.deck.calm *, .deck.calm *::before, .deck.calm *::after { animation: none !important; transition: none !important; }
+.deck.calm .mist, .deck.calm .lift { display: none; }
 .mute.muted .off { display: inline-block; }
 .hud .stat .ic { width: 20px; height: 20px; color: #cdbfa8; }
 .hud .zapstat .ic { color: var(--gold); }
@@ -715,6 +733,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .zap .ic { width: 11px; height: 11px; }
 .sus .noimg .ic { width: 40px; height: 40px; color: #8a7a6a; }
 .goal-bar .gi .ic { width: 24px; height: 24px; color: var(--gold); display: block; }
+/* With the calm button the tool row is wider: below this width the "left" text would run into the next stat. */
+@container (max-width: 1240px) { .hud .clock small { display: none; } }
 /* Narrow boards (a small laptop window, a tablet): lay out by the board's own width, not the screen's */
 @container (max-width: 700px) {
   .hud { flex-wrap: wrap; gap: 8px 10px; padding: 8px; }
