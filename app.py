@@ -505,9 +505,22 @@ header[data-testid="stHeader"] { display: none; }
 /* Pop-ups (a new card unlocked, a refused move) slide in at the bottom, so they never cover the
    suspects, the clock or the answer you just got at the top of the screen. */
 [data-testid="stToastContainer"] { top: auto !important; bottom: 1rem; }
+/* Save game: one round save icon pinned to the bottom-left corner (toasts use the right side). */
+.st-key-save_corner { position: fixed; left: 1rem; bottom: 1rem; z-index: 1000; width: auto !important; }
+.st-key-save_corner [data-testid="stPopoverButton"] {
+  width: 56px; height: 56px; min-height: 0; padding: 0; border-radius: 50%; justify-content: center;
+  background: var(--paper); border: 2px solid var(--gold); color: var(--gold); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55); }
+.st-key-save_corner [data-testid="stPopoverButton"] [data-testid="stMarkdownContainer"] {  /* the name stays for screen readers */
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.st-key-save_corner [data-testid="stPopoverButton"] [aria-hidden="true"]:has([data-testid="stIconMaterial"]) { display: none; }
+.st-key-save_corner [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { font-size: 1.75rem; color: var(--gold); margin: 0; }
+.st-key-save_corner button:hover { border-color: #fff3d6; transform: translateY(-1px); }
+.st-key-save_corner button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 @media (max-width: 640px) {
   [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1rem; }
   [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; bottom: 0.5rem; }
+  .st-key-save_corner { left: 0.6rem; bottom: 0.6rem; }
+  .st-key-save_corner [data-testid="stPopoverButton"] { width: 52px; height: 52px; }
   [data-testid="stButtonGroup"] button { min-height: 40px; }
   .st-key-mode_pick [data-testid="stElementContainer"], .st-key-mode_pick [data-testid="stButtonGroup"],
   .st-key-mode_pick [data-testid="stButtonGroup"] > div { width: 100% !important; max-width: none !important; }
@@ -677,17 +690,19 @@ def panel_home(game):
                     unsafe_allow_html=True)
     st.caption(
         f"Searching costs {case['clock']['clue_cost']} min, a question {case['clock']['question_cost']} min. "
-        "Your case saves itself. Use Save game to keep the link."
+        "Your case saves itself. Tap the save icon in the corner to keep the link."
     )
-    new_case_col, save_game_col = st.columns(2)
-    with new_case_col:
-        with st.popover("New case", icon=":material/refresh:"):
-            st.write("Start over with a new culprit? This case will be lost.")
-            if st.button("Yes, new case", type="primary", key="new_case"):
-                new_case()
-                st.rerun()
-    with save_game_col:
-        with st.popover("Save game", icon=":material/bookmark:"):
+    with st.popover("New case", icon=":material/refresh:"):
+        st.write("Start over with a new culprit? This case will be lost.")
+        if st.button("Yes, new case", type="primary", key="new_case"):
+            new_case()
+            st.rerun()
+
+
+def save_corner():
+    """Save game: a round save icon pinned to the bottom-left corner, on every panel, desktop and phone."""
+    with st.container(key="save_corner"):
+        with st.popover("Save game", icon=":material/save:"):
             st.write("Your case saves itself after every move. Keep this link to come back to it.")
             game_id = st.session_state.get("game_id")
             if game_id:
@@ -1441,6 +1456,10 @@ with side_column:
         else:
             panel_home(game)
     next_step_button(game)
+save_corner()
+if show_tour(game):  # the first-play tour card sits at the bottom of a phone screen: lift the icon above it
+    st.markdown("<style>@media (max-width: 640px) { .st-key-save_corner { bottom: 10.5rem; } }</style>",
+                unsafe_allow_html=True)
 
 # Called last, so the story and rules open over the game on a new case.
 if not st.session_state.get("intro_done", bool(game.history)):
