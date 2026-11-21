@@ -301,7 +301,7 @@ def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=
     width, height = size
     s = width / 1200  # every size below is for a 1200-pixel-wide picture
     parts = [
-        f'<svg class="map" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
+        f'<svg class="map" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="group" '
         f'aria-label="Campus map"><image href="{map_uri}" width="{width}" height="{height}"/>'
         + NIGHT_DEFS
         + f'<rect class="night" width="{width}" height="{height}" fill="url(#night)"/>'
@@ -611,7 +611,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tools { display: flex; gap: 6px; }
 .tools button { background: #2b221d; border: 1px solid #4a3a31; border-radius: 10px; width: 38px; height: 38px; padding: 0; font-size: 16px; }
 .tools button:hover { border-color: var(--gold); }
-.tools .accuse { width: auto; background: var(--red); border-color: #e05a48; font: 700 15px var(--type); letter-spacing: .08em;
+.tools .accuse { width: auto; background: var(--red); border-color: #e05a48; color: #fff; font: 700 15px var(--type); letter-spacing: .08em;
   text-transform: uppercase; padding: 0 16px; animation: beckon 2.4s infinite; }
 @keyframes beckon { 0%,70%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); } 35% { box-shadow: 0 0 0 6px rgba(192,57,43,.35); } }
 @keyframes throb { 50% { opacity: .55; } }
@@ -667,7 +667,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @container (max-width: 820px) {
   .hud .clock small { display: none; }
 }
-.card.locked { background: #2a221e; color: #8d7f72; border-color: #3a2e28; }
+.card.locked { background: #2a221e; color: #a89a8c; border-color: #3a2e28; }  /* 5.7:1, readable at 11px */
 .card.available { border-color: var(--red); animation: glow 1.8s infinite; }
 .card.picked { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 0 0 3px rgba(232,194,122,.45); }
 .card .new { position: absolute; top: 4px; right: 4px; background: var(--red); color: #fff; font: 400 9px var(--type);
@@ -785,6 +785,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tools button { color: #e8dccb; display: inline-flex; align-items: center; justify-content: center; }
 .tools button .ic { width: 19px; height: 19px; }
 .tools button:hover { color: var(--gold); }
+.tools .accuse:hover { color: #fff; border-color: #fff3d6; }  /* white on red stays readable (5.4:1) */
 .mute .off, .mute.muted .on { display: none; }
 .tools .calmbtn.on { border-color: var(--gold); color: var(--gold); background: #3a2e1c; }
 /* Calm mode: nothing moves or blinks, the drifting mist is gone. Locked places keep their (still) fog. */
