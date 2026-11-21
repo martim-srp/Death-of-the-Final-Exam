@@ -59,3 +59,11 @@ def test_no_save_icon_once_the_case_is_closed():
     at.run()
     assert not at.exception
     assert not save_popovers(at)
+
+
+def test_on_wider_screens_the_icon_moves_to_the_bottom_right_away_from_the_evidence_cards():
+    css = page(start(tour_done=True))
+    assert "@media (min-width: 641px) { .st-key-save_corner { left: auto; right: 1rem; } }" in css
+    # The page ends with room to scroll the last card and the next-step button clear of the icon.
+    assert '[data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 5.5rem;' in css
+    assert '[data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 5rem; }' in phone_rules(css)

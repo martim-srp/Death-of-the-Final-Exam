@@ -403,7 +403,7 @@ PAGE_CSS = """
   --label: "Special Elite", "Courier New", monospace; --ink: #efe6d8; --gold: #e8c27a; --red: #c0392b;
   --paper: #1c1613; --line: #3a2e28; }
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
-[data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 1.5rem; max-width: 1480px; }
+[data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 5.5rem; max-width: 1480px; }  /* room at the end to scroll clear of the save icon */
 .stApp { font-variant-numeric: lining-nums; }
 header[data-testid="stHeader"] { display: none; }
 [data-testid="stElementToolbar"] { display: none; }  /* chart download/fullscreen buttons floated over the detective's line */
@@ -612,8 +612,10 @@ header[data-testid="stHeader"] { display: none; }
 .st-key-save_corner [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { font-size: 1.75rem; color: var(--gold); margin: 0; }
 .st-key-save_corner button:hover { border-color: #fff3d6; transform: translateY(-1px); }
 .st-key-save_corner button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+/* On wider screens the icon sits bottom-right, under the side panel, so it never covers an evidence card. */
+@media (min-width: 641px) { .st-key-save_corner { left: auto; right: 1rem; } }
 @media (max-width: 640px) {
-  [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1rem; }
+  [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 5rem; }
   [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; top: 0.5rem !important; }
   .st-key-save_corner { left: 0.6rem; bottom: 0.6rem; }
   .st-key-save_corner [data-testid="stPopoverButton"] { width: 52px; height: 52px; }
