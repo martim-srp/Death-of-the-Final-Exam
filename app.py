@@ -312,11 +312,10 @@ def guide(game):
     """The next step the board points at: the tutorial's while it runs, then the engine's."""
     number = tutorial_step(game)
     if number == 1:
-        return {"do": "search", "clue": TUTORIAL_CLUE, "text": f"Tutorial 1 of 3 · Search {engine.label(TUTORIAL_CLUE)}"}
+        return {"do": "search", "clue": TUTORIAL_CLUE, "text": "Tutorial 1 of 3 · Tap the glowing Faculty pin, then Search it."}
     if number == 2:
-        name = case["suspects"][TUTORIAL_SUSPECT]["name"]
         return {"do": "show", "clue": TUTORIAL_CLUE, "suspect": TUTORIAL_SUSPECT,
-                "text": f"Tutorial 2 of 3 · Show Evidence {engine.number(TUTORIAL_CLUE)} to {mid_sentence(name)}."}
+                "text": "Tutorial 2 of 3 · Show card 12 to the Companion. She says she never went to his office door."}
     return engine.next_step(game)
 
 
@@ -325,29 +324,16 @@ def end_tutorial():
 
 
 def coach_card(game):
-    """What the tutorial step is for, under the suspects. The guide strip says what to tap."""
+    """The tutorial in the side panel: a skip link while it runs (the guide strip says what to tap),
+    then one line once the lie is caught."""
     number = tutorial_step(game)
     if not number:
         return
-    search, ask = case["clock"]["clue_cost"], case["clock"]["question_cost"]
-    if number == 1:
-        title = "Tutorial · 1 of 3 · Search"
-        body = (f"Evidence is hidden around campus. Searching a place turns its card over and costs {search} minutes "
-                "of your night. Start with the faculty corridor: tap the glowing Faculty pin or card 12, then <b>Search it</b>.")
-    elif number == 2:
-        title = "Tutorial · 2 of 3 · Show"
-        body = ("Every suspect has a story. Your job is to find the card that breaks it. The Companion says "
-                "<b>“I never went to his office door.”</b> Card 12 says otherwise. Show it to her: tap the "
-                f"Companion under <b>Show this card to</b>, or tap her face ({ask} min).")
-    else:
-        title = "Tutorial · 3 of 3 · That is the game"
-        body = ("You caught a lie: the story and the evidence did not match. Keep doing this: search places, question "
-                "suspects and show each one the card that breaks their story. A liar is not always the culprit, so ask "
-                "yourself why they lied. When you know <b>who</b>, <b>how</b>, <b>where</b> and <b>why</b>, accuse.")
     with st.container(key="coach"):
-        st.markdown(f'<div class="coach"><div class="kicker">{esc(title)}</div><p>{body}</p></div>', unsafe_allow_html=True)
         if number == 3:
-            st.button("Got it, I'll take it from here", key="tutorial_ok", type="primary", icon=":material/check:",
+            st.markdown('<div class="coach"><p><b>Caught her lying! That is the game:</b> '
+                        "find the card that breaks each story.</p></div>", unsafe_allow_html=True)
+            st.button("Got it", key="tutorial_ok", type="primary", icon=":material/check:",
                       on_click=end_tutorial, use_container_width=True)
         else:
             st.button("Skip the tutorial", key="tutorial_skip", type="tertiary", on_click=end_tutorial)
@@ -474,7 +460,7 @@ header[data-testid="stHeader"] { display: none; }
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
 .lead b { font-family: var(--label); color: #e8c27a; }
 .coach { padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); }
-.coach p { margin: 0.35rem 0 0; font-size: 0.98rem; line-height: 1.45; }
+.coach p { margin: 0; font-size: 1.05rem; line-height: 1.45; }
 .coach b { color: #e8c27a; }
 .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
@@ -691,7 +677,7 @@ def draw_board(game, clues, fresh):
             calm=calm(),
         )
         # In calm mode the next step is one plain line, without the detective's musing.
-        + board.goal_html(step, None if calm() else engine.thought(game, step))
+        + board.goal_html(step, None if calm() or tutorial_step(game) in (1, 2) else engine.thought(game, step))
         + board.case_html(case_columns())
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
