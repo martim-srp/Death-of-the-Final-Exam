@@ -1399,18 +1399,20 @@ st.markdown(PAGE_CSS, unsafe_allow_html=True)
 if calm():
     st.markdown(CALM_CSS, unsafe_allow_html=True)
 
+# Pop-ups stay long enough to read (Streamlit's default is 4 seconds); the cross closes them sooner.
+TOAST_SECONDS = 9
 flash = st.session_state.pop("flash", None)
 if flash:
     getattr(st, flash[0])(flash[1])
 toast = st.session_state.pop("toast", None)
 if toast:
-    st.toast(toast[0], icon=toast[1])
+    st.toast(toast[0], icon=toast[1], duration=TOAST_SECONDS)
 night = st.session_state.pop("night_toast", None)
 if night:
-    st.toast(night, icon=":material/thunderstorm:")
+    st.toast(night, icon=":material/thunderstorm:", duration=TOAST_SECONDS)
 refusal = st.session_state.pop("refusal", None)
 if refusal:
-    st.toast(refusal, icon=":material/warning:")
+    st.toast(refusal, icon=":material/warning:", duration=TOAST_SECONDS)
 fresh = st.session_state.pop("fresh", [])
 
 if game.status != "playing":
