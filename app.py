@@ -592,9 +592,11 @@ def ask_topic():
     result = run(engine.ask, suspect, topic)
     if result:
         sound("tick")
+        from game import ai
+
         brief = engine.character_brief(current_game(), suspect)
         say(suspect, {"who": "you", "text": TOPICS[topic][1]})
-        say(suspect, {"who": "them", "text": result["line"] or brief["cover"], "unlocked": result["unlocked"]})
+        say(suspect, {"who": "them", "text": ai.scripted_reply(brief, topic), "unlocked": result["unlocked"]})
         think(suspect, engine.reaction(current_game(), topic=topic, unlocked=bool(result["unlocked"])))
 
 
@@ -708,7 +710,9 @@ def panel_suspect(game, suspect):
     step = engine.next_step(game) or {}
     tip = step if step.get("suspect") == suspect else {}
     asked = {e["topic"] for e in game.history if e.get("action") == "ask" and e.get("suspect") == suspect}
-    st.pills(f"Ask · {cost} min", list(TOPICS), format_func=lambda t: topic_label(t, asked, tip.get("topic")),
+    # Nobody asks the Teaching Assistant about the Teaching Assistant.
+    topics = [t for t in TOPICS if not (t == "teaching_assistant" and suspect == "ta")]
+    st.pills(f"Ask · {cost} min", topics, format_func=lambda t: topic_label(t, asked, tip.get("topic")),
              key="ask_topic", on_change=ask_topic)
     opened = [c["id"] for c in engine.clue_list(game) if c["state"] == "open"]
     if opened:

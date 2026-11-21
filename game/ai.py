@@ -28,6 +28,24 @@ TOPIC_PHRASES = {
 }
 
 
+# What a suspect says when asked about a topic they have no scripted line for (data/case.json
+# "topic_lines" wins whenever it has one). Without these, every such question got the suspect's
+# whole cover story back, so "What is your job here?" was answered with an alibi. Each line fits
+# any suspect in any variant, so it gives nothing away. Alibi and "other" questions keep the cover.
+DODGES = {
+    "exam": '"All I know is that it leaked. Ask the Professor, it is his exam."',
+    "report": '"I have nothing to add about the report."',
+    "work": '"My work has nothing to do with this."',
+    "teaching_assistant": '"You should ask the Teaching Assistant that yourself."',
+    "leak": '"I know as much about the leak as you do."',
+}
+
+
+def scripted_reply(brief, topic):
+    """The suspect's scripted answer on a topic: their own line, else a dodge, else their cover story."""
+    return brief["topic_lines"].get(topic) or DODGES.get(topic) or brief["cover"]
+
+
 def system_prompt(brief, topics):
     character = {
         key: brief[key]
@@ -180,5 +198,5 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
     if reply is None:
         game.history[-1]["fallback"] = fallback
     if reply is None:
-        reply = brief["topic_lines"].get(topic) or brief["cover"]
+        reply = scripted_reply(brief, topic)
     return {"reply": reply, "unlocked": result["unlocked"]}
