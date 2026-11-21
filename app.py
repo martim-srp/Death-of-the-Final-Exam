@@ -1367,26 +1367,25 @@ def rank_card(game):
 
 def finale(game):
     scene = denouement(game)
+    solution = engine.solution(game)
     solved = game.status == "solved"
     heading = "Case closed" if solved else "The trail went cold"
     lies = len(game.contradictions)
+    facts = '<div class="facts">' + "".join(
+        f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS
+    ) + "</div>"
     if solved:
-        solution = engine.solution(game)
         uri = board.find_picture("suspects", solution["who"]) or ""
         portrait = f'<div class="mug"><img src="{uri}" alt=""><span class="slam">GUILTY</span></div>'
         sub = f"Solved at {engine.clock_label(game)} · {lies} {'lie' if lies == 1 else 'lies'} caught"
-        facts = '<div class="facts">' + "".join(
-            f"<div><small>{c.upper()}</small>{esc(label(c, solution[c]))}</div>" for c in COLUMNS
-        ) + "</div>"
     else:
         portrait = '<div class="cold-stamp">CASE COLD</div>'
         sub = "The case remains unsolved. The exam is cancelled."
-        facts = ""
     medals = "".join(f"<span>{board.icon('medal')} {esc(b['title'])}</span>" for b in engine.badge_list(game))
     _, middle, _ = st.columns([1, 3, 1])
     middle.markdown(
         f'<div class="finale{"" if solved else " cold"}">{portrait}'
-        f'<div class="title">{heading}</div><div class="sub">{esc(sub)}</div>{facts}'
+        f'<div class="title">{heading}</div><div class="sub">{esc(sub)}</div>{facts if solved else ""}'
         f'{f"<div class=medals>{medals}</div>" if medals else ""}</div>',
         unsafe_allow_html=True,
     )
@@ -1394,13 +1393,17 @@ def finale(game):
     if marker:
         deck(data=marker, key="finale_sound", height=1)
     with middle:
-        # Show the outcome first; a cold case has no confrontation or solution reveal.
+        # A cold case stays unsolved in the story; its answer is shown separately to the player.
         if scene:
             scene_label = "Read the confrontation" if solved else "The case remains unsolved"
             with st.expander(scene_label, icon=":material/history_edu:",
                              expanded=True):
                 for paragraph in scene.split("\n\n"):
                     st.markdown(plain(paragraph))
+        if not solved:
+            st.markdown("#### The correct solution")
+            st.caption("For you, the player: the investigation itself remained unsolved.")
+            st.markdown(facts, unsafe_allow_html=True)
         rank_card(game)
         case_summary(game)
         st.download_button(

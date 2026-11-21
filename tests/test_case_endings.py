@@ -1,5 +1,6 @@
-"""All six outcomes: three explicit confrontations and three genuinely unsolved cases."""
+"""All six outcomes: solved confrontations, or unsolved stories with a player-only answer."""
 
+from html import unescape
 from pathlib import Path
 
 import pytest
@@ -60,17 +61,20 @@ def test_all_six_endings_on_screen_and_in_the_report(variant, status):
         assert "the Dean cancels the exam" in page and "The Dean cancels the exam" in text
         assert "culprit remains unidentified" in page and "culprit remains unidentified" in text
         assert not any(e.label == "Read the confrontation" for e in at.expander)
-        assert 'class="facts"' not in page
+        assert 'class="facts"' in page
+        assert any(h.value == "#### The correct solution" for h in at.markdown)
+        assert "## The correct solution (for the player)" in text
         for suspect in CASE["suspects"]:
             assert board.find_picture("suspects", suspect) not in page
-            assert CASE["suspects"][suspect]["name"] not in page
-            assert CASE["suspects"][suspect]["name"] not in text
-        for column in report.COLUMNS:
-            assert f"- **{column.capitalize()}:**" not in text
         for output in (page, text):
             assert "Campus security arrives" not in output
             assert "exam will go ahead" not in output
-            assert "Project Lantern" not in output
+
+    solution = engine.solution(game)
+    for column in report.COLUMNS:
+        name = next(o["label"] for o in CASE["accusation"][column] if o["id"] == solution[column])
+        assert name in unescape(page)
+        assert f"- **{column.capitalize()}:** {report._plain(name)}" in text
 
     assert "Share the game" in [c.value for c in at.caption]
     assert len(at.get("download_button")) == 1
@@ -81,14 +85,15 @@ def test_all_six_endings_on_screen_and_in_the_report(variant, status):
 
 
 @pytest.mark.parametrize("variant", VARIANTS)
-def test_cold_outcomes_never_request_the_solution(variant, monkeypatch):
+def test_cold_story_does_not_discover_the_culprit_but_the_player_gets_the_answer(variant, monkeypatch):
     engine, game = close_case(variant, "cold")
 
     def unexpected_solution(*args, **kwargs):
-        pytest.fail("A cold ending must not request the hidden solution")
+        pytest.fail("The cold story must not discover the culprit")
 
-    monkeypatch.setattr(Engine, "solution", unexpected_solution)
-    assert report.closing_scene(engine, game) == CASE["cold_ending"]
+    with monkeypatch.context() as story_only:
+        story_only.setattr(Engine, "solution", unexpected_solution)
+        assert report.closing_scene(engine, game) == CASE["cold_ending"]
     assert "case remains unsolved" in report.build(engine, game)
     at = AppTest.from_file(APP, default_timeout=15)
     at.session_state["game"] = game.to_dict()
