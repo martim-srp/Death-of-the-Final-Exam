@@ -30,6 +30,7 @@ def test_step_one_points_the_guide_at_the_faculty_corridor():
     assert 'class="goal-bar" data-act="next:clue:L4"' in markup
     assert "Tutorial 1 of 3" in markup
     assert "Tutorial · 1 of 3" in coach(at) and "Search it" in coach(at)
+    assert not any("Where to start" in m.value for m in at.markdown)  # the coach card says it once
 
 
 def test_step_two_points_at_the_companion_then_step_three_explains_the_game():

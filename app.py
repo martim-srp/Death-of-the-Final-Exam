@@ -719,7 +719,7 @@ def panel_home(game):
         step = engine.next_step(game)
         if step:
             st.markdown(f"### {step['text']}")  # the next step, once the first move is made
-    else:
+    elif not tutorial_step(game):  # the tutorial's coach card already says where to start
         st.markdown("### Where to start")
         st.markdown(
             f'<div class="tips"><div><span>{board.icon("search")}</span>Tap a red evidence card or pin to search it</div>'
