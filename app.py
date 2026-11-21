@@ -282,6 +282,15 @@ header[data-testid="stHeader"] { display: none; }
 .st-key-panel { background: #1c1613; border: 1px solid #3a2e28; border-radius: 14px; padding: 0.9rem 1rem 1rem; gap: 0.6rem; }
 .st-key-panel h3 { margin: 0 0 0.55rem !important; padding: 0.1rem 0 0.1rem; font-size: 1.35rem; line-height: 1.35; }
 .kicker { font: 600 0.72rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
+.progress-line { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; margin: 0 0 0.4rem; font-size: 0.82rem; color: #cdbfa8; }
+.progress-line b { font-family: var(--label); color: #efe6d8; font-weight: 400; }
+.all-asked { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.6rem; padding: 0.4rem 0.6rem; border: 1px solid #e8c27a;
+  border-radius: 8px; color: #e8c27a; font-size: 0.85rem; }
+.all-asked .ic { width: 16px; height: 16px; }
+.recap { display: grid; gap: 0.3rem; margin: 0 0 0.8rem; }
+.recap div { display: flex; align-items: center; gap: 0.55rem; font-size: 0.9rem; }
+.recap .ic { width: 18px; height: 18px; color: #e8c27a; }
+.recap b { font-family: var(--label); font-weight: 400; color: #efe6d8; }
 .who-head { padding-bottom: 0.9rem; display: flex; gap: 0.8rem; align-items: center; }
 .st-key-chat_log { margin-top: 0.5rem; }
 .who-head img { width: 64px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #c0392b; }
@@ -480,7 +489,7 @@ def suspect_status(game):
         caught[suspect] = caught.get(suspect, 0) + 1
     return [
         {"id": s, "name": d["name"], "questioned": s in questioned, "caught": caught.get(s, 0), "ruled_out": ruled_out(s),
-         "nerves": engine.nerves(game, s)}
+         "nerves": engine.nerves(game, s), "done": engine.suspect_progress(game, s)["done"]}
         for s, d in case["suspects"].items()
     ]
 
@@ -530,8 +539,27 @@ def draw_suspects(game):
 # ---- Panel: home (leads, lies caught) ---------------------------------------------------
 
 
+def recap_html(game):
+    """The case so far, in four short lines: for a player coming back after a break."""
+    clues = engine.clue_list(game)
+    found = sum(c["state"] == "open" for c in clues)
+    done = sum(engine.suspect_progress(game, s)["done"] for s in case["suspects"])
+    lies = len(game.contradictions)
+    out = len(engine.eliminated(game))
+    rows = [
+        ("card", f"<b>{found} of {len(clues)}</b> evidence cards found"),
+        ("ask", f"<b>{done} of {len(case['suspects'])}</b> suspects with nothing left to ask"),
+        ("bolt", f"<b>{lies}</b> {'lie' if lies == 1 else 'lies'} caught"),
+        ("check", f"<b>{out}</b> {'answer' if out == 1 else 'answers'} ruled out on your notebook"),
+    ]
+    return '<div class="recap">' + "".join(f"<div>{board.icon(i)}<span>{t}</span></div>" for i, t in rows) + "</div>"
+
+
 def panel_home(game):
     st.markdown('<div class="kicker">Your move</div>', unsafe_allow_html=True)
+    if game.history:
+        st.markdown("### The case so far")
+        st.markdown(recap_html(game), unsafe_allow_html=True)
     leads = engine.leads(game) + [{"clue": c, "text": t} for c, t in engine.hint_list(game).items()]
     if leads:
         st.markdown("### Leads")
@@ -694,6 +722,17 @@ def card_label(clue_id, shown, tip=None):
     return f"✓ {label}" if clue_id in shown else label
 
 
+def progress_html(progress):
+    """How much of this suspect you have covered, and a clear sign once there is nothing left to ask."""
+    cards = f'{progress["shown"]} of {progress["cards"]}' if progress["cards"] else "none found yet"
+    line = (f'<div class="progress-line"><span>Questions asked <b>{progress["asked"]} of {progress["questions"]}</b></span>'
+            f'<span>Evidence shown <b>{cards}</b></span></div>')
+    if progress["done"]:
+        line += (f'<div class="all-asked">{board.icon("check")} Nothing left to ask. '
+                 "Find a new evidence card, then come back.</div>")
+    return line
+
+
 def panel_suspect(game, suspect):
     from game import ai
 
@@ -721,8 +760,9 @@ def panel_suspect(game, suspect):
     step = engine.next_step(game) or {}
     tip = step if step.get("suspect") == suspect else {}
     asked = {e["topic"] for e in game.history if e.get("action") == "ask" and e.get("suspect") == suspect}
+    st.markdown(progress_html(engine.suspect_progress(game, suspect)), unsafe_allow_html=True)
     # Nobody asks the Teaching Assistant about the Teaching Assistant.
-    topics = [t for t in TOPICS if not (t == "teaching_assistant" and suspect == "ta")]
+    topics = [t for t in TOPICS if t in engine.topics_for(suspect)]
     st.pills(f"Ask · {cost} min", topics, format_func=lambda t: topic_label(t, asked, tip.get("topic")),
              key="ask_topic", on_change=ask_topic)
     opened = [c["id"] for c in engine.clue_list(game) if c["state"] == "open"]
