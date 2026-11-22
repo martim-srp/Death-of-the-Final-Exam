@@ -6,19 +6,27 @@ from game.engine import Engine
 from tests.test_board_game import board_markup, start
 
 
-def test_starting_after_the_welcome_restores_the_four_screen_highlights():
+def test_starting_after_the_welcome_starts_the_tutorial_not_the_screen_tour():
+    # One walkthrough at a time: a new case starts with the gameplay tutorial; the screen tour is a button away.
     at = start(intro_done=False)
-    assert 'class="tour"' not in board_markup(at)
     before = at.session_state["game"]
     next(b for b in at.button if b.label == "Start the investigation").click().run()
+    assert not at.exception
+    markup = board_markup(at)
+    assert 'class="tour"' not in markup
+    assert "Tutorial 1 of 4" in markup
+    assert at.session_state["game"] == before
+
+
+def test_a_new_player_can_ask_for_the_four_screen_highlights_on_the_welcome_screen():
+    at = start(intro_done=False)
+    next(b for b in at.button if b.label == "Show the screen walkthrough").click().run()
     assert not at.exception
     markup = board_markup(at)
     assert 'aria-label="Screen walkthrough"' in markup
     for target in ("map", "hand", "suspects", "accuse"):
         assert f'data-target="{target}"' in markup
     assert '>Skip</button>' in markup and '>Next</button>' in markup
-    assert at.session_state["game"] == before
-    assert 'Tutorial 1 of 4' in markup  # the gameplay tutorial is still available
 
 
 def test_replaying_from_the_rules_preserves_an_in_progress_case():
@@ -42,7 +50,7 @@ def test_the_screen_walkthrough_also_works_without_case_tips_and_with_calm_mode(
     engine = Engine()
     game = engine.new_game(seed=1, variant="A")
     engine.set_mode(game, mode)
-    markup = board_markup(start(game=game, calm=True))
+    markup = board_markup(start(game=game, calm=True, tour_active=True))
     assert 'aria-label="Screen walkthrough"' in markup
     assert 'class="calm-on"' in markup
 

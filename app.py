@@ -305,6 +305,9 @@ def guide(game):
     if number == 2:
         return {"do": "show", "clue": TUTORIAL_CLUE, "suspect": TUTORIAL_SUSPECT,
                 "text": "Tutorial 2 of 4 · Show card 12 to the Companion. She says she never went to his office door."}
+    if number == 3:
+        return {"do": "show", "suspect": TUTORIAL_SUSPECT,
+                "text": "Tutorial 3 of 4 · Lie caught! Read it in her chat, then tap Got it."}
     if number == 4:
         return {"do": "sheet", "text": "Tutorial 4 of 4 · Open your notebook: the glowing button at the top."}
     return engine.next_step(game)
@@ -437,7 +440,7 @@ def draw_board(game, clues, fresh):
             calm=calm(), goal=(step or {}).get("do"),
         )
         # In calm mode the next step is one plain line, without the detective's musing.
-        + board.goal_html(step, None if calm() or tutorial_step(game) in (1, 2, 4) else engine.thought(game, step))
+        + board.goal_html(step, None if calm() or tutorial_step(game) else engine.thought(game, step))
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)

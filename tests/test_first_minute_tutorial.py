@@ -45,6 +45,7 @@ def test_step_two_points_at_the_companion_then_step_three_explains_the_game():
     assert not at.exception
     assert "Caught her lying! That is the game:" in coach(at)
     assert len(coach(at)) < 200  # one line, not a paragraph
+    assert "Tutorial 3 of 4 · Lie caught!" in board_markup(at)  # the strip stays on the tutorial
     at.button(key="tutorial_ok").click().run()
     markup = board_markup(at)
     assert "Tutorial 4 of 4" in markup and 'data-act="next:sheet"' in markup
