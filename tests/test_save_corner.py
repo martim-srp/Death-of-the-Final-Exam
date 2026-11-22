@@ -41,9 +41,10 @@ def test_the_icon_is_round_gold_and_hides_its_text_label_only_visually():
     assert "clip: rect(0 0 0 0)" in css
 
 
-def test_on_a_phone_the_icon_is_finger_sized_and_hugs_the_corner():
+def test_on_a_phone_the_icon_is_finger_sized_and_sits_in_the_page_corner_without_covering_cards():
     phone = phone_rules(page(start(tour_done=True)))
-    assert ".st-key-save_corner { left: 0.6rem; bottom: 0.6rem; }" in phone
+    # Not pinned to the screen: on a phone a floating icon covered the evidence cards while scrolling.
+    assert ".st-key-save_corner { position: static; margin: 0.8rem 0 0; }" in phone
     assert '.st-key-save_corner [data-testid="stPopoverButton"] { width: 52px; height: 52px; }' in phone
 
 
@@ -60,4 +61,5 @@ def test_on_wider_screens_the_icon_moves_to_the_bottom_right_away_from_the_evide
     assert "@media (min-width: 641px) { .st-key-save_corner { left: auto; right: 1rem; } }" in css
     # The page ends with room to scroll the last card and the next-step button clear of the icon.
     assert '[data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 5.5rem;' in css
-    assert '[data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 5rem; }' in phone_rules(css)
+    # On a phone the icon sits at the end of the page instead, so no extra room is needed.
+    assert '[data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1.5rem; }' in phone_rules(css)

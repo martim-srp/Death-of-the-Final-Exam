@@ -224,9 +224,9 @@ header[data-testid="stHeader"] { display: none; }
 /* On wider screens the icon sits bottom-right, under the side panel, so it never covers an evidence card. */
 @media (min-width: 641px) { .st-key-save_corner { left: auto; right: 1rem; } }
 @media (max-width: 640px) {
-  [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 5rem; }
+  [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1.5rem; }  /* the save icon is in the page now, not floating */
   [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; top: 0.5rem !important; }
-  .st-key-save_corner { left: 0.6rem; bottom: 0.6rem; }
+  .st-key-save_corner { position: static; margin: 0.8rem 0 0; }  /* on a phone it sits in the page's bottom corner, never over a card */
   .st-key-save_corner [data-testid="stPopoverButton"] { width: 52px; height: 52px; }
   [data-testid="stButtonGroup"] button { min-height: 40px; }
   .st-key-mode_pick [data-testid="stElementContainer"], .st-key-mode_pick [data-testid="stButtonGroup"],
