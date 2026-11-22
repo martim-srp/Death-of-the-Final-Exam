@@ -60,7 +60,7 @@ and rattles them more. Tap the lightning in the status bar to see what a caught 
 means and the lies you have caught. Every new card shown raises a suspect's nerves; at full nerves
 they crack and let slip where the paper left from. A crack never shows who is guilty: the culprit
 cracks exactly like an innocent. Stuck on a locked card? A hint costs 15 minutes,
-and the magnifier shows your free leads. Cross off what it cannot be on the case sheet; the game
+and the notebook shows your free leads and the night so far. Cross off what it cannot be on the case sheet; the game
 crosses off what a wrong accusation has proved. When a card breaks someone's story, your detective notices: the odd detail is
 highlighted and a short thought hints at who to show it to.
 

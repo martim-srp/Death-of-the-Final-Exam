@@ -176,7 +176,6 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'<button class="stat zapstat" type="button" data-act="lies" title="Lies caught: what they mean">'
         f'{icon("bolt")}<b>{caught}</b><small>{"lie" if caught == 1 else "lies"} caught</small></button>'
         '<div class="tools">'
-        f'<button data-act="home" title="The case so far and your leads">{icon("search")}</button>'
         f'<button{notebook_glow} data-act="sheet" title="Notebook">{icon("sheet")}</button>'
         f'<button data-act="intro" title="Story and rules">{icon("book")}</button>'
         f'<button class="mute" type="button" title="Sound on or off">{icon("sound", "ic on")}{icon("mute", "ic off")}</button>'
@@ -870,5 +869,39 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @container (max-width: 300px) {
   .suspects { gap: 3px; }
   .sus .nm { font-size: 8px; letter-spacing: 0; padding: 10px 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+}
+/* Status bar layout, last so it wins over the older rules above. One grid, every control 40px tall,
+   even gaps. A wide board: one row, the stats on the left and the buttons on the right.
+   A medium board: the time and the stats on top, the buttons below. A phone: time, stats, buttons. */
+.hud { display: grid; align-items: center; column-gap: 22px; row-gap: 10px; padding: 10px 12px;
+  grid-template-columns: auto 150px auto auto minmax(0, 1fr); grid-template-areas: "me clock tries lies tools"; }
+.hud .me { grid-area: me; }
+.hud .clock { grid-area: clock; flex-direction: column; align-items: stretch; gap: 7px; min-width: 0; }
+.hud .clock .fuse { display: block; flex: none; width: 100%; height: 5px; min-width: 0; }
+.hud .stat:not(.zapstat) { grid-area: tries; }
+.hud .zapstat { grid-area: lies; margin: 0; padding: 4px 6px; }
+.hud .stat { gap: 7px; font-size: 16px; }
+.hud .stat small { font-size: 12.5px; }
+.tools { grid-area: tools; justify-self: end; gap: 6px; }
+.tools button { width: 40px; height: 40px; flex: 0 0 40px; }
+.tools .accuse { width: auto; flex: 0 0 auto; padding: 0 18px; }
+@container (max-width: 820px) {
+  .hud { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "me clock tries lies" "tools tools tools tools"; column-gap: 18px; }
+  .hud .clock .fuse { display: block; max-width: 220px; }
+  .tools { justify-self: stretch; }
+  .tools button { flex: 0 0 44px; height: 44px; }
+  .tools .accuse { flex: 1 1 auto; }
+}
+@container (max-width: 520px) {
+  .hud { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "me clock clock" "tries tries lies" "tools tools tools";
+    column-gap: 12px; padding: 10px; }
+  .hud .me img { width: 38px; height: 38px; }
+  .hud .clock b { font-size: 20px; }
+  .hud .clock .fuse { max-width: none; }
+  .hud .stat:not(.zapstat) { padding-left: 2px; }
+  .hud .zapstat { justify-self: end; }
+  .tools { gap: 6px; }
+  .tools button { flex: 1 1 0; min-width: 0; }
+  .tools .accuse { flex: 2.4 1 0; padding: 0 10px; }
 }
 """

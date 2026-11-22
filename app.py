@@ -157,7 +157,7 @@ def run(action, *args):
         names = ", ".join(engine.label(c["id"]) for c in unlocked)
         st.session_state.toast = (f"New evidence card unlocked: {names}", ":material/lock_open:")
     elif any(lead["clue"] not in known_leads for lead in engine.leads(game)):
-        st.session_state.toast = ("New lead. Tap the magnifier to see it.", ":material/search:")
+        st.session_state.toast = ("New lead. Open the notebook to see it.", ":material/search:")
     # Something happened in the building while the clock moved on: the latest event pops up.
     passed = engine.night_events(game, since=clock_before)
     if passed:
@@ -405,13 +405,8 @@ def draw_suspects(game):
 
 def panel_home(game):
     st.markdown('<div class="kicker">Your move</div>', unsafe_allow_html=True)
-    leads = engine.leads(game) + [{"clue": c, "text": t} for c, t in engine.hint_list(game).items()]
-    if leads:
-        st.markdown("### Leads")
-        st.markdown(
-            "".join(f'<div class="lead"><b>Evidence {engine.number(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
-            unsafe_allow_html=True,
-        )
+    if leads_html(game, "### Leads"):
+        pass  # the leads are the next move
     elif game.history:
         step = engine.next_step(game)
         if step:
@@ -424,11 +419,7 @@ def panel_home(game):
             f'<div><span>{board.icon("bolt")}</span>Show a suspect the evidence card that breaks their story</div></div>',
             unsafe_allow_html=True,
         )
-    night = engine.night_events(game)
-    if night:
-        st.markdown("### The night so far")
-        st.markdown("".join(f'<div class="lead"><b>{e["time"]}</b><span>{esc(e["text"])}</span></div>' for e in night),
-                    unsafe_allow_html=True)
+    night_html(game, "### The night so far")
     badges = engine.badge_list(game)
     if badges:
         st.markdown('<div class="medals">' + "".join(f'<span title="{esc(b["description"])}">{board.icon("medal")} {esc(b["title"])}</span>' for b in badges) + "</div>",
@@ -437,11 +428,37 @@ def panel_home(game):
         f"Searching costs {case['clock']['clue_cost']} min, a question {case['clock']['question_cost']} min. "
         "Your case saves itself. Tap the save icon in the corner to keep the link."
     )
-    with st.popover("New case", icon=":material/refresh:"):
-        st.write("Start over with a new culprit? This case will be lost.")
-        if st.button("Yes, new case", type="primary", key="new_case"):
-            new_case()
-            st.rerun()
+
+
+def leads_html(game, heading):
+    """The free leads and the hints bought for locked cards. Returns whether there were any."""
+    leads = engine.leads(game) + [{"clue": c, "text": t} for c, t in engine.hint_list(game).items()]
+    if leads:
+        st.markdown(heading)
+        st.markdown(
+            "".join(f'<div class="lead"><b>Evidence {engine.number(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
+            unsafe_allow_html=True,
+        )
+    return bool(leads)
+
+
+def night_html(game, heading):
+    """What has happened in the building so far tonight."""
+    night = engine.night_events(game)
+    if night:
+        st.markdown(heading)
+        st.markdown("".join(f'<div class="lead"><b>{e["time"]}</b><span>{esc(e["text"])}</span></div>' for e in night),
+                    unsafe_allow_html=True)
+
+
+def restart_corner():
+    """Restart case: a round icon above the save icon. It asks first, so a mis-tap never wipes a case."""
+    with st.container(key="restart_corner"):
+        with st.popover("Restart case", icon=":material/restart_alt:"):
+            st.write("Start over with a new culprit? This case will be lost.")
+            if st.button("Yes, new case", type="primary", key="new_case"):
+                new_case()
+                st.rerun()
 
 
 def save_corner():
@@ -844,6 +861,7 @@ def notebook_notes(game):
     if not opened and not game.history:
         st.caption("Empty for now. Everything you find and hear is written down here by itself.")
         return
+    leads_html(game, "#### Leads")
     st.markdown(f"#### Evidence · {len(opened)}")
     for clue_id in opened:
         name = board.CARD_NAMES.get(clue_id, case["clues"][clue_id]["title"])
@@ -868,6 +886,7 @@ def notebook_notes(game):
             rows.append(f'<div class="story-note"><b>{esc(board.short_name(brief["name"]))}</b>'
                         f'<span>“{esc(brief["cover"].strip())}”</span>{lies}</div>')  # whole story: a cut could hide the line a card breaks
         st.markdown("".join(rows), unsafe_allow_html=True)
+    night_html(game, "#### The night so far")
 
 
 def panel_sheet():
@@ -1227,9 +1246,10 @@ with side_column:
         else:
             panel_home(game)
     next_step_button(game)
+restart_corner()
 save_corner()
 if show_tour(game):
-    st.markdown('<style>.st-key-save_corner { visibility: hidden; }</style>', unsafe_allow_html=True)
+    st.markdown('<style>.st-key-save_corner, .st-key-restart_corner { visibility: hidden; }</style>', unsafe_allow_html=True)
 
 # Called last, so the story and rules open over the game on a new case.
 if not st.session_state.get("intro_done", bool(game.history)):

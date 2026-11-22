@@ -217,12 +217,27 @@ header[data-testid="stHeader"] { display: none; }
 .st-key-save_corner [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { font-size: 1.75rem; color: var(--gold); margin: 0; }
 .st-key-save_corner button:hover { border-color: #fff3d6; transform: translateY(-1px); }
 .st-key-save_corner button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+/* Restart case: the same round icon, stacked just above the save icon. */
+.st-key-restart_corner { position: fixed; left: 1rem; bottom: calc(1rem + 66px); z-index: 1000; width: auto !important; }
+.st-key-restart_corner [data-testid="stPopoverButton"] {
+  width: 56px; height: 56px; min-height: 0; padding: 0; border-radius: 50%; justify-content: center;
+  background: var(--paper); border: 2px solid var(--gold); color: var(--gold); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55); }
+.st-key-restart_corner [data-testid="stPopoverButton"] [data-testid="stMarkdownContainer"] {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.st-key-restart_corner [data-testid="stPopoverButton"] [aria-hidden="true"]:has([data-testid="stIconMaterial"]) { display: none; }
+.st-key-restart_corner [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { font-size: 1.75rem; color: var(--gold); margin: 0; }
+.st-key-restart_corner button:hover { border-color: #fff3d6; transform: translateY(-1px); }
+.st-key-restart_corner button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+@media (min-width: 641px) { .st-key-restart_corner { left: auto; right: 1rem; } }
 /* On wider screens the icon sits bottom-right, under the side panel, so it never covers an evidence card. */
 @media (min-width: 641px) { .st-key-save_corner { left: auto; right: 1rem; } }
 @media (max-width: 640px) {
   [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1.5rem; }  /* the save icon is in the page now, not floating */
   [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; top: 0.5rem !important; }
-  .st-key-save_corner { position: static; margin: 0.8rem 0 0; }  /* on a phone it sits in the page's bottom corner, never over a card */
+  .st-key-save_corner { position: static; margin: 0.8rem 0 0; }
+  .st-key-restart_corner { position: static; margin: 0.8rem 0 0; }  /* stacked above the save icon at the end of the page */
+  .st-key-restart_corner + [data-testid="stElementContainer"] .st-key-save_corner, .st-key-restart_corner ~ .st-key-save_corner { margin-top: 0.6rem; }
+  .st-key-restart_corner [data-testid="stPopoverButton"] { width: 52px; height: 52px; }  /* on a phone it sits in the page's bottom corner, never over a card */
   .st-key-save_corner [data-testid="stPopoverButton"] { width: 52px; height: 52px; }
   [data-testid="stButtonGroup"] button { min-height: 40px; }
   .st-key-mode_pick [data-testid="stElementContainer"], .st-key-mode_pick [data-testid="stButtonGroup"],
