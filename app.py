@@ -272,81 +272,9 @@ def set_focus(kind, value=None):
         st.session_state.suspect = value
 
 
-# ---- The first-minute tutorial ----------------------------------------------------------
-# A new player's first case, in any mode, starts with four guided steps: search the faculty
-# corridor, show it to the Companion, see the lie break, then meet the notebook. The same in
-# every variant, and a caught lie is not a confession, so it never points at the culprit.
-
-TUTORIAL_CLUE, TUTORIAL_SUSPECT = "L4", "companion"
-
-
-def tutorial_step(game):
-    """1: search Evidence 12. 2: show it to the Companion. 3: a lie is caught. 4: the notebook.
-    None once over or off."""
-    if not st.session_state.get("tutorial") or st.session_state.get("tutorial_done"):
-        return None
-    if game.status != "playing":  # every mode gets it, hard too: it teaches the game, not the case
-        return None
-    if game.contradictions:
-        return 4 if st.session_state.get("tutorial_notebook") else 3
-    if TUTORIAL_CLUE not in game.opened:
-        ready = engine.clue_state(game, TUTORIAL_CLUE) == "available" and engine.can_afford(game, case["clock"]["clue_cost"])
-        return 1 if ready else None
-    shown = any(e.get("action") == "present" and e.get("suspect") == TUTORIAL_SUSPECT and e.get("clue") == TUTORIAL_CLUE
-                for e in game.history)
-    return None if shown or not engine.can_afford(game, case["clock"]["question_cost"]) else 2
-
-
 def guide(game):
-    """The next step the board points at: the tutorial's while it runs, then the engine's."""
-    number = tutorial_step(game)
-    if number == 1:
-        return {"do": "search", "clue": TUTORIAL_CLUE, "text": "Tutorial 1 of 4 · Tap the glowing Faculty pin, then Search it."}
-    if number == 2:
-        return {"do": "show", "clue": TUTORIAL_CLUE, "suspect": TUTORIAL_SUSPECT,
-                "text": "Tutorial 2 of 4 · Show card 12 to the Companion. She says she never went to his office door."}
-    if number == 3:
-        return {"do": "show", "suspect": TUTORIAL_SUSPECT,
-                "text": "Tutorial 3 of 4 · Lie caught! Read it in her chat, then tap Got it."}
-    if number == 4:
-        return {"do": "sheet", "text": "Tutorial 4 of 4 · Open your notebook: the glowing button at the top."}
+    """The next step the board points at."""
     return engine.next_step(game)
-
-
-def end_tutorial():
-    st.session_state.tutorial_done = True
-
-
-def to_notebook_step():
-    st.session_state.tutorial_notebook = True
-
-
-COACH_LINES = {
-    1: ("search", "Start with a search", "Tap the glowing Faculty pin on the map, then Search it."),
-    2: ("card", "Show your evidence", "Show card 12 to the Companion. She says she never went to his office door."),
-    3: ("bolt", "Caught her lying! That is the game:", "find the card that breaks each story."),
-    4: ("sheet", "Your notebook", "writes down every card, every story and every lie for you. "
-                                  "Cross off what can't be: what is left is your accusation."),
-}
-
-
-def coach_card(game):
-    """The tutorial in the side panel: one card per step, with its step number, one line and its buttons inside."""
-    number = tutorial_step(game)
-    if not number:
-        return
-    icon, title, line = COACH_LINES[number]
-    with st.container(key="coach"):
-        st.markdown(f'<div class="coach"><small>Tutorial · {number} of 4</small>'
-                    f"<p>{board.icon(icon)} <b>{html.escape(title, quote=False)}</b> {html.escape(line, quote=False)}</p></div>", unsafe_allow_html=True)
-        with st.container(horizontal=True, key="coach_actions"):
-            if number == 3:
-                st.button("Got it", key="tutorial_ok", type="primary", icon=":material/check:", on_click=to_notebook_step)
-            elif number == 4:
-                st.button("Got it, let me play", key="tutorial_end", type="primary", icon=":material/check:",
-                          on_click=end_tutorial)
-            if number < 4:
-                st.button("Skip the tutorial", key="tutorial_skip", type="tertiary", on_click=end_tutorial)
 
 
 def go_next():
@@ -446,7 +374,7 @@ def draw_board(game, clues, fresh):
             calm=calm(), goal=(step or {}).get("do"),
         )
         # In calm mode the next step is one plain line, without the detective's musing.
-        + board.goal_html(step, None if calm() or tutorial_step(game) else engine.thought(game, step))
+        + board.goal_html(step, None if calm() else engine.thought(game, step))
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
@@ -466,11 +394,10 @@ def pending_sound():
 
 
 def show_tour(game):
-    """The screen tour, only when the player asks for it on the welcome screen.
-
-    A new case starts with the tutorial instead, so a new player never gets two walkthroughs at once."""
+    """The screen walkthrough: on its own after the welcome on a new case, in every mode, or when replayed."""
     return (game.status == "playing" and bool(st.session_state.get("intro_done"))
-            and bool(st.session_state.get("tour_active")))
+            and bool(st.session_state.get("tour_active")
+                     or (not st.session_state.get("tour_done") and not game.history)))
 
 
 def draw_suspects(game):
@@ -497,7 +424,7 @@ def panel_home(game):
         step = engine.next_step(game)
         if step:
             st.markdown(f"### {step['text']}")  # the next step, once the first move is made
-    elif not tutorial_step(game):  # the tutorial's coach card already says where to start
+    else:
         st.markdown("### Where to start")
         st.markdown(
             f'<div class="tips"><div><span>{board.icon("search")}</span>Tap a red evidence card or pin to search it</div>'
@@ -1206,13 +1133,8 @@ def pick_detective(avatar):
     st.session_state.player_avatar = avatar
 
 
-def finish_intro(start_tutorial=True):
+def finish_intro():
     st.session_state.intro_done = True
-    game = current_game()
-    if not game.history and "tutorial" not in st.session_state:
-        st.session_state.tutorial = start_tutorial  # the guided first minute teaches by doing
-        if not start_tutorial:
-            st.session_state.tutorial_done = True
 
 
 @st.dialog("The exam has leaked", width="large", on_dismiss=finish_intro)
@@ -1255,10 +1177,11 @@ def intro_dialog():
         if st.button("Start the investigation", type="primary", icon=":material/search:", use_container_width=True):
             finish_intro()
             st.rerun()
-        if st.button("Show the screen walkthrough", icon=":material/help_outline:", use_container_width=True):
-            st.session_state.tour_active = True
-            finish_intro(start_tutorial=False)
-            st.rerun()
+        if st.session_state.get("tour_done") or game.history:  # a new case shows it anyway
+            if st.button("Show the screen walkthrough", icon=":material/help_outline:", use_container_width=True):
+                st.session_state.tour_active = True
+                finish_intro()
+                st.rerun()
 
 
 # ---- The page ---------------------------------------------------------------------------
@@ -1295,7 +1218,6 @@ with board_column:
 with side_column:
     draw_suspects(game)
     with st.container(key="panel"):
-        coach_card(game)  # first in the panel, which every tap scrolls into view on phones
         kind, value = focus()
         if kind == "suspect" and value in case["suspects"]:
             panel_suspect(game, value)
