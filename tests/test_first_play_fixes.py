@@ -70,6 +70,6 @@ def test_the_confrontation_is_open_and_above_the_rank():
 
 
 def test_chosen_accusation_options_are_filled():
-    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    source = (ROOT / "assets" / "style.css").read_text(encoding="utf-8")  # the page's look moved out of app.py
     for column in ("who", "how", "where", "why"):
         assert f'.st-key-accuse_{column} button[aria-checked="true"]' in source  # how Streamlit marks a chosen pill
