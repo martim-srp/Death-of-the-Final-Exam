@@ -142,7 +142,7 @@ def parse_act(act, suspects, clues):
         return ("clue", value)
     if kind == "spot" and value in MAP_SPOTS:
         return ("spot", value)
-    if kind in ("home", "sheet", "lies", "accuse", "intro", "calm") and not value:
+    if kind in ("home", "sheet", "lies", "accuse", "intro", "tour_done", "calm") and not value:
         return (kind, None)
     return None
 
@@ -193,6 +193,23 @@ def calm_html(on):
 
     For players who find motion, blinking and sound distracting."""
     return '<i class="calm-on" hidden></i>' if on else ""
+
+
+def tutorial_html():
+    """A skippable tour of the screen, before the separate learn-by-playing tutorial."""
+    steps = [
+        ("map", "The map", "Tap a red pin to search a place. Searching costs 30 minutes."),
+        ("hand", "Your evidence", "Tap a card to read it. Red cards are ready to search; locked cards need more investigation."),
+        ("suspects", "The suspects", "Tap a face to ask questions or show evidence. A question or showing a card costs 10 minutes."),
+        ("accuse", "Accuse", "Choose who leaked the exam, how, where and why. At 09:00 you can only accuse. You have three tries."),
+    ]
+    items = "".join(
+        f'<div class="step" data-target="{target}" data-i="{i}" hidden><b>{esc(title)}</b><p>{esc(text)}</p></div>'
+        for i, (target, title, text) in enumerate(steps)
+    )
+    return ('<div class="tour" role="dialog" aria-label="Screen walkthrough" hidden>' + items
+            + '<div class="tour-nav"><button class="skip" type="button">Skip</button>'
+            '<span class="dots" aria-live="polite"></span><button class="next" type="button">Next</button></div></div>')
 
 
 # ---- Next step ---------------------------------------------------------------------
@@ -486,6 +503,67 @@ function revealPanel() {
     setTimeout(check, 150);
 }
 
+function tour(root, setTriggerValue) {
+    const box = root.querySelector(".tour");
+    if (!box) { root.dataset.tourStep = "0"; return; }
+    const steps = [...box.querySelectorAll(".step")];
+    let i = Math.min(Number(root.dataset.tourStep || 0), steps.length - 1);
+    const ring = document.createElement("div");
+    ring.className = "tour-ring";
+    ring.setAttribute("aria-hidden", "true");
+    root.appendChild(ring);
+    const target = (name) => {
+        if (name === "suspects") {
+            const row = document.querySelector(".st-key-suspect_row");
+            return row && row.offsetParent ? row : root.querySelector(".phone-only .suspects");
+        }
+        return root.querySelector({ map: ".map", hand: ".hand", accuse: ".accuse" }[name]);
+    };
+    const place = () => {
+        if (box.hidden || !box.isConnected || !ring.isConnected) return;
+        const el = target(steps[i].dataset.target);
+        if (el) {
+            const r = el.getBoundingClientRect();
+            Object.assign(ring.style, { left: r.left - 6 + "px", top: r.top - 6 + "px",
+                width: r.width + 12 + "px", height: r.height + 12 + "px" });
+            // Keep the explanation clear of the thing it is explaining.
+            const height = box.getBoundingClientRect().height;
+            const above = window.innerHeight - r.bottom < height + 24 && r.top > height + 24;
+            box.style.top = above ? "16px" : "auto";
+            box.style.bottom = above ? "auto" : "16px";
+        }
+        requestAnimationFrame(place);
+    };
+    const show = () => {
+        root.dataset.tourStep = String(i);
+        steps.forEach((step, n) => { step.hidden = n !== i; });
+        box.querySelector(".dots").textContent = `${i + 1} of ${steps.length}`;
+        box.querySelector(".next").textContent = i === steps.length - 1 ? "Play" : "Next";
+        const el = target(steps[i].dataset.target);
+        if (el) el.scrollIntoView({ block: "center", behavior: "instant" });
+        box.querySelector(".next").focus({ preventScroll: true });
+    };
+    const done = () => {
+        box.hidden = true;
+        ring.remove();
+        root.dataset.tourStep = "0";
+        setTriggerValue("act", "tour_done");
+    };
+    box.querySelector(".skip").addEventListener("click", done);
+    box.querySelector(".next").addEventListener("click", () => { if (i < steps.length - 1) { i += 1; show(); } else done(); });
+    box.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { e.preventDefault(); done(); }
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const next = box.querySelector(".next"), skip = box.querySelector(".skip");
+            (box.getRootNode().activeElement === next ? skip : next).focus({ preventScroll: true });
+        }
+    });
+    box.hidden = false;
+    show();
+    requestAnimationFrame(place);
+}
+
 export default function(component) {
     const { data, setTriggerValue, parentElement } = component;
     let root = parentElement.querySelector(".deck");
@@ -528,6 +606,7 @@ export default function(component) {
         el.addEventListener("click", go);
         el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
     });
+    tour(root, setTriggerValue);
 }
 """
 
@@ -538,6 +617,22 @@ BOARD_CSS = """
 .phone-only { display: none; }
 .deck { color: var(--ink); font-family: var(--serif); font-variant-numeric: lining-nums; user-select: none; container-type: inline-size; }
 button { font: inherit; color: inherit; cursor: pointer; }
+/* Optional screen walkthrough. The ring follows its target while the page scrolls. */
+.tour { position: fixed; z-index: 1000; left: 50%; bottom: 16px; transform: translateX(-50%);
+  box-sizing: border-box; width: min(360px, calc(100vw - 32px)); padding: 14px 16px;
+  background: #1c1613; color: var(--ink); border: 1px solid var(--gold); border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.7); }
+.tour[hidden], .tour .step[hidden] { display: none; }
+.tour .step b { font: 700 18px var(--serif); }
+.tour .step p { margin: 5px 0 12px; font: 15px/1.4 var(--prose); color: #cdbfa8; }
+.tour-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tour-nav button { min-height: 44px; border: 1px solid #8a7a6a; border-radius: 8px; background: transparent;
+  color: var(--ink); padding: 8px 16px; font: 600 14px var(--ui); }
+.tour-nav .next { background: var(--red); border-color: var(--red); color: #fff; }
+.tour-nav button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.tour .dots { font: 13px var(--ui); }
+.tour-ring { position: fixed; z-index: 999; box-sizing: border-box; border: 3px solid var(--gold); border-radius: 14px;
+  pointer-events: none; box-shadow: 0 0 0 9999px rgba(8,6,5,.6); }
 /* Status bar */
 .hud { display: flex; align-items: center; gap: 14px; padding: 8px 10px; background: linear-gradient(#241c18, #1a1411);
   border: 1px solid #3a2e28; border-radius: 14px; margin-bottom: 10px; }
