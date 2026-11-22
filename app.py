@@ -272,72 +272,9 @@ def set_focus(kind, value=None):
         st.session_state.suspect = value
 
 
-# ---- The first-minute tutorial ----------------------------------------------------------
-# A new player's first case (normal mode) starts with four guided steps: search the faculty
-# corridor, show it to the Companion, see the lie break, then meet the notebook. The same in
-# every variant, and a caught lie is not a confession, so it never points at the culprit.
-
-TUTORIAL_CLUE, TUTORIAL_SUSPECT = "L4", "companion"
-
-
-def tutorial_step(game):
-    """1: search Evidence 12. 2: show it to the Companion. 3: a lie is caught. 4: the notebook.
-    None once over or off."""
-    if not st.session_state.get("tutorial") or st.session_state.get("tutorial_done"):
-        return None
-    if engine.hard(game) or game.status != "playing":
-        return None
-    if game.contradictions:
-        return 4 if st.session_state.get("tutorial_notebook") else 3
-    if TUTORIAL_CLUE not in game.opened:
-        ready = engine.clue_state(game, TUTORIAL_CLUE) == "available" and engine.can_afford(game, case["clock"]["clue_cost"])
-        return 1 if ready else None
-    shown = any(e.get("action") == "present" and e.get("suspect") == TUTORIAL_SUSPECT and e.get("clue") == TUTORIAL_CLUE
-                for e in game.history)
-    return None if shown or not engine.can_afford(game, case["clock"]["question_cost"]) else 2
-
-
 def guide(game):
-    """The next step the board points at: the tutorial's while it runs, then the engine's."""
-    number = tutorial_step(game)
-    if number == 1:
-        return {"do": "search", "clue": TUTORIAL_CLUE, "text": "Tutorial 1 of 4 · Tap the glowing Faculty pin, then Search it."}
-    if number == 2:
-        return {"do": "show", "clue": TUTORIAL_CLUE, "suspect": TUTORIAL_SUSPECT,
-                "text": "Tutorial 2 of 4 · Show card 12 to the Companion. She says she never went to his office door."}
-    if number == 4:
-        return {"do": "sheet", "text": "Tutorial 4 of 4 · Open your notebook: the glowing button at the top."}
+    """The next step the board points at."""
     return engine.next_step(game)
-
-
-def end_tutorial():
-    st.session_state.tutorial_done = True
-
-
-def to_notebook_step():
-    st.session_state.tutorial_notebook = True
-
-
-def coach_card(game):
-    """The tutorial in the side panel: a skip link while it runs (the guide strip says what to tap),
-    then one line once the lie is caught, then what the notebook is for."""
-    number = tutorial_step(game)
-    if not number:
-        return
-    with st.container(key="coach"):
-        if number == 3:
-            st.markdown('<div class="coach"><p><b>Caught her lying! That is the game:</b> '
-                        "find the card that breaks each story.</p></div>", unsafe_allow_html=True)
-            st.button("Got it", key="tutorial_ok", type="primary", icon=":material/check:",
-                      on_click=to_notebook_step, use_container_width=True)
-        elif number == 4:
-            st.markdown(f'<div class="coach"><p>{board.icon("sheet")} <b>Your notebook</b> writes down every card, '
-                        "every story and every lie for you. Cross off what can't be: what is left is your accusation.</p></div>",
-                        unsafe_allow_html=True)
-            st.button("Got it, let me play", key="tutorial_end", type="primary", icon=":material/check:",
-                      on_click=end_tutorial, use_container_width=True)
-        else:
-            st.button("Skip the tutorial", key="tutorial_skip", type="tertiary", on_click=end_tutorial)
 
 
 def go_next():
@@ -437,7 +374,7 @@ def draw_board(game, clues, fresh):
             calm=calm(), goal=(step or {}).get("do"),
         )
         # In calm mode the next step is one plain line, without the detective's musing.
-        + board.goal_html(step, None if calm() or tutorial_step(game) in (1, 2, 4) else engine.thought(game, step))
+        + board.goal_html(step, None if calm() else engine.thought(game, step))
         + '<div class="phone-only">' + board.suspects_html(suspect_status(game), focus()[1] if kind == "suspect" else None, goal) + "</div>"
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
@@ -457,10 +394,10 @@ def pending_sound():
 
 
 def show_tour(game):
-    """Show the optional screen tour after the welcome, or when explicitly replayed."""
+    """The screen walkthrough: on its own after the welcome on a new case, in every mode, or when replayed."""
     return (game.status == "playing" and bool(st.session_state.get("intro_done"))
-            and (st.session_state.get("tour_active")
-                 or (not st.session_state.get("tour_done") and not game.history)))
+            and bool(st.session_state.get("tour_active")
+                     or (not st.session_state.get("tour_done") and not game.history)))
 
 
 def draw_suspects(game):
@@ -487,7 +424,7 @@ def panel_home(game):
         step = engine.next_step(game)
         if step:
             st.markdown(f"### {step['text']}")  # the next step, once the first move is made
-    elif not tutorial_step(game):  # the tutorial's coach card already says where to start
+    else:
         st.markdown("### Where to start")
         st.markdown(
             f'<div class="tips"><div><span>{board.icon("search")}</span>Tap a red evidence card or pin to search it</div>'
@@ -742,7 +679,8 @@ def panel_suspect(game, suspect):
         if log:
             st.markdown(chat_html(log, suspect), unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="empty-chat">Ask {esc(brief["name"])} something, or show them an evidence card.</div>',
+            st.markdown(f'<div class="empty-chat">Ask {esc(brief["name"])} something, or show them an evidence card. '
+                        'Quote a time or a card number from your evidence in your own question to press them.</div>',
                         unsafe_allow_html=True)
     cost = case["clock"]["question_cost"]
     step = guide(game) or {}
@@ -757,7 +695,7 @@ def panel_suspect(game, suspect):
              key="ask_topic", on_change=ask_topic)
     opened = [c["id"] for c in engine.clue_list(game) if c["state"] == "open"]
     if opened:
-        shown = {e["clue"] for e in game.history if e.get("action") == "present" and e.get("suspect") == suspect}
+        shown = {e["clue"] for e in game.history if e.get("action") in ("present", "press") and e.get("suspect") == suspect}
         show_tip = tip.get("clue") if tip.get("do") == "show" else None
         st.pills(f"Show an evidence card · {cost} min", opened, format_func=lambda i: card_label(i, shown, show_tip),
                  key="show_clue", on_change=show_evidence, help="Show them evidence. The right card breaks a lie.")
@@ -772,11 +710,17 @@ def panel_suspect(game, suspect):
             result = run(ask_and_note_fallback)
         if result:
             answer, fallback = result
-            sound("tick")
+            caught = answer.get("contradictions", [])
+            sound("stamp" if caught or answer.get("cracked") else "tick")
             say(suspect, {"who": "you", "text": HIDDEN_QUESTION if answer.get("blocked") else question})
-            say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback})
+            if answer.get("pressed"):
+                say(suspect, {"who": "you", "text": f"You press them with a detail from {engine.label(answer['pressed'])}.", "act": True})
+            say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback,
+                          "caught": caught})
+            if answer.get("cracked"):
+                say(suspect, {"who": "them", "text": answer["cracked"]["line"], "cracked": answer["cracked"]})
             if not answer.get("blocked"):
-                think(suspect, engine.reaction(current_game(), unlocked=bool(answer["unlocked"])))
+                think(suspect, engine.reaction(current_game(), caught=bool(caught), unlocked=bool(answer["unlocked"])))
         st.rerun()
 
 
@@ -878,7 +822,7 @@ def panel_clue(game, clue_id, fresh):
             st.caption(AI_TRAP_NOTE)
     if engine.out_of_time(game):
         st.caption(OUT_OF_TIME)
-    shown = {e["suspect"] for e in game.history if e.get("action") == "present" and e.get("clue") == clue_id}
+    shown = {e["suspect"] for e in game.history if e.get("action") in ("present", "press") and e.get("clue") == clue_id}
     st.pills(
         f"Show this card to · {case['clock']['question_cost']} min", list(case["suspects"]),
         format_func=lambda s: ("✓ " if s in shown else "") + board.short_name(case["suspects"][s]["name"]),
@@ -1163,8 +1107,8 @@ HOW_TO_PLAY = (
 # The rules in one box: how time works, then what each action costs.
 CLOCK_RULE = (
     f'<div class="clock-rule"><b class="headline">Every action costs time. Use your {HOURS} hours well.</b>'
-    "<span>The clock runs from midnight to 09:00, and every search and every question moves it forward. "
-    "At 09:00 you can no longer search or ask: you can only accuse.</span>" + HOW_TO_PLAY + "</div>"
+    "<span>Your clock starts at midnight, and every search and every question moves it forward. "
+    "When the time runs out, you can only accuse.</span>" + HOW_TO_PLAY + "</div>"
 )
 
 
@@ -1191,9 +1135,6 @@ def pick_detective(avatar):
 
 def finish_intro():
     st.session_state.intro_done = True
-    game = current_game()
-    if not game.history and not engine.hard(game) and "tutorial" not in st.session_state:
-        st.session_state.tutorial = True  # the guided first minute teaches by doing
 
 
 @st.dialog("The exam has leaked", width="large", on_dismiss=finish_intro)
@@ -1236,7 +1177,7 @@ def intro_dialog():
         if st.button("Start the investigation", type="primary", icon=":material/search:", use_container_width=True):
             finish_intro()
             st.rerun()
-        if st.session_state.get("tour_done") or game.history:
+        if st.session_state.get("tour_done") or game.history:  # a new case shows it anyway
             if st.button("Show the screen walkthrough", icon=":material/help_outline:", use_container_width=True):
                 st.session_state.tour_active = True
                 finish_intro()
@@ -1277,7 +1218,6 @@ with board_column:
 with side_column:
     draw_suspects(game)
     with st.container(key="panel"):
-        coach_card(game)  # first in the panel, which every tap scrolls into view on phones
         kind, value = focus()
         if kind == "suspect" and value in case["suspects"]:
             panel_suspect(game, value)

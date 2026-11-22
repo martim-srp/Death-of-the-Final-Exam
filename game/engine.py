@@ -21,6 +21,11 @@ HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
 # Nerves (Engine.nerves): where every suspect starts, what each different card shown
 # and each lie caught adds, and the top, where they crack.
 NERVES_START, NERVES_PER_CARD, NERVES_PER_LIE, NERVES_MAX = 10, 30, 20, 100
+# Pressing a suspect (Engine.press): catching a lie by quoting a card's detail in a typed
+# question rattles them this much more than sliding the card across the table.
+NERVES_PER_PRESS = 15
+# How the AI is told a suspect's nerves (Engine.character_brief): (lowest nerves, word), most first.
+COMPOSURE = ((85, "close to breaking"), (60, "rattled"), (35, "uneasy"), (0, "calm"))
 ACCUSE_NOW_MINUTES = 30  # with this little time left, the next step is to accuse
 # Questions the guide suggests once every card is found, before the notebook. Each answers a
 # "why" that no evidence card holds (in one variant the Teaching Assistant's motive is only told
@@ -117,6 +122,13 @@ def looks_like_secret(text, known_words=frozenset()):
     return any(_looks_like_password(word, known_words) for word in _words(text))
 
 
+def _quotes(question, detail):
+    """True if a casefolded question contains the detail as a whole word or number:
+    "card 2291" quotes 2291, but "22910" and "12291" do not."""
+    detail = detail.casefold().strip()
+    return bool(detail) and re.search(rf"(?<!\w){re.escape(detail)}(?!\w)", question) is not None
+
+
 def case_vocabulary(case):
     """Every word that appears in the case file's text, lowercased.
 
@@ -165,6 +177,7 @@ class Game:
     contradictions: list = field(default_factory=list)  # [suspect, claim_id], in the order caught
     hints: list = field(default_factory=list)  # clue ids the player bought a hint for
     cracked: list = field(default_factory=list)  # suspects whose nerves broke, in order
+    pressed: list = field(default_factory=list)  # [suspect, clue_id]: lies caught by quoting a card in a typed question
     mode: str = "normal"  # "normal" or "hard": hard mode gives no tips (see Engine.set_mode)
 
     def to_dict(self):
@@ -391,6 +404,38 @@ class Engine:
         if self.clue_state(game, clue_id) != "open":
             raise GameError("You can only show a suspect a clue you have opened.")
         self._spend(game, self.clock_rules["question_cost"])
+        return self._put_to(game, suspect, clue_id, "present")
+
+    def press(self, game, suspect, text):
+        """Press a suspect with a detail from an opened card, quoted in a typed question.
+
+        If the question quotes a detail (data/hunches.json "press") of an opened card that
+        breaks one of this suspect's claims not caught yet, it counts as showing them that
+        card: the lie is caught, they react, and their nerves rise more than with the card
+        alone. Free: the typed question it rides on already cost its minutes (Engine.ask).
+        The rule is the same for every suspect and every claim, so it never shows who is
+        guilty, and it needs an opened card, so it reveals nothing the player could not see.
+        Returns the same result as present() plus "clue", or None if nothing was pressed.
+        """
+        self._check_suspect(game, suspect)
+        if game.status != "playing":
+            return None
+        question = text.casefold()
+        for claim in self._suspects(game)[suspect].get("claims", []):
+            if [suspect, claim["id"]] in game.contradictions:
+                continue
+            for clue_id in claim["broken_by"]:
+                if clue_id not in game.opened:
+                    continue
+                details = self.hunch_lines.get(f"{clue_id}|{suspect}.{claim['id']}", {}).get("press", [])
+                if any(_quotes(question, self._fill(game, detail)) for detail in details):
+                    if [suspect, clue_id] not in game.pressed:
+                        game.pressed.append([suspect, clue_id])
+                    return {**self._put_to(game, suspect, clue_id, "press"), "clue": clue_id}
+        return None
+
+    def _put_to(self, game, suspect, clue_id, action):
+        """Put an opened card in front of a suspect: unlocks, reaction, lies caught, nerves."""
         if [suspect, clue_id] not in game.presented:
             game.presented.append([suspect, clue_id])
         unlocked = []
@@ -402,7 +447,7 @@ class Engine:
         if suspect == "professor" and clue_id == "D8":
             self._award(game, "honey_trap")
         caught = self._catch_contradictions(game, suspect, clue_id)
-        event = {"action": "present", "suspect": suspect, "clue": clue_id, "clock": game.clock}
+        event = {"action": action, "suspect": suspect, "clue": clue_id, "clock": game.clock}
         if caught:
             event["contradictions"] = [item["claim"] for item in caught]
         cracked = self._crack(game, suspect)
@@ -451,14 +496,16 @@ class Engine:
 
     def nerves(self, game, suspect):
         """How rattled a suspect is, 0 to 100: up with each different card shown to them,
-        more with each of their lies caught. Showing the same card twice adds nothing.
+        more with each of their lies caught, and more again for a lie caught by pressing them
+        with a quoted detail (Engine.press). Showing the same card twice adds nothing.
 
         It comes only from what the player has done, never from who is guilty.
         """
         self._check_suspect(game, suspect)
         shown = sum(1 for presented_to, _clue in game.presented if presented_to == suspect)
         caught = sum(1 for s, _claim in game.contradictions if s == suspect)
-        return min(NERVES_MAX, NERVES_START + NERVES_PER_CARD * shown + NERVES_PER_LIE * caught)
+        pressed = sum(1 for s, _clue in game.pressed if s == suspect)
+        return min(NERVES_MAX, NERVES_START + NERVES_PER_CARD * shown + NERVES_PER_LIE * caught + NERVES_PER_PRESS * pressed)
 
     def _crack(self, game, suspect):
         """At full nerves a suspect breaks, once. Returns what they blurt out, or None.
@@ -895,7 +942,10 @@ class Engine:
         the reveals the player has earned by presenting clues to them. Once they
         have cracked, "broke_down" holds what they blurted out (one part of the
         answer the player has already heard), so the AI does not deny it later;
-        otherwise it is None. It never contains the rest of the solution or the
+        otherwise it is None. So the suspect can react to the interrogation so
+        far, it also holds the titles of the cards shown to them ("evidence_shown"),
+        their own statements the player has proven false ("lies_caught") and one word
+        for their nerves ("composure"): all things the player has already seen. It never contains the rest of the solution or the
         text of any clue.
         """
         self._check_suspect(game, suspect)
@@ -914,4 +964,12 @@ class Engine:
             "earned_reveals": earned,
             "broke_down": self._crack_line(game, suspect),
             "asks_password": bool(s.get("asks_password")),
+            "evidence_shown": [
+                self.case["clues"][clue_id]["title"] for presented_to, clue_id in game.presented if presented_to == suspect
+            ],
+            "lies_caught": [
+                self._fill(game, claim["text"]) for claim in s.get("claims", [])
+                if [suspect, claim["id"]] in game.contradictions
+            ],
+            "composure": next(word for floor, word in COMPOSURE if self.nerves(game, suspect) >= floor),
         }

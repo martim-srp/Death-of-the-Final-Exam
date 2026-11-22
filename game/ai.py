@@ -46,10 +46,14 @@ def scripted_reply(brief, topic):
     return brief["topic_lines"].get(topic) or DODGES.get(topic) or brief["cover"]
 
 
-def system_prompt(brief, topics):
+def system_prompt(brief, topics, pressed=False):
     character = {
         key: brief[key]
-        for key in ("name", "persona", "mood", "cover", "topic_lines", "earned_reveals", "broke_down")
+        for key in (
+            "name", "persona", "mood", "cover", "topic_lines", "earned_reveals", "broke_down",
+            "evidence_shown", "lies_caught", "composure",
+        )
+        if key in brief
     }
     instructions = (
         "Play this suspect in a fictional investigation. Stay in character and "
@@ -60,6 +64,19 @@ def system_prompt(brief, topics):
         "Return only a JSON object with string fields reply and topic. "
         f"The allowed topics are {json.dumps(topics)}. Pick other if none fits. "
     )
+    instructions += (
+        "evidence_shown lists the evidence the detective has put in front of you; you may "
+        "refer to it by name, but say nothing about what it shows beyond earned_reveals. "
+        "lies_caught are your own statements the detective has proven false: never repeat "
+        "them as true; dodge, bristle or fall back on earned_reveals. Let your tone follow "
+        "composure: calm is assured, uneasy is guarded, rattled is defensive and short, "
+        "close to breaking is shaky and pleading. "
+    )
+    if pressed:
+        instructions += (
+            "The detective has just caught you out with a detail from the evidence. React to "
+            "being caught, in your own words, keeping to earned_reveals. "
+        )
     if brief.get("broke_down"):
         instructions += (
             "Under pressure you already blurted out what is in broke_down. Never deny it "
@@ -149,6 +166,10 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
     if game.status != "playing" or engine.time_left(game) < engine.clock_rules["question_cost"]:
         return engine.ask(game, suspect, "other")  # The engine raises the rule error.
 
+    # A question that quotes a detail of an opened card catches the lie it breaks, as if the
+    # card were shown. The engine decides this from the typed text, before the AI is called,
+    # so the suspect's brief already holds the lie and their reaction.
+    pressed = engine.press(game, suspect, text)
     brief = engine.character_brief(game, suspect)
     topics = engine.case["topics"]
     fallback_topic = _scripted_topic(text, topics)
@@ -176,7 +197,7 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
         else:
             attempted = True
             try:
-                answer = _parse_answer(complete(system_prompt(brief, topics), text), topics)
+                answer = _parse_answer(complete(system_prompt(brief, topics, bool(pressed)), text), topics)
             except Exception as error:
                 fallback = "failed"
                 status = getattr(error, "status_code", None)
@@ -198,5 +219,12 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
     if reply is None:
         game.history[-1]["fallback"] = fallback
     if reply is None:
-        reply = scripted_reply(brief, topic)
-    return {"reply": reply, "unlocked": result["unlocked"]}
+        reply = (pressed and pressed["reveal"]) or scripted_reply(brief, topic)
+    answer = {"reply": reply, "unlocked": (pressed["unlocked"] if pressed else []) + result["unlocked"]}
+    if pressed:
+        answer["pressed"] = pressed["clue"]
+        if pressed.get("contradictions"):
+            answer["contradictions"] = pressed["contradictions"]
+        if pressed.get("cracked"):
+            answer["cracked"] = pressed["cracked"]
+    return answer

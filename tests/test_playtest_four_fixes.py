@@ -24,8 +24,11 @@ REASONS = json.loads((Path(__file__).resolve().parent.parent / "data" / "ruleout
 
 def test_time_left_sits_under_the_clock_where_no_screen_hides_it():
     hud = board.hud_html("00:40", 500, 540, 3, 3, 0, None, "Detective")
-    assert '<span class="time"><b>00:40</b><span class="left">8h 20m left</span></span>' in hud
-    assert '<span class="left">9h 00m left</span>' in board_markup(start())
+    # One countdown on screen; the night's hour only on hover (Lúcia: show one or the other, not both).
+    assert '<span class="time"><b>8h 20m left</b></span>' in hud
+    assert 'title="Night clock: 00:40. The case closes at 09:00."' in hud
+    assert "<b>00:40</b>" not in hud
+    assert '<b>9h 00m left</b>' in board_markup(start())
     for css in board.BOARD_CSS.split("@container")[1:] + board.BOARD_CSS.split("@media")[1:]:
         block = css.split("}\n}")[0]
         assert ".clock .left { display: none" not in block and ".clock .time { display: none" not in block
@@ -102,3 +105,11 @@ def test_rule_out_reasons_state_only_what_the_card_shows():
     assert engine.rule_out_reason(game, "D5", "why") == "The paper was posted free to all 212 students in the class group."
     for line in (engine.rule_out_reason(game, "D3", "why"), engine.rule_out_reason(game, "D5", "why")):
         assert "nobody" not in line.lower()
+
+
+def test_the_start_screen_says_09_00_once():
+    at = start(intro_done=False)
+    text = "\n".join(m.value for m in at.markdown)
+    welcome = text[text.find('class="story"'):text.find("Who's who")]
+    assert welcome.count("09:00") == 1  # in the story; the time box says it without the hour
+    assert "When the time runs out, you can only accuse." in welcome
