@@ -496,7 +496,7 @@ def test_showing_the_same_card_again_does_not_catch_twice():
     assert len(at.session_state["game"]["contradictions"]) == 1
 
 
-# ---- Sound, and no separate tour ---------------------------------------------------------------
+# ---- Sound and the optional screen tour --------------------------------------------------------
 
 
 def test_opening_a_clue_plays_one_flip_sound():
@@ -524,9 +524,8 @@ def test_only_known_sounds_are_drawn():
     assert board.sfx_html("<script>", 1) == ""
 
 
-def test_there_is_no_separate_tour():
-    # The guided first minute (tutorial) teaches by doing and the start screen states the rules,
-    # so the old four-step pop-up tour, which repeated both, was removed.
-    for at in (start(), start(game=opened_game("D1")), start(intro_done=False)):
+def test_the_screen_tour_waits_for_the_intro_and_does_not_interrupt_a_resumed_case():
+    for at in (start(game=opened_game("D1")), start(intro_done=False), start(tour_done=True)):
         assert 'class="tour"' not in board_markup(at)
-    assert board.parse_act("tour_done", CASE["suspects"], CASE["clues"]) is None
+    assert board.parse_act("tour_done", CASE["suspects"], CASE["clues"]) == ("tour_done", None)
+    assert board.parse_act("tour_done:unexpected", CASE["suspects"], CASE["clues"]) is None
