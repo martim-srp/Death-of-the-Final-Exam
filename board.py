@@ -680,7 +680,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pin:hover .ring, .pin:focus .ring { stroke-width: 10; }
 .pin:focus { outline: none; }
 .pin .glyph { font: bold 34px var(--prose); text-anchor: middle; }
-.pin .glyph.small { font-size: 26px; }
 .pin .tag { font: 700 19px var(--serif); text-anchor: middle; fill: var(--ink); paint-order: stroke; stroke: #14100e; stroke-width: 6px; }
 .pin.fresh { animation: pop .7s ease-out; }
 .det { pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,.6)); }

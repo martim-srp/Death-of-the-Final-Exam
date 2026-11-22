@@ -4,9 +4,7 @@ It sums up the player's investigation and outcome. A cold case stays unsolved in
 the story, with the correct answer shown separately for the player after it ends.
 """
 
-from game.engine import GameError
-
-COLUMNS = ("who", "how", "where", "why")
+from game.engine import COLUMNS, GameError
 
 
 def closing_scene(engine, game):
