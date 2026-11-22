@@ -146,6 +146,6 @@ def test_evidence_quotes_wrap_both_thoughts_and_hunches(clue_id):
     hunches = engine.hunches(game, clue_id)
     lines = [item["line"] for item in hunches] or [engine.musing(game, clue_id)]
     at = start(game=game, focus=("clue", clue_id))
-    markup = html.unescape(page(at))
+    markup = html.unescape(page(at).replace('<strong class="kw">', "").replace("</strong>", ""))  # key words are bold
     for line in lines:
         assert f'<p>"{line}"</p>' in markup

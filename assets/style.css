@@ -258,3 +258,9 @@ header[data-testid="stHeader"] { display: none; }
   .finale h1 { font-size: 2rem; }
   .st-key-pick_buttons button { width: 110px; height: 138px; }
 }
+/* Key-word emphasis for easier scanning: the people, places, times and objects a sentence turns on, in bold.
+   Weight only, no background, so it never competes with the gold highlighter (<mark>) on a hunch's detail. */
+.kw { font-weight: 700; font-style: inherit; color: inherit; }
+.evidence .kw, .bubble .kw, .story-note .kw, .lead .kw, .hunch .kw { color: #fff4dc; }
+.keyfact { font-weight: 400; }  /* lighter body on the paper slip, so its key words stand out */
+.keyfact .kw { color: #8a2a1f; }

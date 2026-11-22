@@ -54,7 +54,7 @@ def test_an_open_card_shows_its_fact_first():
     engine = Engine()
     game = engine.new_game(seed=1, variant="A")
     engine.open_clue(game, "L4")
-    text = page(start(game=game, focus=("clue", "L4")))
+    text = page(start(game=game, focus=("clue", "L4"))).replace('<strong class="kw">', "").replace("</strong>", "")  # key words are bold
     assert '<div class="keyfact"><small>In short</small>At 19:40 a well-dressed woman' in text
     assert text.index('class="keyfact"') < text.index('class="evidence"')
 

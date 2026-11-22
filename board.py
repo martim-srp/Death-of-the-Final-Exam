@@ -10,6 +10,7 @@ Python as an "act" string, such as "suspect:ta", "clue:D2", "place:L4" or "accus
 
 import base64
 import html
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -124,6 +125,68 @@ def esc(text):
     return html.escape(str(text), quote=True)
 
 
+# ---- Key-word emphasis --------------------------------------------------------------
+# The game is a lot of reading. To make it easier to scan, the words a sentence turns on are
+# shown in bold: people, places, times, card numbers and the objects the case is about.
+# This is done here, when the HTML is built, so the story data stays plain text: nothing extra
+# ever reaches the AI, and every piece is escaped before it is wrapped.
+
+KEY_TERMS = re.compile(
+    r"\b(?:"
+    # people
+    r"Class Representative|Teaching Assistant|Exchange Student|Professor|Companion|Dean|Kiosk Owner|"
+    r"Cashier|Cleaner|Receptionist|bartender|(?-i:TA)|"
+    # places
+    r"library gate|library printer|library|LIB-1|residence|cafeteria|beach caf\u00e9|faculty lobby|faculty corridor|"
+    r"faculty dinner|exam hall|Chiado|Lisbon|"
+    # the objects the case turns on
+    r"Project Lantern|Meridian Silicon|INV_Final_v3\.pdf|version [34]|v[34]|Question 5|print job|job \d+|"
+    r"prepaid SIMs?|invite link|staff card|room card|student card|(?:STAFF|STU)-\w+|fellowship|annulled|"
+    r"Article 14|white text|visitors' book|lanyard|red pins?|evidence cards?|notebook|three tries|"
+    # numbers that matter: times, durations, money, grades
+    r"\d{1,2}:\d{2}|\d+ minutes|[\d,]+ euros|\d{1,2}\.\d"
+    r")(?![\w-])",
+    re.IGNORECASE,
+)
+SENTENCE_END = re.compile(r"[.!?][\"\u201d']?\s")
+EMPHASIS_PER_SENTENCE = 3
+
+
+def emphasize(text, marks=()):
+    """Escape story text and put its key words in bold, at most three per sentence.
+
+    A word is bold only the first time it appears in the text, so a paragraph never turns
+    into a wall of bold. `marks` are exact details to highlight with <mark> instead (the
+    detail a hunch points at); they win over a key word in the same place.
+    """
+    text = str(text)
+    spans = []
+    for detail in marks:
+        start = text.find(detail) if detail else -1
+        if start >= 0:
+            spans.append((start, start + len(detail), "mark"))
+    ends = [m.end() for m in SENTENCE_END.finditer(text)]
+    seen, used, sentence = set(), 0, 0
+    for match in KEY_TERMS.finditer(text):
+        start, end = match.span()
+        if any(start < e and s < end for s, e, _ in spans):
+            continue
+        while sentence < len(ends) and ends[sentence] <= start:
+            sentence, used = sentence + 1, 0
+        word = match.group().lower()
+        if word in seen or used >= EMPHASIS_PER_SENTENCE:
+            continue
+        seen.add(word)
+        used += 1
+        spans.append((start, end, "strong"))
+    out, at = [], 0
+    for start, end, tag in sorted(spans):
+        cls = ' class="kw"' if tag == "strong" else ""
+        out.append(esc(text[at:start]) + f"<{tag}{cls}>{esc(text[start:end])}</{tag}>")
+        at = end
+    return "".join(out) + esc(text[at:])
+
+
 def short_name(name):
     return name.removeprefix("The ")
 
@@ -211,7 +274,7 @@ def tutorial_html():
         ("accuse", "Accuse", "Choose who leaked the exam, how, where and why. At 09:00 you can only accuse. You have three tries."),
     ]
     items = "".join(
-        f'<div class="step" data-target="{target}" data-i="{i}" hidden><b>{esc(title)}</b><p>{esc(text)}</p></div>'
+        f'<div class="step" data-target="{target}" data-i="{i}" hidden><b>{esc(title)}</b><p>{emphasize(text)}</p></div>'
         for i, (target, title, text) in enumerate(steps)
     )
     return ('<div class="tour" role="dialog" aria-label="Screen walkthrough" hidden>' + items
@@ -248,9 +311,9 @@ def goal_html(step, thought=None):
     if not step:
         return ""
     if thought and thought != step["text"]:
-        text = f'<small class="plain">{esc(step["text"])}</small><em>{esc(thought)}</em>'
+        text = f'<small class="plain">{esc(step["text"])}</small><em>{emphasize(thought)}</em>'
     else:
-        text = f'<small>Next step</small>{esc(step["text"])}'
+        text = f'<small>Next step</small>{emphasize(step["text"])}'
     return (
         f'<button class="goal-bar" data-act="next:{goal_act(step)}"><span class="gi">{icon(GOAL_ICON[step["do"]])}</span>'
         f'<span class="gt">{text}</span><span class="go">›</span></button>'
@@ -772,6 +835,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .goal-bar .go { font-size: 26px; color: var(--gold); flex: 0 0 auto; }
 .goal-bar small.plain { text-transform: none; letter-spacing: .04em; font-size: 11px; margin-bottom: 2px; }
 .goal-bar em { display: block; font-style: italic; line-height: 1.3; }
+.kw { font-weight: 700; font-style: inherit; color: inherit; }  /* key-word emphasis */
+.tour .step .kw { color: #fff4dc; }
 @keyframes rise-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .card.goal, .sus.goal, .tools button.goal { border-color: var(--gold); animation: beacon-box 1.8s ease-in-out infinite; }
 @keyframes beacon-box { 50% { box-shadow: 0 0 0 4px rgba(232,194,122,.5), 0 0 18px rgba(232,194,122,.45); } }
