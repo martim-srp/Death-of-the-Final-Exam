@@ -296,10 +296,12 @@ def test_the_notebook_keeps_each_suspects_story_and_the_lies_caught():
     assert 'class="lie-note"' in text and "broken by evidence 12" in text
 
 
-def test_the_notebook_lists_what_has_been_ruled_out():
+def test_what_is_ruled_out_is_shown_once_on_the_cross_off_tab():
     engine = Engine()
     game = engine.new_game(seed=1, variant="A")
     answer = CASE["variants"]["A"]["solution"]
     engine.accuse(game, wrong_who(), answer["how"], answer["where"], answer["why"])
     at = start(game=game, focus=("sheet", None))
-    assert "Ruled out · 1" in page(at)
+    text = page(at)
+    assert "Ruled out ·" not in text  # no second list on the Notes tab
+    assert text.count("ruled out by your accusation") == 1

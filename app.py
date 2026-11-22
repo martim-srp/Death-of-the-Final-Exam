@@ -403,10 +403,6 @@ header[data-testid="stHeader"] { display: none; }
 .all-asked { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.6rem; padding: 0.4rem 0.6rem; border: 1px solid #e8c27a;
   border-radius: 8px; color: #e8c27a; font-size: 0.85rem; }
 .all-asked .ic { width: 16px; height: 16px; }
-.recap { display: grid; gap: 0.3rem; margin: 0 0 0.8rem; }
-.recap div { display: flex; align-items: center; gap: 0.55rem; font-size: 0.9rem; }
-.recap .ic { width: 18px; height: 18px; color: #e8c27a; }
-.recap b { font-family: var(--label); font-weight: 400; color: #efe6d8; }
 .who-head { padding-bottom: 0.9rem; display: flex; gap: 0.8rem; align-items: center; }
 .st-key-chat_log { margin-top: 0.5rem; }
 .who-head img { width: 64px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #c0392b; }
@@ -710,30 +706,11 @@ def draw_suspects(game):
          on_act_change=functools.partial(on_act, "suspect_row"))
 
 
-# ---- Panel: home (leads, lies caught) ---------------------------------------------------
-
-
-def recap_html(game):
-    """The case so far, in four short lines: for a player coming back after a break."""
-    clues = engine.clue_list(game)
-    found = sum(c["state"] == "open" for c in clues)
-    done = sum(engine.suspect_progress(game, s)["done"] for s in case["suspects"])
-    lies = len(game.contradictions)
-    out = len(engine.eliminated(game))
-    rows = [
-        ("card", f"<b>{found} of {len(clues)}</b> evidence cards found"),
-        ("ask", f"<b>{done} of {len(case['suspects'])}</b> suspects with nothing left to ask"),
-        ("bolt", f"<b>{lies}</b> {'lie' if lies == 1 else 'lies'} caught"),
-        ("check", f"<b>{out}</b> {'answer' if out == 1 else 'answers'} ruled out on your notebook"),
-    ]
-    return '<div class="recap">' + "".join(f"<div>{board.icon(i)}<span>{t}</span></div>" for i, t in rows) + "</div>"
+# ---- Panel: home (leads, the night so far) ------------------------------------------------
 
 
 def panel_home(game):
     st.markdown('<div class="kicker">Your move</div>', unsafe_allow_html=True)
-    if game.history:
-        st.markdown("### The case so far")
-        st.markdown(recap_html(game), unsafe_allow_html=True)
     leads = engine.leads(game) + [{"clue": c, "text": t} for c, t in engine.hint_list(game).items()]
     if leads:
         st.markdown("### Leads")
@@ -758,17 +735,6 @@ def panel_home(game):
         st.markdown("### The night so far")
         st.markdown("".join(f'<div class="lead"><b>{e["time"]}</b><span>{esc(e["text"])}</span></div>' for e in night),
                     unsafe_allow_html=True)
-    caught = engine.contradiction_list(game)
-    if caught:
-        st.markdown(f"### Lies caught · {len(caught)}")
-        st.markdown(
-            "".join(
-                f'<div class="lie"><b>{esc(board.short_name(case["suspects"][c["suspect"]]["name"]))}</b> said '
-                f'“{esc(c["text"])}” · broken by <b>{esc(proof_name(c["clue"]) if c["clue"] else "a clue")}</b></div>'
-                for c in caught
-            ),
-            unsafe_allow_html=True,
-        )
     badges = engine.badge_list(game)
     if badges:
         st.markdown('<div class="medals">' + "".join(f'<span title="{esc(b["description"])}">{board.icon("medal")} {esc(b["title"])}</span>' for b in badges) + "</div>",
@@ -1172,7 +1138,9 @@ def clue_fact(game, clue_id):
 
 
 def notebook_notes(game):
-    """The automatic half of the notebook: every card found, every story told, every lie and proof."""
+    """The automatic half of the notebook: every card found, every story told, every lie.
+
+    What the evidence rules out is shown once, on the Cross off tab, beside the answers it crosses off."""
     opened = [e["clue"] for e in game.history if e.get("action") == "open"]
     if not opened and not game.history:
         st.caption("Empty for now. Everything you find and hear is written down here by itself.")
@@ -1201,16 +1169,6 @@ def notebook_notes(game):
             rows.append(f'<div class="story-note"><b>{esc(board.short_name(brief["name"]))}</b>'
                         f'<span>“{esc(brief["cover"].strip())}”</span>{lies}</div>')  # whole story: a cut could hide the line a card breaks
         st.markdown("".join(rows), unsafe_allow_html=True)
-    proven = engine.eliminated(game)
-    if proven:
-        st.markdown(f"#### Ruled out · {len(proven)}")
-        st.markdown(
-            '<div class="proof">' + "".join(
-                f"<span>{board.icon('check')} {esc(label(e['column'], e['option']))} <em>ruled out by {esc(proof_name(e['by']))}</em></span>"
-                for e in proven
-            ) + "</div>",
-            unsafe_allow_html=True,
-        )
 
 
 def panel_sheet():
