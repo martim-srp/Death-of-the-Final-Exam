@@ -647,7 +647,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hud .clock { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 .hud .clock b { font: 700 21px var(--type); letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hud .clock { min-width: auto; } .hud .clock .fuse { min-width: 0; }  /* the bar gives way, never the time left */
-.hud .clock small { font-size: 12px; opacity: .7; white-space: nowrap; }
 .hud .clock .time { display: flex; flex-direction: column; line-height: 1.05; flex: 0 0 auto; }
 .hud .fuse { flex: 1; height: 6px; background: #3a2e28; border-radius: 3px; overflow: hidden; min-width: 30px; }
 .hud .fuse i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--red)); transition: width .6s; }
@@ -714,7 +713,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .card .lbl b { flex: 0 0 auto; }
   .card .lbl span { height: auto; max-height: 2.4em; }
 }
-/* A medium board (a 1280px laptop): the "9h 00m left" note would run over the tries; the fuse bar still shows it. */
+/* A medium board (a 1280px laptop): the burning bar gives way so the time left and Accuse fit on one row. */
 @container (max-width: 820px) {
   .hud .clock small { display: none; }
   .hud { gap: 9px; }  /* room for the time left and the Accuse button on one row */
@@ -752,21 +751,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .nv.full b { background: #e0645a; animation: throb 1.2s infinite; }
 .sus .stamp { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-16deg); border: 2px solid #e0645a;
   color: #e0645a; background: rgba(20,16,14,.7); padding: 1px 4px; font: 400 11px var(--type); white-space: nowrap; }
+/* Phones. The status bar and card labels follow the narrow-board rules below (the board is never
+   wider than the screen, so a 640px screen always has a board under 700px). */
 @media (max-width: 640px) {
-  .hud { flex-wrap: wrap; gap: 8px 10px; padding: 8px; }
-  .hud .clock { order: 1; flex: 1 1 auto; }
-  .hud .me { order: 0; }
-  .hud .me img { width: 34px; height: 34px; }
-  .hud .clock b { font-size: 18px; }
-  .hud .clock small { display: none; }
-  .hud .stat { order: 2; font-size: 14px; }
-  .tools { order: 3; flex: 1 1 100%; }
-  .tools button { flex: 0 0 38px; }
-  .tools .accuse { flex: 1 1 auto; }
   .phone-only { display: block; margin-bottom: 10px; }
   .hand { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-  .card .lbl { padding: 2px 4px 4px; }
-  .card .lbl span { font-size: 10px; }
   .sus .nm { font-size: 9px; padding: 12px 2px 4px; }
   .sus .marks { top: 3px; right: 3px; }
   .suspects { gap: 5px; }
@@ -833,16 +822,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .zap .ic { width: 11px; height: 11px; }
 .sus .noimg .ic { width: 40px; height: 40px; color: #8a7a6a; }
 .goal-bar .gi .ic { width: 24px; height: 24px; color: var(--gold); display: block; }
-/* With the calm button the tool row is wider: below this width the "left" text would run into the next stat. */
-@container (max-width: 1240px) { .hud .clock small { display: none; } }
 /* Narrow boards (a small laptop window, a tablet): lay out by the board's own width, not the screen's */
 @container (max-width: 700px) {
   .hud { flex-wrap: wrap; gap: 8px 10px; padding: 8px; }
   .hud .clock { order: 1; flex: 1 1 auto; min-width: 0; }
-  .hud .me { order: 0; }
   .hud .me img { width: 34px; height: 34px; }
   .hud .clock b { font-size: 18px; }
-  .hud .clock small { display: none; }
   .hud .stat { order: 2; font-size: 14px; }
   .tools { order: 3; flex: 1 1 100%; }
   .tools button { flex: 0 0 38px; }
@@ -870,38 +855,39 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .suspects { gap: 3px; }
   .sus .nm { font-size: 8px; letter-spacing: 0; padding: 10px 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
 }
-/* Status bar layout, last so it wins over the older rules above. One grid, every control 40px tall,
-   even gaps. A wide board: one row, the stats on the left and the buttons on the right.
-   A medium board: the time and the stats on top, the buttons below. A phone: time, stats, buttons. */
-.hud { display: grid; align-items: center; column-gap: 22px; row-gap: 10px; padding: 10px 12px;
-  grid-template-columns: auto 150px auto auto minmax(0, 1fr); grid-template-areas: "me clock tries lies tools"; }
+/* Status bar layout, last so it wins over the older rules above. One slim row on every desktop and
+   laptop: portrait, time left with its fuse under it, tries, lies, the four buttons and a compact Accuse.
+   Every control is 36px tall with even gaps. Narrower boards drop the small labels before anything wraps;
+   only a phone-width board splits into two rows (stats on top, buttons below). */
+.hud { display: grid; align-items: center; column-gap: 16px; row-gap: 8px; padding: 7px 10px; margin-bottom: 8px; box-sizing: border-box; height: 52px;
+  grid-template-columns: auto minmax(96px, 1fr) auto auto auto; grid-template-areas: "me clock tries lies tools"; }
 .hud .me { grid-area: me; }
-.hud .clock { grid-area: clock; flex-direction: column; align-items: stretch; gap: 7px; min-width: 0; }
-.hud .clock .fuse { display: block; flex: none; width: 100%; height: 5px; min-width: 0; }
+.hud .me img { width: 36px; height: 36px; }
+.hud .clock { grid-area: clock; flex-direction: column; align-items: stretch; gap: 5px; min-width: 0; }
+.hud .clock b { font-size: 19px; }
+.hud .clock .fuse { display: block; flex: none; width: 100%; max-width: 170px; height: 4px; min-width: 0; }
 .hud .stat:not(.zapstat) { grid-area: tries; }
-.hud .zapstat { grid-area: lies; margin: 0; padding: 4px 6px; }
-.hud .stat { gap: 7px; font-size: 16px; }
-.hud .stat small { font-size: 12.5px; }
+.hud .zapstat { grid-area: lies; margin: 0; padding: 3px 6px; min-height: 32px; }
+.hud .stat { gap: 6px; font-size: 15px; }
+.hud .stat b { font-size: 17px; }
+.hud .stat small { font-size: 12px; }
 .tools { grid-area: tools; justify-self: end; gap: 6px; }
-.tools button { width: 40px; height: 40px; flex: 0 0 40px; }
-.tools .accuse { width: auto; flex: 0 0 auto; padding: 0 18px; }
-@container (max-width: 820px) {
-  .hud { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "me clock tries lies" "tools tools tools tools"; column-gap: 18px; }
-  .hud .clock .fuse { display: block; max-width: 220px; }
-  .tools { justify-self: stretch; }
-  .tools button { flex: 0 0 44px; height: 44px; }
-  .tools .accuse { flex: 1 1 auto; }
+.tools button { width: 36px; height: 36px; flex: 0 0 36px; }
+.tools button .ic { width: 18px; height: 18px; }
+.tools .accuse { width: auto; flex: 0 0 auto; padding: 0 14px; font-size: 14px; }
+/* The status bar and the next-step strip together end level with the suspect portraits beside them
+   (a portrait is about 16.4% of the board's width tall on a desktop). */
+.goal-bar { box-sizing: border-box; min-height: calc(min(16.4cqw, 136px) - 65px); }
+@container (max-width: 760px) {
+  .hud { column-gap: 12px; }
+  .hud .stat small { display: none; }  /* the icons and their tooltips carry it; nothing wraps */
 }
-@container (max-width: 520px) {
-  .hud { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "me clock clock" "tries tries lies" "tools tools tools";
-    column-gap: 12px; padding: 10px; }
-  .hud .me img { width: 38px; height: 38px; }
-  .hud .clock b { font-size: 20px; }
-  .hud .clock .fuse { max-width: none; }
-  .hud .stat:not(.zapstat) { padding-left: 2px; }
-  .hud .zapstat { justify-self: end; }
-  .tools { gap: 6px; }
-  .tools button { flex: 1 1 0; min-width: 0; }
+@container (max-width: 560px) {
+  .hud { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "me clock tries lies" "tools tools tools tools";
+    column-gap: 12px; padding: 8px 10px; height: auto; }
+  .goal-bar { min-height: 0; }
+  .tools { justify-self: stretch; }
+  .tools button { flex: 1 1 0; min-width: 0; height: 40px; }
   .tools .accuse { flex: 2.4 1 0; padding: 0 10px; }
 }
 """
