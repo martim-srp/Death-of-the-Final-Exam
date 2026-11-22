@@ -162,8 +162,9 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
     return (
         f'<div class="hud{urgent}">'
         f'<div class="me" title="{esc(name)}">{face}</div>'
-        f'<div class="clock"><b>{esc(clock)}</b><div class="fuse"><i style="width:{burnt:.1f}%"></i></div>'
-        f'<small>{hours}h {minutes:02d}m left</small></div>'
+        # Time left sits under the clock, so it fits every screen (beside it, it had to hide on most).
+        f'<div class="clock"><span class="time"><b>{esc(clock)}</b><span class="left">{hours}h {minutes:02d}m left</span></span>'
+        f'<div class="fuse"><i style="width:{burnt:.1f}%"></i></div></div>'
         f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span><small>tries left</small></div>'
         f'<button class="stat zapstat" type="button" data-act="lies" title="Lies caught: what they mean">'
         f'{icon("bolt")}<b>{caught}</b><small>{"lie" if caught == 1 else "lies"} caught</small></button>'
@@ -599,6 +600,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hud .clock { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 .hud .clock b { font: 700 28px var(--type); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
 .hud .clock small { font-size: 12px; opacity: .7; white-space: nowrap; }
+.hud .clock .time { display: flex; flex-direction: column; line-height: 1.05; flex: 0 0 auto; }
+.hud .clock .left { font: 600 11px var(--type); letter-spacing: .06em; color: var(--gold); white-space: nowrap; margin-top: 2px; }
+.hud.urgent .clock .left { color: #ff6b5a; }
 .hud .fuse { flex: 1; height: 6px; background: #3a2e28; border-radius: 3px; overflow: hidden; min-width: 30px; }
 .hud .fuse i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--red)); transition: width .6s; }
 .hud.urgent .clock b { color: #ff6b5a; animation: throb 1s ease-in-out infinite; }

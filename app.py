@@ -558,6 +558,7 @@ header[data-testid="stHeader"] { display: none; }
 .proof { display: flex; flex-direction: column; gap: 0.15rem; margin: -0.4rem 0 0.7rem; font-size: 0.8rem; color: #a89a88; }
 .proof .ic { color: #e8c27a; width: 13px; height: 13px; }
 .proof em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
+.proof small { display: block; margin: 0 0 0.3rem 1.1rem; font-size: 0.8rem; color: #cdbfa8; line-height: 1.35; }
 .tips div span .ic { width: 26px; height: 26px; color: #e8c27a; }
 .facedown.locked .ic { width: 40px; height: 40px; }
 .medals span .ic { width: 15px; height: 15px; }
@@ -1206,8 +1207,7 @@ def notebook_notes(game):
         st.markdown(f"#### Ruled out · {len(proven)}")
         st.markdown(
             '<div class="proof">' + "".join(
-                f"<span>{board.icon('check')} {esc(label(e['column'], e['option']))} <em>ruled out by {esc(proof_name(e['by']))}</em></span>"
-                for e in proven
+                ruled_out_html(game, e["column"], e["option"], e["by"]) for e in proven
             ) + "</div>",
             unsafe_allow_html=True,
         )
@@ -1232,14 +1232,21 @@ def panel_sheet():
             if proven:
                 st.markdown(
                     '<div class="proof">' + "".join(
-                        f"<span>{board.icon('check')} {esc(label(column, o))} <em>ruled out by {esc(proof_name(by))}</em></span>"
-                        for o, by in proven.items()
+                        ruled_out_html(game, column, o, by) for o, by in proven.items()
                     ) + "</div>",
                     unsafe_allow_html=True,
                 )
     if st.button("Accuse", type="primary", icon=":material/balance:", use_container_width=True, key="to_accuse"):
         set_focus("accuse")
         st.rerun()
+
+
+def ruled_out_html(game, column, option, by):
+    """One crossed-off option: what, by which card, and why in one sentence."""
+    reason = engine.rule_out_reason(game, by, column)
+    why = f"<small>{esc(reason)}</small>" if reason else ""
+    return (f"<span>{board.icon('check')} {esc(label(column, option))} <em>ruled out by {esc(proof_name(by))}</em>"
+            f"{why}</span>")
 
 
 def proof_name(by):

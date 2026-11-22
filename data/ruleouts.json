@@ -1,0 +1,32 @@
+{
+  "_about": "Why an evidence card crosses an option off the case sheet: one sentence per card and column, shown next to 'ruled out by evidence N'. 'base' is the shared story; a variant lists only the cards whose reasons differ (its rules_out differ in case.json). Every rules_out in case.json needs a reason here.",
+  "base": {
+    "D1": {"how": "The leaked pages are a crooked scan of paper, not a file copied from a laptop."},
+    "D2": {
+      "how": "Job 88213 is printed on the leaked pages, and the log shows it printed at the library printer.",
+      "where": "Job 88213 is printed on the leaked pages, and the log shows it printed at the library printer, LIB-1."
+    },
+    "D3": {"why": "The leak is an old draft with questions that will not be in the exam, so nobody could cheat with it."},
+    "D5": {"why": "The paper was posted free to all 212 students. Nobody sells what they give away."},
+    "L4": {
+      "how": "The Professor's office stayed locked all evening, with no sign of entry.",
+      "where": "The Professor's office stayed locked all evening, with no sign of entry."
+    }
+  },
+  "A": {
+    "L1": {
+      "who": "Visitors cannot pass the library gate, and the exam was printed inside the library.",
+      "how": "No staff card passed the library gate, so the staff card that printed the job was not in its owner's hands."
+    }
+  },
+  "C": {
+    "D1": {
+      "how": "The leaked file was never printed or photographed: it was saved from an email attachment.",
+      "where": "The leaked file was never printed: it was saved on an iPad from an email attachment."
+    },
+    "D2": {
+      "how": "Job 88213 was never collected: at midnight it was still waiting in the print queue.",
+      "where": "Job 88213 was never collected: at midnight it was still waiting in the print queue."
+    }
+  }
+}
