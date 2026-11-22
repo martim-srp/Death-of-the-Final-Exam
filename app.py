@@ -189,7 +189,7 @@ def new_case():
     start_new_game()
     for key in [k for k in st.session_state if str(k).startswith(("sheet_", "crossed_", "accuse_"))]:
         del st.session_state[key]
-    for key in ("chats", "focus", "suspect", "verdict", "fresh", "sfx"):
+    for key in ("chats", "focus", "suspect", "verdict", "fresh", "sfx", "tour_active"):
         st.session_state.pop(key, None)
 
 
@@ -365,6 +365,9 @@ def on_act(key):
     kind, value = parsed
     if kind == "intro":
         st.session_state.intro_done = False
+    elif kind == "tour_done":
+        st.session_state.tour_done = True
+        st.session_state.tour_active = False
     elif kind == "calm":
         toggle_calm()
     else:
@@ -439,6 +442,7 @@ def draw_board(game, clues, fresh):
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
         + pending_sound()
+        + (board.tutorial_html() if show_tour(game) else "")
         + board.calm_html(calm())
     )
     deck(data=markup, key="board", on_act_change=functools.partial(on_act, "board"))
@@ -450,6 +454,13 @@ def pending_sound():
     if calm():
         return ""
     return board.sfx_html(name, st.session_state.get("sfx_n", 0)) if name else ""
+
+
+def show_tour(game):
+    """Show the optional screen tour after the welcome, or when explicitly replayed."""
+    return (game.status == "playing" and bool(st.session_state.get("intro_done"))
+            and (st.session_state.get("tour_active")
+                 or (not st.session_state.get("tour_done") and not game.history)))
 
 
 def draw_suspects(game):
@@ -1225,6 +1236,11 @@ def intro_dialog():
         if st.button("Start the investigation", type="primary", icon=":material/search:", use_container_width=True):
             finish_intro()
             st.rerun()
+        if st.session_state.get("tour_done") or game.history:
+            if st.button("Show the screen walkthrough", icon=":material/help_outline:", use_container_width=True):
+                st.session_state.tour_active = True
+                finish_intro()
+                st.rerun()
 
 
 # ---- The page ---------------------------------------------------------------------------
@@ -1280,6 +1296,8 @@ with side_column:
             panel_home(game)
     next_step_button(game)
 save_corner()
+if show_tour(game):
+    st.markdown('<style>.st-key-save_corner { visibility: hidden; }</style>', unsafe_allow_html=True)
 
 # Called last, so the story and rules open over the game on a new case.
 if not st.session_state.get("intro_done", bool(game.history)):

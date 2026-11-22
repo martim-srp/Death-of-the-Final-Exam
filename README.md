@@ -44,7 +44,9 @@ crosses nothing off your notebook.
 
 The screen is laid out like a board game. The campus map is the board, the clues are a hand of evidence
 cards, and the five suspects sit across the top. Tap anything to open it in the side panel. A new case
-in normal mode starts with a four-step tutorial (catch a first lie, then meet the notebook), and the **Next step** strip above the map always names one useful thing
+opens with a skippable screen walkthrough (map, evidence, suspects and Accuse), which can be replayed
+from **Story and rules**. In normal mode, a four-step gameplay tutorial follows (catch a first lie,
+then meet the notebook), and the **Next step** strip above the map always names one useful thing
 to do; tap it to go there. The book button shows the briefing again and the speaker button turns the
 sound effects on or off.
 
