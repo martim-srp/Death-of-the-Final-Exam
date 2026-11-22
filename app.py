@@ -526,8 +526,9 @@ header[data-testid="stHeader"] { display: none; }
 .whos-who b { display: block; font-family: var(--display); font-size: 0.9rem; color: #efe6d8; }
 .clock-rule { display: flex; flex-direction: column; gap: 0.3rem; margin: 0 0 0.9rem; padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); font-size: 1.05rem; line-height: 1.45; }
 .clock-rule .headline { font-family: var(--display); font-size: 1.2rem; color: #e8c27a; }
-.how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
-.how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
+.how-to { list-style: none; margin: 0.35rem 0 0; padding: 0; border-top: 1px solid rgba(232, 194, 122, 0.35); }
+.how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.45rem 0.1rem; border-bottom: 1px solid rgba(232, 194, 122, 0.2); font-size: 0.92rem; margin: 0; }
+.how-to li:last-child { border-bottom: 0; padding-bottom: 0; }
 .how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
 .how-to li span { flex: 1 1 auto; }
 .how-to li em { font: 0.75rem var(--label); font-style: normal; color: #a89a88; white-space: nowrap; }
@@ -1382,11 +1383,6 @@ def whos_who_html():
 
 
 HOURS = case["clock"]["limit_minutes"] // 60
-CLOCK_RULE = (
-    f'<div class="clock-rule"><b class="headline">Every action costs time. Use your {HOURS} hours well.</b>'
-    "<span>The clock runs from midnight to 09:00, and every search and every question moves it forward. "
-    "At 09:00 you can no longer search or ask: you can only accuse.</span></div>"
-)
 HOW_TO_PLAY = (
     '<ol class="how-to">'
     f'<li>{board.icon("search")}<span><b>Search</b> a new place or document</span><em>−{case["clock"]["clue_cost"]} min</em></li>'
@@ -1395,12 +1391,17 @@ HOW_TO_PLAY = (
     f'<li>{board.icon("scale")}<span><b>Accuse</b> who, how, where and why</span><em>no time · {case["max_strikes"]} tries</em></li>'
     "</ol>"
 )
+# The rules in one box: how time works, then what each action costs.
+CLOCK_RULE = (
+    f'<div class="clock-rule"><b class="headline">Every action costs time. Use your {HOURS} hours well.</b>'
+    "<span>The clock runs from midnight to 09:00, and every search and every question moves it forward. "
+    "At 09:00 you can no longer search or ask: you can only accuse.</span>" + HOW_TO_PLAY + "</div>"
+)
 SHOW_COVER = True  # the cover picture beside the briefing on the start screen (hidden on phones)
 
 
 MODE_LABELS = {"normal": "Normal", "hard": "Hard"}
-MODE_NOTE = ("Hard mode is the same case with one difference: no tips. No next step, no hints, "
-             "no highlighted details and nothing crossed off for you. Normal mode keeps them all.")
+MODE_NOTE = "Hard mode is the same case with one difference: no tips."
 
 
 def pick_mode():
@@ -1440,7 +1441,7 @@ def intro_dialog():
         brief = st.container()
     with brief:
         st.markdown(f'<div class="kicker">{esc(TITLE)}</div>', unsafe_allow_html=True)
-        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + CLOCK_RULE + whos_who_html() + HOW_TO_PLAY, unsafe_allow_html=True)
+        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + CLOCK_RULE + whos_who_html(), unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your mode</div>', unsafe_allow_html=True)
         game = current_game()
         if game.history:
