@@ -166,7 +166,8 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'<div class="me" title="{esc(name)}">{face}</div>'
         # One number: the time left, counting down. Two (a clock counting up, time left counting down)
         # read as two different things to new players. The night's hour stays on hover.
-        f'<div class="clock" title="Night clock: {esc(clock)}. The case closes at 09:00.">'
+        f'<div class="clock" role="timer" title="Night clock: {esc(clock)}. The case closes at 09:00." '
+        f'aria-label="{hours} hours and {minutes:02d} minutes left. Night clock: {esc(clock)}. The case closes at 09:00.">'
         f'<span class="time"><b>{hours}h {minutes:02d}m left</b></span>'
         f'<div class="fuse"><i style="width:{burnt:.1f}%"></i></div></div>'
         f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span><small>tries left</small></div>'
