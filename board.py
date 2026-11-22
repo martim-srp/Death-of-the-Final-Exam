@@ -870,38 +870,39 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .suspects { gap: 3px; }
   .sus .nm { font-size: 8px; letter-spacing: 0; padding: 10px 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
 }
-/* Status bar layout, last so it wins over the older rules above. One grid, every control 40px tall,
-   even gaps. A wide board: one row, the stats on the left and the buttons on the right.
-   A medium board: the time and the stats on top, the buttons below. A phone: time, stats, buttons. */
-.hud { display: grid; align-items: center; column-gap: 22px; row-gap: 10px; padding: 10px 12px;
-  grid-template-columns: auto 150px auto auto minmax(0, 1fr); grid-template-areas: "me clock tries lies tools"; }
+/* Status bar layout, last so it wins over the older rules above. One slim row on every desktop and
+   laptop: portrait, time left with its fuse under it, tries, lies, the four buttons and a compact Accuse.
+   Every control is 36px tall with even gaps. Narrower boards drop the small labels before anything wraps;
+   only a phone-width board splits into two rows (stats on top, buttons below). */
+.hud { display: grid; align-items: center; column-gap: 16px; row-gap: 8px; padding: 7px 10px; margin-bottom: 8px; box-sizing: border-box; height: 52px;
+  grid-template-columns: auto minmax(96px, 1fr) auto auto auto; grid-template-areas: "me clock tries lies tools"; }
 .hud .me { grid-area: me; }
-.hud .clock { grid-area: clock; flex-direction: column; align-items: stretch; gap: 7px; min-width: 0; }
-.hud .clock .fuse { display: block; flex: none; width: 100%; height: 5px; min-width: 0; }
+.hud .me img { width: 36px; height: 36px; }
+.hud .clock { grid-area: clock; flex-direction: column; align-items: stretch; gap: 5px; min-width: 0; }
+.hud .clock b { font-size: 19px; }
+.hud .clock .fuse { display: block; flex: none; width: 100%; max-width: 170px; height: 4px; min-width: 0; }
 .hud .stat:not(.zapstat) { grid-area: tries; }
-.hud .zapstat { grid-area: lies; margin: 0; padding: 4px 6px; }
-.hud .stat { gap: 7px; font-size: 16px; }
-.hud .stat small { font-size: 12.5px; }
+.hud .zapstat { grid-area: lies; margin: 0; padding: 3px 6px; min-height: 32px; }
+.hud .stat { gap: 6px; font-size: 15px; }
+.hud .stat b { font-size: 17px; }
+.hud .stat small { font-size: 12px; }
 .tools { grid-area: tools; justify-self: end; gap: 6px; }
-.tools button { width: 40px; height: 40px; flex: 0 0 40px; }
-.tools .accuse { width: auto; flex: 0 0 auto; padding: 0 18px; }
-@container (max-width: 820px) {
-  .hud { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "me clock tries lies" "tools tools tools tools"; column-gap: 18px; }
-  .hud .clock .fuse { display: block; max-width: 220px; }
-  .tools { justify-self: stretch; }
-  .tools button { flex: 0 0 44px; height: 44px; }
-  .tools .accuse { flex: 1 1 auto; }
+.tools button { width: 36px; height: 36px; flex: 0 0 36px; }
+.tools button .ic { width: 18px; height: 18px; }
+.tools .accuse { width: auto; flex: 0 0 auto; padding: 0 14px; font-size: 14px; }
+/* The status bar and the next-step strip together end level with the suspect portraits beside them
+   (a portrait is about 16.4% of the board's width tall on a desktop). */
+.goal-bar { box-sizing: border-box; min-height: calc(min(16.4cqw, 136px) - 65px); }
+@container (max-width: 760px) {
+  .hud { column-gap: 12px; }
+  .hud .stat small { display: none; }  /* the icons and their tooltips carry it; nothing wraps */
 }
-@container (max-width: 520px) {
-  .hud { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "me clock clock" "tries tries lies" "tools tools tools";
-    column-gap: 12px; padding: 10px; }
-  .hud .me img { width: 38px; height: 38px; }
-  .hud .clock b { font-size: 20px; }
-  .hud .clock .fuse { max-width: none; }
-  .hud .stat:not(.zapstat) { padding-left: 2px; }
-  .hud .zapstat { justify-self: end; }
-  .tools { gap: 6px; }
-  .tools button { flex: 1 1 0; min-width: 0; }
+@container (max-width: 560px) {
+  .hud { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "me clock tries lies" "tools tools tools tools";
+    column-gap: 12px; padding: 8px 10px; height: auto; }
+  .goal-bar { min-height: 0; }
+  .tools { justify-self: stretch; }
+  .tools button { flex: 1 1 0; min-width: 0; height: 40px; }
   .tools .accuse { flex: 2.4 1 0; padding: 0 10px; }
 }
 """
