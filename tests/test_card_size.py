@@ -1,4 +1,4 @@
-"""Smaller evidence cards on a wide board, so both rows fit on screen under the map, and a plain tour box."""
+"""Smaller evidence cards on a wide board, so both rows fit on screen under the map."""
 
 import re
 
@@ -35,12 +35,6 @@ def test_card_names_still_never_break_inside_a_word():
 
 def test_map_leaves_room_for_both_rows_of_cards():
     assert "calc((100vh - 390px) * 1.65)" in SOURCE
-
-
-def test_tour_box_has_no_gold_bar():
-    rule = re.search(r"\.tour \{([^}]*)\}", SOURCE).group(1)
-    assert "border-left" not in rule
-    assert "var(--gold)" not in rule
 
 
 def test_cards_have_no_hover_tooltip_but_keep_a_spoken_name():

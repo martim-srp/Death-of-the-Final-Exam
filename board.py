@@ -142,7 +142,7 @@ def parse_act(act, suspects, clues):
         return ("clue", value)
     if kind == "spot" and value in MAP_SPOTS:
         return ("spot", value)
-    if kind in ("home", "sheet", "lies", "accuse", "intro", "tour_done", "calm") and not value:
+    if kind in ("home", "sheet", "lies", "accuse", "intro", "calm") and not value:
         return (kind, None)
     return None
 
@@ -191,20 +191,6 @@ def calm_html(on):
 
     For players who find motion, blinking and sound distracting."""
     return '<i class="calm-on" hidden></i>' if on else ""
-
-
-def tutorial_html():
-    """The first-play tour: four short steps, each pointing at one part of the screen."""
-    steps = [
-        ("map", "The board", "To search a new area, click on the red circle."),
-        ("hand", "Your evidence", "Tap an evidence card to open it. Red ones are new."),
-        ("suspects", "The suspects", "Tap a face to question them, or show them an evidence card."),
-        ("accuse", "Accuse", "Name who, how, where and why before 09:00."),
-    ]
-    items = "".join(
-        f'<div class="step" data-target="{t}" data-i="{i}"><b>{esc(h)}</b><p>{esc(x)}</p></div>' for i, (t, h, x) in enumerate(steps)
-    )
-    return f'<div class="tour" hidden>{items}<div class="tour-nav"><button class="skip" type="button">Skip</button><span class="dots"></span><button class="next" type="button">Next</button></div></div>'
 
 
 # ---- Next step ---------------------------------------------------------------------
@@ -478,51 +464,6 @@ if (!window.__dfeUnlock) {
     document.addEventListener("pointerdown", () => { const ctx = audio(); if (ctx && ctx.state !== "running") ctx.resume(); }, true);
 }
 
-function tour(root, setTriggerValue) {
-    const box = root.querySelector(".tour");
-    if (!box) return;
-    const steps = [...box.querySelectorAll(".step")];
-    const dots = box.querySelector(".dots");
-    // The board is redrawn whenever Streamlit reruns, which rebuilds the tour. Keep the step
-    // on the window so a redraw in the middle of the tour resumes it instead of restarting.
-    let i = Math.min(window.__dfeTourStep || 0, steps.length - 1);
-    const ring = document.createElement("div");
-    ring.className = "tour-ring";
-    root.appendChild(ring);
-    const target = (name) => {
-        if (name === "suspects") {
-            const row = document.querySelector(".st-key-suspect_row");
-            if (row && row.offsetParent) return row;
-            return root.querySelector(".phone-only .suspects");
-        }
-        return root.querySelector({ map: ".map", hand: ".hand", accuse: ".accuse" }[name]);
-    };
-    // The ring follows its target on every frame, so it stays on it while the page scrolls.
-    const place = () => {
-        if (box.hidden || !ring.isConnected) return;
-        const el = target(steps[i].dataset.target);
-        if (el) {
-            const r = el.getBoundingClientRect();
-            Object.assign(ring.style, { left: r.left - 6 + "px", top: r.top - 6 + "px", width: r.width + 12 + "px", height: r.height + 12 + "px" });
-        }
-        requestAnimationFrame(place);
-    };
-    const show = () => {
-        window.__dfeTourStep = i;
-        steps.forEach((s, n) => s.classList.toggle("on", n === i));
-        dots.textContent = steps.map((_, n) => (n === i ? "●" : "○")).join(" ");
-        box.querySelector(".next").textContent = i === steps.length - 1 ? "Play" : "Next";
-        const el = target(steps[i].dataset.target);
-        if (el) el.scrollIntoView({ block: "center", behavior: root.classList.contains("calm") ? "auto" : "smooth" });
-    };
-    const done = () => { box.hidden = true; ring.remove(); window.__dfeTourStep = 0; setTriggerValue("act", "tour_done"); };
-    box.querySelector(".next").addEventListener("click", () => { if (i < steps.length - 1) { i += 1; show(); } else done(); });
-    box.querySelector(".skip").addEventListener("click", done);
-    box.hidden = false;
-    show();
-    requestAnimationFrame(place);
-}
-
 // What a tap opens shows in the panel. When the columns stack (phones, narrow windows) the
 // panel sits below the map and the cards, so bring it into view once the redraw has filled it.
 // Where the panel is already on screen, nothing moves.
@@ -582,7 +523,6 @@ export default function(component) {
         el.addEventListener("click", go);
         el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
     });
-    tour(root, setTriggerValue);
 }
 """
 
@@ -703,22 +643,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sus .nv.full b { background: #e0645a; animation: throb 1.2s infinite; }
 .sus .stamp { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-16deg); border: 2px solid #e0645a;
   color: #e0645a; background: rgba(20,16,14,.7); padding: 1px 4px; font: 400 11px var(--type); white-space: nowrap; }
-/* First-play tour */
-.tour { position: fixed; z-index: 1000; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(360px, calc(100vw - 32px));
-  background: #1c1613; color: var(--ink); border: 1px solid #3a2e28; border-radius: 14px;
-  padding: 14px 16px 12px; box-shadow: 0 18px 50px rgba(0,0,0,.7);
-  animation: rise .35s ease-out; }
-.tour .step { display: none; }
-.tour .step.on { display: block; }
-.tour .step b { font: 700 18px var(--serif); }
-.tour .step p { margin: 4px 0 10px; font: 15px/1.4 var(--prose); color: #cdbfa8; }
-.tour-nav { display: flex; align-items: center; justify-content: space-between; }
-.tour-nav .dots { font-size: 10px; letter-spacing: 2px; color: var(--gold); }
-.tour-nav button { border-radius: 8px; padding: 6px 14px; border: 1px solid #4a3a31; background: transparent; color: var(--ink); font: 500 14px var(--ui); }
-.tour-nav .next { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
-.tour-ring { position: fixed; z-index: 999; border: 3px solid var(--gold); border-radius: 14px; pointer-events: none;
-  box-shadow: 0 0 0 9999px rgba(8,6,5,.6); }  /* no transition: it follows its target every frame */
-@keyframes rise { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @media (max-width: 640px) {
   .hud { flex-wrap: wrap; gap: 8px 10px; padding: 8px; }
   .hud .clock { order: 1; flex: 1 1 auto; }

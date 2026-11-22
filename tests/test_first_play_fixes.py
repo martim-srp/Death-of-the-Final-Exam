@@ -1,12 +1,11 @@
-"""Fixes from a first-time playthrough: the detective's reaction to an answer, a tour that
-survives redraws, the confrontation shown first at the end, and visible accusation picks."""
+"""Fixes from a first-time playthrough: the detective's reaction to an answer, the confrontation
+shown first at the end, and visible accusation picks. (Fix 2, the pop-up tour, went with the tour.)"""
 
 import json
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-import board
 from game.case import load_case
 from game.engine import Engine
 
@@ -53,15 +52,6 @@ def test_the_class_reps_cafeteria_answer_gets_a_reacted_thought():
     assert chat[-1]["think"] in VOICE["replies"]["reacted"]
 
 
-# ---- 2. The tour resumes after a redraw, and its ring follows the target ------------------
-
-
-def test_the_tour_keeps_its_step_across_redraws_and_tracks_its_target():
-    assert "window.__dfeTourStep" in board.BOARD_JS
-    assert "requestAnimationFrame(place)" in board.BOARD_JS
-    assert "}, 350);" not in board.BOARD_JS.split("function tour", 1)[1].split("function revealPanel", 1)[0]
-
-
 # ---- 3. The confrontation comes first and starts open -----------------------------------
 
 
@@ -80,6 +70,6 @@ def test_the_confrontation_is_open_and_above_the_rank():
 
 
 def test_chosen_accusation_options_are_filled():
-    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    source = (ROOT / "assets" / "style.css").read_text(encoding="utf-8")  # the page's look moved out of app.py
     for column in ("who", "how", "where", "why"):
         assert f'.st-key-accuse_{column} button[aria-checked="true"]' in source  # how Streamlit marks a chosen pill

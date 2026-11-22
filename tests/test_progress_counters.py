@@ -1,5 +1,5 @@
 """Progress counters: how much of each suspect you have covered, a clear sign when there is
-nothing left to ask, and a short recap of the case so far."""
+nothing left to ask."""
 
 import json
 from pathlib import Path
@@ -167,16 +167,16 @@ def test_the_suspect_card_marks_a_suspect_with_nothing_left_to_ask():
     assert 'title="Nothing left to ask"' not in professor and 'title="Questioned"' in professor
 
 
-def test_the_recap_shows_the_case_so_far():
+def test_the_home_panel_does_not_repeat_the_counters():
+    # The status bar, the evidence hand and the WHO/HOW/WHERE/WHY strip already count these:
+    # the home panel keeps only what to do next.
     engine = Engine()
     game = engine.new_game(seed=1, variant="A")
     first_open_card(engine, game)
     everything_asked(engine, game, "exchange")
     text = page(start(game, focus=("home", None)))
-    assert "The case so far" in text
-    assert f"<b>1 of {len(CASE['clues'])}</b> evidence cards found" in text
-    assert f"<b>0 of {len(SUSPECTS)}</b> suspects with nothing left to ask" in text  # a card is not shown yet
-    assert "<b>0</b> lies caught" in text
+    assert "The case so far" not in text
+    assert "evidence cards found" not in text and "suspects with nothing left to ask" not in text
 
 
 def test_no_recap_before_the_first_move():

@@ -496,7 +496,7 @@ def test_showing_the_same_card_again_does_not_catch_twice():
     assert len(at.session_state["game"]["contradictions"]) == 1
 
 
-# ---- Sound and the first-play tour -------------------------------------------------------------
+# ---- Sound, and no separate tour ---------------------------------------------------------------
 
 
 def test_opening_a_clue_plays_one_flip_sound():
@@ -524,19 +524,9 @@ def test_only_known_sounds_are_drawn():
     assert board.sfx_html("<script>", 1) == ""
 
 
-def test_the_tour_shows_once_on_a_new_case_after_the_intro():
-    at = start()
-    assert 'class="tour"' in board_markup(at)
-    assert board_markup(at).count('class="step"') == 4
-    at.session_state["tour_done"] = True
-    at.run()
-    assert 'class="tour"' not in board_markup(at)
-
-
-def test_no_tour_on_a_resumed_game_or_before_the_intro():
-    assert 'class="tour"' not in board_markup(start(game=opened_game("D1")))
-    assert 'class="tour"' not in board_markup(start(intro_done=False))
-
-
-def test_finishing_the_tour_is_a_known_tap():
-    assert board.parse_act("tour_done", CASE["suspects"], CASE["clues"]) == ("tour_done", None)
+def test_there_is_no_separate_tour():
+    # The guided first minute (tutorial) teaches by doing and the start screen states the rules,
+    # so the old four-step pop-up tour, which repeated both, was removed.
+    for at in (start(), start(game=opened_game("D1")), start(intro_done=False)):
+        assert 'class="tour"' not in board_markup(at)
+    assert board.parse_act("tour_done", CASE["suspects"], CASE["clues"]) is None

@@ -35,7 +35,6 @@ AVATARS = {"she": "Play as her", "he": "Play as him"}
 DEFAULT_AVATAR = "she"
 COLUMNS = ("who", "how", "where", "why")
 APP_URL = "https://carcavelos-paper.streamlit.app"
-PUBLIC_URL = APP_URL
 COLUMN_ICONS = {"who": ":material/person:", "how": ":material/build:", "where": ":material/location_on:", "why": ":material/psychology_alt:"}
 # Shown under a free-text answer when the suspect gave a scripted line instead of the AI's.
 # Keys are the reasons game/ai.py records in the game's history.
@@ -127,7 +126,7 @@ def resume_link(game_id):
         parts = urlsplit(current_url)
         base = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
     else:
-        base = PUBLIC_URL
+        base = APP_URL
     return f"{base}?game={quote(str(game_id), safe='')}"
 
 
@@ -364,15 +363,13 @@ def on_act(key):
     kind, value = parsed
     if kind == "intro":
         st.session_state.intro_done = False
-    elif kind == "tour_done":
-        st.session_state.tour_done = True
     elif kind == "calm":
         toggle_calm()
     else:
         set_focus(kind, value)
 
 
-# ---- The D4 chart --------------------------------------------------------------------
+# ---- The ending scene ---------------------------------------------------------------
 
 def denouement(game):
     """The confrontation if solved, or the unsolved outcome if cold."""
@@ -381,251 +378,8 @@ def denouement(game):
 
 # ---- Page style ----------------------------------------------------------------------
 
-PAGE_CSS = """
-<style>
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Special+Elite&display=swap");
-/* One look everywhere: Playfair for titles, a serif for in-world text, a typewriter for labels, the app font for controls. */
-:root { --display: "Playfair Display", Georgia, serif; --prose: Georgia, "Times New Roman", serif;
-  --label: "Special Elite", "Courier New", monospace; --ink: #efe6d8; --gold: #e8c27a; --red: #c0392b;
-  --paper: #1c1613; --line: #3a2e28; }
-[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
-[data-testid="stMainBlockContainer"] { padding: 1rem 1.2rem 5.5rem; max-width: 1480px; }  /* room at the end to scroll clear of the save icon */
-.stApp { font-variant-numeric: lining-nums; }
-header[data-testid="stHeader"] { display: none; }
-[data-testid="stElementToolbar"] { display: none; }  /* chart download/fullscreen buttons floated over the detective's line */
-.st-key-next_phone { display: none; }  /* the game is full screen; Streamlit's bar covered the status bar */
-.st-key-panel h3, .finale .title, [data-testid="stDialog"] h2 { font-family: var(--display) !important; }
-.st-key-panel { background: #1c1613; border: 1px solid #3a2e28; border-radius: 14px; padding: 0.9rem 1rem 1rem; gap: 0.6rem; }
-.st-key-panel h3 { margin: 0 0 0.55rem !important; padding: 0.1rem 0 0.1rem; font-size: 1.35rem; line-height: 1.35; }
-.kicker { font: 600 0.72rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
-.progress-line { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; margin: 0 0 0.4rem; font-size: 0.82rem; color: #cdbfa8; }
-.progress-line b { font-family: var(--label); color: #efe6d8; font-weight: 400; }
-.all-asked { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.6rem; padding: 0.4rem 0.6rem; border: 1px solid #e8c27a;
-  border-radius: 8px; color: #e8c27a; font-size: 0.85rem; }
-.all-asked .ic { width: 16px; height: 16px; }
-.recap { display: grid; gap: 0.3rem; margin: 0 0 0.8rem; }
-.recap div { display: flex; align-items: center; gap: 0.55rem; font-size: 0.9rem; }
-.recap .ic { width: 18px; height: 18px; color: #e8c27a; }
-.recap b { font-family: var(--label); font-weight: 400; color: #efe6d8; }
-.who-head { padding-bottom: 0.9rem; display: flex; gap: 0.8rem; align-items: center; }
-.st-key-chat_log { margin-top: 0.5rem; }
-.who-head img { width: 64px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #c0392b; }
-.nerves { display: flex; align-items: center; gap: 0.4rem; font: 600 0.68rem var(--label); letter-spacing: 0.12em;
-  text-transform: uppercase; opacity: 0.85; margin-top: 0.25rem; }
-.nerves i { width: 110px; height: 6px; background: #3a2e28; border-radius: 3px; overflow: hidden; display: inline-block; }
-.nerves b { display: block; height: 100%; background: linear-gradient(90deg, #e8c27a, #e0645a); transition: width 0.6s; }
-.who-head .line { font-size: 0.85rem; opacity: 0.75; line-height: 1.3; }
-.chat { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.2rem 0.1rem; }
-.bubble { display: flex; gap: 0.5rem; align-items: flex-end; max-width: 92%; animation: rise 0.35s ease-out both; }
-.bubble .face { width: 30px; height: 30px; border-radius: 50%; background: #2b221d center top / cover no-repeat; flex: none; }
-.bubble .say { padding: 0.5rem 0.75rem; border-radius: 16px; font-family: var(--prose); font-size: 0.95rem; line-height: 1.35; }
-.bubble.them .say { background: #2b221d; border: 1px solid #3f322b; border-bottom-left-radius: 4px; }
-.bubble.you { margin-left: auto; flex-direction: row-reverse; }
-.bubble.you .say { background: #5a1d16; border: 1px solid #7a2c22; border-bottom-right-radius: 4px; }
-.bubble.think { margin-left: auto; flex-direction: row-reverse; max-width: 86%; }
-.bubble.think .face { width: 24px; height: 24px; opacity: 0.85; }
-.bubble.think .say { background: transparent; border: 0; border-right: 2px solid var(--gold); border-radius: 0; padding: 0.15rem 0.6rem;
-  font: italic 0.88rem/1.35 var(--display); color: #cdbfa8; text-align: right; }
-.bubble.you .say.act { font-style: italic; background: #2a2a1e; border-color: #4a4a30; }
-.bubble .note { display: block; margin-top: 0.35rem; font-size: 0.72rem; opacity: 0.6; font-family: inherit; }
-.bubble .unlock { display: block; margin-top: 0.35rem; font: 600 0.75rem var(--label); color: #e8c27a; }
-.caught { margin: 0.2rem auto 0.3rem; text-align: center; animation: slam 0.5s cubic-bezier(.2,1.6,.4,1) both; }
-.caught b { display: inline-block; border: 3px solid #e0645a; color: #e0645a; padding: 0.1rem 0.6rem; transform: rotate(-4deg);
-  font: 800 1.15rem var(--label); letter-spacing: 0.12em; text-transform: uppercase; }
-.caught.cracked b { border-color: #e8c27a; color: #e8c27a; transform: rotate(3deg); }
-.nerves.broke { color: #e0645a; }
-.caught small { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 0.3rem; }
-.keyfact { margin: 0.2rem 0 0.7rem; padding: 0.6rem 0.8rem; border-left: 4px solid #e8c27a; border-radius: 6px;
-  background: rgba(232, 194, 122, 0.1); font-size: 1.02rem; font-weight: 600; line-height: 1.4; }
-.keyfact small { display: block; font: 600 0.68rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
-.caught .means, .lie .means { display: block; max-width: 30rem; margin: 0.45rem auto 0; padding: 0.45rem 0.7rem; border-radius: 8px;
-  background: rgba(232, 194, 122, 0.1); border-left: 3px solid #e8c27a; text-align: left; font-size: 0.92rem; line-height: 1.4; }
-.caught .means b, .lie .means b { display: inline; border: 0; padding: 0; transform: none; color: #e8c27a;
-  font: 600 0.92rem var(--prose); letter-spacing: 0; text-transform: none; }
-.empty-chat { text-align: center; opacity: 0.6; padding: 1.6rem 0.5rem; font-size: 0.9rem; }
-.evidence { position: relative; box-sizing: border-box; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden;
-  background: #1c1613; color: #efe6d8; border: 1px solid #3a2e28; margin-bottom: 0.9rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.45); animation: flip 0.55s ease-out both; }
-.evidence .body ul { margin: 0; padding-left: 1.1rem; }
-.evidence .body li { margin: 0 0 0.35rem; }
-.evidence .body p { margin: 0 0 0.5rem; }
-.evidence img { width: 100%; display: block; max-height: 260px; object-fit: cover; }
-.evidence .body { padding: 0.85rem 1rem 1rem; font-family: var(--prose); font-size: 0.95rem; line-height: 1.5;
-  overflow-wrap: anywhere; white-space: normal; border-left: 3px solid #8a2a1f; }
-.facedown { box-sizing: border-box; border-radius: 12px; height: 150px; display: flex; align-items: center; justify-content: center;
-  font: 700 2.6rem var(--display); border: 1px solid #7a2c22; margin-bottom: 0.9rem;  /* room before the button under it */
-  background: repeating-linear-gradient(45deg, #5a1d16 0 10px, #6e241b 10px 20px); color: #f4d9a0; }
-.facedown.locked { background: repeating-linear-gradient(45deg, #2a221e 0 10px, #332924 10px 20px); border-color: var(--line); color: #8a7a6a; }
-.lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
-  padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
-.lead b { font-family: var(--label); color: #e8c27a; }
-.coach { padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); }
-.coach p { margin: 0; font-size: 1.05rem; line-height: 1.45; }
-.coach b { color: #e8c27a; }
-.tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
-.tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
-.tips div span { display: block; font-size: 1.6rem; }
-.lie { background: #2a1714; border: 1px solid #5a2a22; border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.88rem; }
-.lie b { color: #e0645a; }
-.lie-rules { display: grid; gap: 0.45rem; margin: 0.2rem 0 0.9rem; }
-.lie-rules div { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.9rem; line-height: 1.4; }
-.lie-rules .ic { width: 18px; height: 18px; flex: none; margin-top: 2px; color: #e8c27a; }
-.lie .nerves-mini { display: block; margin-top: 0.3rem; font: 0.72rem var(--label); color: #cdbfa8; letter-spacing: 0.06em; }
-.verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; animation: shake 0.5s; margin-bottom: 0.6rem; }
-.verdict div { text-align: center; border-radius: 10px; padding: 0.5rem 0.2rem; font: 700 0.8rem var(--label); letter-spacing: 0.08em; }
-.verdict .ok { background: #1f3a24; color: #8be09a; border: 2px solid #3d7a48; }
-.verdict .no { background: #3a1714; color: #ff8a7a; border: 2px solid #7a2c22; }
-.verdict span { display: block; font-size: 1.5rem; }
-.st-key-panel [data-testid="stButtonGroup"] button { font-size: 0.85rem; height: auto; min-height: 2rem; max-width: 100%; }
-.st-key-panel [data-testid="stButtonGroup"] button * { white-space: normal !important; overflow: visible !important;
-  text-overflow: clip !important; text-align: left; }
-[class*="st-key-sheet_"] button[kind="pillsActive"], [class*="st-key-sheet_"] button[aria-checked="true"] {
-  text-decoration: line-through; text-decoration-color: #e0645a; text-decoration-thickness: 2px; opacity: 0.6;
-  background: #2a1714 !important; border-color: #5a2a22 !important; color: #efe6d8 !important; }
-/* The accusation: a chosen option is filled, so the four picks stand out before you accuse. */
-.st-key-accuse_who button[aria-checked="true"], .st-key-accuse_how button[aria-checked="true"],
-.st-key-accuse_where button[aria-checked="true"], .st-key-accuse_why button[aria-checked="true"] {
-  background: #c0392b !important; border-color: #e8c27a !important; color: #fff !important; font-weight: 700; }
-.st-key-accuse_who button[aria-checked="true"] *, .st-key-accuse_how button[aria-checked="true"] *,
-.st-key-accuse_where button[aria-checked="true"] *, .st-key-accuse_why button[aria-checked="true"] * { color: #fff !important; }
-.st-key-case_summary [data-testid="stMetricValue"] { font-size: 1.4rem; }
-.st-key-accuse_go button, .st-key-to_accuse button { padding: 0.7rem; }
-.st-key-to_accuse { margin-top: 0.6rem; }
-.st-key-accuse_go button p, .st-key-to_accuse button p { font: 700 1.05rem var(--label); letter-spacing: 0.08em; text-transform: uppercase; }
-/* The finale */
-.finale { text-align: center; padding: 0.5rem 0 0.2rem; }
-.finale .mug { position: relative; width: 220px; margin: 0 auto; }
-.finale .mug img { width: 220px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 14px; border: 3px solid #3a2e28;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.6); animation: rise 0.8s ease-out both; }
-.finale .slam { position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%) rotate(-14deg); border: 5px solid #e0645a;
-  color: #e0645a; background: rgba(20,16,14,0.78); padding: 0.1rem 0.8rem; font: 900 2.2rem var(--label);
-  letter-spacing: 0.15em; animation: stamp 0.6s 0.6s cubic-bezier(.2,1.6,.4,1) both; white-space: nowrap; }
-.finale.cold .slam { border-color: #9aa7b3; color: #9aa7b3; }
-.finale .cold-stamp { display: inline-block; border: 4px solid #9aa7b3; color: #9aa7b3;
-  padding: 0.3rem 0.7rem; font-family: var(--label); font-size: 1.8rem; font-weight: 700; }
-.finale .title { font-size: 2.6rem; font-weight: 700; line-height: 1.2; margin: 1.1rem 0 0.3rem; animation: rise 0.6s 1s ease-out both; }
-.finale .sub { opacity: 0.75; animation: rise 0.6s 1.1s ease-out both; }
-.facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin: 1.2rem 0 0.4rem; }
-.facts div { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-top: 3px solid #8a2a1f;
-  border-radius: 10px; padding: 0.7rem 0.6rem; font-family: var(--prose);
-  font-size: 0.92rem; line-height: 1.3; animation: deal 0.5s ease-out both; }
-.facts div:nth-child(1) { animation-delay: 1.3s; } .facts div:nth-child(2) { animation-delay: 1.5s; }
-.facts div:nth-child(3) { animation-delay: 1.7s; } .facts div:nth-child(4) { animation-delay: 1.9s; }
-.facts small { display: block; font: 700 0.7rem var(--label); letter-spacing: 0.15em; color: var(--gold); margin-bottom: 0.25rem; }
-.rank { text-align: center; margin: 0.4rem auto 0.3rem; animation: rise 0.6s 2.1s ease-out both; }
-.rank small { display: block; font: 700 0.7rem var(--label); letter-spacing: 0.15em; color: var(--gold); }
-.rank b { display: inline-block; border: 3px solid var(--gold); color: var(--gold); padding: 0.15rem 0.9rem; margin: 0.3rem 0;
-  animation: slam 0.5s 2.4s cubic-bezier(.2,1.6,.4,1) both; font: 800 1.5rem var(--label); letter-spacing: 0.1em; text-transform: uppercase; }
-.rank .score { display: block; font: 700 1.1rem var(--display); opacity: 0.85; }
-.rank.cold b { border-color: #9aa7b3; color: #9aa7b3; }
-.medals { margin-top: 0.8rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
-.medals span { background: #2b221d; border: 1px solid #e8c27a; color: #e8c27a; border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.85rem; }
-.cover-art { width: 100%; aspect-ratio: 800 / 731; background-size: cover; background-position: center; border-radius: 14px;
-  -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%);
-  mask-image: radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%); animation: rise 0.8s ease-out; }
-.story { font-family: var(--display); font-size: 1.12rem; line-height: 1.5; margin: 0.2rem 0 0.9rem; color: #efe6d8; }
-.whos-who { list-style: none; margin: 0.3rem 0 0.9rem; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.45rem 0.9rem; }
-.whos-who li { display: flex; align-items: center; gap: 0.55rem; margin: 0; font-size: 0.8rem; line-height: 1.25; color: #cdbfa8; }
-.whos-who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; flex: 0 0 auto; border: 1px solid #3a2e28; }
-.whos-who b { display: block; font-family: var(--display); font-size: 0.9rem; color: #efe6d8; }
-.clock-rule { display: flex; flex-direction: column; gap: 0.3rem; margin: 0 0 0.9rem; padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); font-size: 1.05rem; line-height: 1.45; }
-.clock-rule .headline { font-family: var(--display); font-size: 1.2rem; color: #e8c27a; }
-.how-to { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid #3a2e28; }
-.how-to li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.1rem; border-bottom: 1px solid #3a2e28; font-size: 0.92rem; margin: 0; }
-.how-to li .ic { width: 20px; height: 20px; color: #e8c27a; flex: 0 0 auto; }
-.how-to li span { flex: 1 1 auto; }
-.how-to li em { font: 0.75rem var(--label); font-style: normal; color: #a89a88; white-space: nowrap; }
-.ic { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; }
-.evidence mark { background: rgba(232, 194, 122, 0.22); color: #ffe2a8; border-bottom: 2px solid #e8c27a; padding: 0 0.1em; border-radius: 2px; }
-.hunch { display: flex; gap: 0.7rem; align-items: flex-start; margin: 0 0 0.8rem; padding: 0.65rem 0.8rem; border-left: 3px solid #e8c27a;
-  background: rgba(232, 194, 122, 0.07); border-radius: 0 10px 10px 0; animation: rise 0.5s ease-out both; animation-delay: 0.2s; }
-.hunch img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; border: 2px solid #e8c27a; flex: 0 0 auto; }
-.hunch p { margin: 0; font-family: var(--display); font-style: italic; font-size: 0.98rem; line-height: 1.4; color: #efe6d8; }
-.hunch code { display: block; margin-top: 0.4rem; font-size: 0.75rem; background: #1c1613; color: #cdbfa8; padding: 0.3rem 0.45rem; border-radius: 6px; white-space: pre-wrap; }
-.hunch mark { background: rgba(232, 194, 122, 0.25); color: #ffe2a8; padding: 0 0.1em; border-radius: 3px; }
-.st-key-panel h4 { font: 600 0.72rem var(--label) !important; letter-spacing: 0.16em; text-transform: uppercase;
-  color: #e8c27a !important; margin: 0.6rem 0 0.2rem !important; padding: 0 !important; }
-.st-key-panel [class*="st-key-note_"] button { width: 100%; justify-content: flex-start; text-align: left; padding: 0.15rem 0; min-height: 0; }
-.st-key-panel [class*="st-key-note_"] button > div, .st-key-panel [class*="st-key-note_"] button [data-testid="stMarkdownContainer"] { justify-content: flex-start; text-align: left; width: 100%; }
-.st-key-panel [class*="st-key-note_"] button p { font-size: 0.88rem; }
-.st-key-panel [class*="st-key-note_"] button strong { font-family: var(--label); color: #e8c27a; margin-right: 0.3rem; }
-.story-note { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.45rem 0; border-bottom: 1px solid #3a2e28; font-size: 0.86rem; }
-.story-note b { font-family: var(--display); font-size: 0.95rem; }
-.story-note span { color: #cdbfa8; }
-.story-note .lie-note { color: #ff8a7a; font-size: 0.8rem; }
-.story-note .lie-note .ic { width: 12px; height: 12px; }
-.story-note em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
-.proof { display: flex; flex-direction: column; gap: 0.15rem; margin: -0.4rem 0 0.7rem; font-size: 0.8rem; color: #a89a88; }
-.proof .ic { color: #e8c27a; width: 13px; height: 13px; }
-.proof em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
-.proof small { display: block; margin: 0 0 0.3rem 1.1rem; font-size: 0.8rem; color: #cdbfa8; line-height: 1.35; }
-.tips div span .ic { width: 26px; height: 26px; color: #e8c27a; }
-.facedown.locked .ic { width: 40px; height: 40px; }
-.medals span .ic { width: 15px; height: 15px; }
-.chat .unlock .ic, .chat .caught b .ic { width: 14px; height: 14px; }
-/* Detective pick: the portraits are the buttons. The chosen one wears the red ring, the other waits dimmed. */
-.st-key-pick_buttons { margin: 0.7rem 0 0.6rem; }
-.st-key-pick_buttons [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 1rem; }
-.st-key-pick_buttons [data-testid="stColumn"] { min-width: 0 !important; width: 50% !important; flex: 1 1 0 !important;
-  display: flex; justify-content: center; }
-.st-key-pick_buttons [data-testid="stColumn"] > div { align-items: center; }
-.st-key-pick_buttons button { width: 120px; height: 150px; min-height: 0; padding: 0; border-radius: 12px;
-  border: 3px solid transparent; background-color: #241c18; background-size: cover; background-position: center top;
-  filter: grayscale(0.55) brightness(0.7); transition: filter .2s, border-color .2s, box-shadow .2s, transform .2s; }
-.st-key-pick_buttons button:hover { filter: none; border-color: var(--gold); transform: translateY(-2px); }
-.st-key-pick_buttons button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-.st-key-pick_buttons button[kind="primary"] { filter: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35); }
-.st-key-pick_buttons button p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-@keyframes slam { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: scale(1); } }
-@keyframes stamp { from { opacity: 0; transform: translate(-50%, -50%) rotate(-14deg) scale(3); } to { opacity: 1; transform: translate(-50%, -50%) rotate(-14deg) scale(1); } }
-@keyframes flip { from { opacity: 0; transform: perspective(800px) rotateY(80deg); } to { opacity: 1; transform: none; } }
-@keyframes deal { from { opacity: 0; transform: translateY(-30px) rotate(-6deg); } to { opacity: 1; transform: none; } }
-@keyframes shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
-/* The mode choice on the start screen: roomy buttons, and air between the kicker, the buttons and the note. */
-.st-key-mode_pick { gap: 0.8rem; margin: 0.5rem 0 1.4rem; }
-.st-key-mode_pick [data-testid="stButtonGroup"] button { min-height: 48px; padding: 0.6rem 1.6rem; font-size: 1rem; }
-.st-key-mode_pick [data-testid="stCaptionContainer"] { line-height: 1.55; }
-/* Pop-ups (a new card unlocked, a refused move) appear at the top of the screen, where the eye is. */
-[data-testid="stToastContainer"] { top: 1rem !important; bottom: auto !important; }
-/* Save game: one round save icon pinned to the bottom-left corner, away from the pop-ups at the top. */
-.st-key-save_corner { position: fixed; left: 1rem; bottom: 1rem; z-index: 1000; width: auto !important; }
-.st-key-save_corner [data-testid="stPopoverButton"] {
-  width: 56px; height: 56px; min-height: 0; padding: 0; border-radius: 50%; justify-content: center;
-  background: var(--paper); border: 2px solid var(--gold); color: var(--gold); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55); }
-.st-key-save_corner [data-testid="stPopoverButton"] [data-testid="stMarkdownContainer"] {  /* the name stays for screen readers */
-  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.st-key-save_corner [data-testid="stPopoverButton"] [aria-hidden="true"]:has([data-testid="stIconMaterial"]) { display: none; }
-.st-key-save_corner [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { font-size: 1.75rem; color: var(--gold); margin: 0; }
-.st-key-save_corner button:hover { border-color: #fff3d6; transform: translateY(-1px); }
-.st-key-save_corner button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-/* On wider screens the icon sits bottom-right, under the side panel, so it never covers an evidence card. */
-@media (min-width: 641px) { .st-key-save_corner { left: auto; right: 1rem; } }
-@media (max-width: 640px) {
-  [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 5rem; }
-  [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; top: 0.5rem !important; }
-  .st-key-save_corner { left: 0.6rem; bottom: 0.6rem; }
-  .st-key-save_corner [data-testid="stPopoverButton"] { width: 52px; height: 52px; }
-  [data-testid="stButtonGroup"] button { min-height: 40px; }
-  .st-key-mode_pick [data-testid="stElementContainer"], .st-key-mode_pick [data-testid="stButtonGroup"],
-  .st-key-mode_pick [data-testid="stButtonGroup"] > div { width: 100% !important; max-width: none !important; }
-  .st-key-mode_pick [data-testid="stButtonGroup"] button { flex: 1 1 0; padding: 0.6rem 0.5rem; }  /* question and evidence pills: easy to tap */
-  .evidence img { max-height: 170px; }
-  .st-key-next_phone { display: block; margin-top: 0.4rem; }
-  .st-key-case_summary [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.4rem 0.8rem; }
-  .st-key-case_summary [data-testid="stColumn"] { min-width: 28% !important; width: 28% !important; flex: 1 1 28% !important; }
-  .st-key-next_phone button { border-color: #e8c27a; color: #e8c27a; }
-  .tips { grid-template-columns: 1fr; }
-  .st-key-suspect_row { display: none; }
-  [data-testid="stDialog"] [data-testid="stColumn"]:has(.cover-art) { display: none; }
-  .story { font-size: 1rem; }
-  .facts { grid-template-columns: repeat(2, 1fr); }
-  .finale .mug, .finale .mug img { width: 160px; }
-  .finale h1 { font-size: 2rem; }
-  .st-key-pick_buttons button { width: 110px; height: 138px; }
-}
-</style>
-"""
+# The page's look lives in assets/style.css; this file keeps the game's logic.
+PAGE_CSS = "\n<style>\n" + (ROOT / "assets" / "style.css").read_text(encoding="utf-8") + "</style>\n"
 
 # Calm mode on the page itself: chat bubbles, stamps and the finale appear at once instead of animating.
 CALM_CSS = """<style>
@@ -684,7 +438,6 @@ def draw_board(game, clues, fresh):
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
         + pending_sound()
-        + (board.tutorial_html() if show_tour(game) else "")
         + board.calm_html(calm())
     )
     deck(data=markup, key="board", on_act_change=functools.partial(on_act, "board"))
@@ -698,11 +451,6 @@ def pending_sound():
     return board.sfx_html(name, st.session_state.get("sfx_n", 0)) if name else ""
 
 
-def show_tour(game):
-    """The first-play tour: once, after the intro, before the first move."""
-    return bool(st.session_state.get("intro_done")) and not st.session_state.get("tour_done") and not game.history
-
-
 def draw_suspects(game):
     kind, value = focus()
     picked = value if kind == "suspect" else None
@@ -711,30 +459,11 @@ def draw_suspects(game):
          on_act_change=functools.partial(on_act, "suspect_row"))
 
 
-# ---- Panel: home (leads, lies caught) ---------------------------------------------------
-
-
-def recap_html(game):
-    """The case so far, in four short lines: for a player coming back after a break."""
-    clues = engine.clue_list(game)
-    found = sum(c["state"] == "open" for c in clues)
-    done = sum(engine.suspect_progress(game, s)["done"] for s in case["suspects"])
-    lies = len(game.contradictions)
-    out = len(engine.eliminated(game))
-    rows = [
-        ("card", f"<b>{found} of {len(clues)}</b> evidence cards found"),
-        ("ask", f"<b>{done} of {len(case['suspects'])}</b> suspects with nothing left to ask"),
-        ("bolt", f"<b>{lies}</b> {'lie' if lies == 1 else 'lies'} caught"),
-        ("check", f"<b>{out}</b> {'answer' if out == 1 else 'answers'} ruled out on your notebook"),
-    ]
-    return '<div class="recap">' + "".join(f"<div>{board.icon(i)}<span>{t}</span></div>" for i, t in rows) + "</div>"
+# ---- Panel: home (leads, the night so far) ------------------------------------------------
 
 
 def panel_home(game):
     st.markdown('<div class="kicker">Your move</div>', unsafe_allow_html=True)
-    if game.history:
-        st.markdown("### The case so far")
-        st.markdown(recap_html(game), unsafe_allow_html=True)
     leads = engine.leads(game) + [{"clue": c, "text": t} for c, t in engine.hint_list(game).items()]
     if leads:
         st.markdown("### Leads")
@@ -759,17 +488,6 @@ def panel_home(game):
         st.markdown("### The night so far")
         st.markdown("".join(f'<div class="lead"><b>{e["time"]}</b><span>{esc(e["text"])}</span></div>' for e in night),
                     unsafe_allow_html=True)
-    caught = engine.contradiction_list(game)
-    if caught:
-        st.markdown(f"### Lies caught · {len(caught)}")
-        st.markdown(
-            "".join(
-                f'<div class="lie"><b>{esc(board.short_name(case["suspects"][c["suspect"]]["name"]))}</b> said '
-                f'“{esc(c["text"])}” · broken by <b>{esc(proof_name(c["clue"]) if c["clue"] else "a clue")}</b></div>'
-                for c in caught
-            ),
-            unsafe_allow_html=True,
-        )
     badges = engine.badge_list(game)
     if badges:
         st.markdown('<div class="medals">' + "".join(f'<span title="{esc(b["description"])}">{board.icon("medal")} {esc(b["title"])}</span>' for b in badges) + "</div>",
@@ -959,11 +677,6 @@ def chat_html(log, suspect):
     return '<div class="chat">' + "".join(rows) + "</div>"
 
 
-def nerve_level(game, suspect):
-    """How rattled a suspect looks, 0 to 100. The engine decides it (Engine.nerves); at 100 they crack."""
-    return engine.nerves(game, suspect)
-
-
 def topic_label(topic, asked, tip=None):
     """A question's button: an arrow on the suggested next step, ✓ once asked."""
     label = TOPICS[topic][0]
@@ -1002,7 +715,7 @@ def panel_suspect(game, suspect):
     brief = engine.character_brief(game, suspect)
     uri = board.suspect_picture(suspect, rattled(game, suspect)) or ""
     persona = brief["persona"].split(";")[0].split(". ")[0].rstrip(".") + "."
-    nerves = nerve_level(game, suspect)
+    nerves = engine.nerves(game, suspect)  # 0 to 100, decided by the engine; at 100 they crack
     broke = " broke" if suspect in game.cracked else ""
     st.markdown(
         f'<div class="who-head"><img src="{uri}" alt="{esc(brief["name"])}"><div>'
@@ -1173,7 +886,9 @@ def clue_fact(game, clue_id):
 
 
 def notebook_notes(game):
-    """The automatic half of the notebook: every card found, every story told, every lie and proof."""
+    """The automatic half of the notebook: every card found, every story told, every lie.
+
+    What the evidence rules out is shown once, on the Cross off tab, beside the answers it crosses off."""
     opened = [e["clue"] for e in game.history if e.get("action") == "open"]
     if not opened and not game.history:
         st.caption("Empty for now. Everything you find and hear is written down here by itself.")
@@ -1202,15 +917,6 @@ def notebook_notes(game):
             rows.append(f'<div class="story-note"><b>{esc(board.short_name(brief["name"]))}</b>'
                         f'<span>“{esc(brief["cover"].strip())}”</span>{lies}</div>')  # whole story: a cut could hide the line a card breaks
         st.markdown("".join(rows), unsafe_allow_html=True)
-    proven = engine.eliminated(game)
-    if proven:
-        st.markdown(f"#### Ruled out · {len(proven)}")
-        st.markdown(
-            '<div class="proof">' + "".join(
-                ruled_out_html(game, e["column"], e["option"], e["by"]) for e in proven
-            ) + "</div>",
-            unsafe_allow_html=True,
-        )
 
 
 def panel_sheet():
@@ -1431,11 +1137,6 @@ def whos_who_html():
 
 
 HOURS = case["clock"]["limit_minutes"] // 60
-CLOCK_RULE = (
-    f'<div class="clock-rule"><b class="headline">Every action costs time. Use your {HOURS} hours well.</b>'
-    "<span>The clock runs from midnight to 09:00, and every search and every question moves it forward. "
-    "At 09:00 you can no longer search or ask: you can only accuse.</span></div>"
-)
 HOW_TO_PLAY = (
     '<ol class="how-to">'
     f'<li>{board.icon("search")}<span><b>Search</b> a new place or document</span><em>−{case["clock"]["clue_cost"]} min</em></li>'
@@ -1444,12 +1145,16 @@ HOW_TO_PLAY = (
     f'<li>{board.icon("scale")}<span><b>Accuse</b> who, how, where and why</span><em>no time · {case["max_strikes"]} tries</em></li>'
     "</ol>"
 )
-SHOW_COVER = True  # the cover picture beside the briefing on the start screen (hidden on phones)
+# The rules in one box: how time works, then what each action costs.
+CLOCK_RULE = (
+    f'<div class="clock-rule"><b class="headline">Every action costs time. Use your {HOURS} hours well.</b>'
+    "<span>The clock runs from midnight to 09:00, and every search and every question moves it forward. "
+    "At 09:00 you can no longer search or ask: you can only accuse.</span>" + HOW_TO_PLAY + "</div>"
+)
 
 
 MODE_LABELS = {"normal": "Normal", "hard": "Hard"}
-MODE_NOTE = ("Hard mode is the same case with one difference: no tips. No next step, no hints, "
-             "no highlighted details and nothing crossed off for you. Normal mode keeps them all.")
+MODE_NOTE = "Hard mode is the same case with one difference: no tips."
 
 
 def pick_mode():
@@ -1473,14 +1178,13 @@ def finish_intro():
     st.session_state.intro_done = True
     game = current_game()
     if not game.history and not engine.hard(game) and "tutorial" not in st.session_state:
-        st.session_state.tutorial = True  # the guided first minute teaches by doing, so it replaces the tour
-        st.session_state.tour_done = True
+        st.session_state.tutorial = True  # the guided first minute teaches by doing
 
 
 @st.dialog("The exam has leaked", width="large", on_dismiss=finish_intro)
 def intro_dialog():
     """The story and the rules in one glance, and who you are, before the first move."""
-    cover = board.data_uri(str(COVER)) if SHOW_COVER else None
+    cover = board.data_uri(str(COVER))  # beside the briefing (hidden on phones)
     if cover:
         art, brief = st.columns([5, 6], gap="large")
         with art:
@@ -1489,7 +1193,7 @@ def intro_dialog():
         brief = st.container()
     with brief:
         st.markdown(f'<div class="kicker">{esc(TITLE)}</div>', unsafe_allow_html=True)
-        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + CLOCK_RULE + whos_who_html() + HOW_TO_PLAY, unsafe_allow_html=True)
+        st.markdown(f'<p class="story">{STORY_HTML}</p>' + PAGE_CSS + CLOCK_RULE + whos_who_html(), unsafe_allow_html=True)
         st.markdown('<div class="kicker">Choose your mode</div>', unsafe_allow_html=True)
         game = current_game()
         if game.history:
@@ -1572,9 +1276,6 @@ with side_column:
             panel_home(game)
     next_step_button(game)
 save_corner()
-if show_tour(game):  # the first-play tour card sits at the bottom of a phone screen: lift the icon above it
-    st.markdown("<style>@media (max-width: 640px) { .st-key-save_corner { bottom: 10.5rem; } }</style>",
-                unsafe_allow_html=True)
 
 # Called last, so the story and rules open over the game on a new case.
 if not st.session_state.get("intro_done", bool(game.history)):
