@@ -844,23 +844,26 @@ def panel_clue(game, clue_id, fresh):
     fact = engine.key_fact(game, clue_id)
     if fact:
         st.markdown(f'<div class="keyfact"><small>In short</small>{esc(fact)}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{body}</div></div>', unsafe_allow_html=True)
     if hunches:
         st.markdown(hunch_html(hunches, clue["log"]), unsafe_allow_html=True)
     else:
         musing = engine.musing(game, clue_id)
         if musing:
             st.markdown(hunch_html([{"line": musing, "mark": ""}], ""), unsafe_allow_html=True)
-    if clue["log"]:
-        query = st.text_input("Search the log", key=f"search_{clue_id}", placeholder="A card number, a name, a time…")
-        matches, total = search_log(clue["log"], query)
-        if query.strip():
-            st.caption(f"{len(matches)} of {total} lines match.")
-        if matches:
-            st.code("\n".join(matches), language=None, wrap_lines=True)
-    if clue["hidden_text"] and st.toggle("Look closer", key=f"hidden_{clue_id}"):
-        st.warning(clue["hidden_text"])
-        st.caption(AI_TRAP_NOTE)
+    # Less reading: with an "In short" line on top, the whole card waits behind one tap.
+    # Hard mode has no "In short" line, so there the card is always open.
+    with st.expander("Read the whole card", icon=":material/description:") if fact else st.container():
+        st.markdown(f'<div class="evidence"{style}>{art}<div class="body">{body}</div></div>', unsafe_allow_html=True)
+        if clue["log"]:
+            query = st.text_input("Search the log", key=f"search_{clue_id}", placeholder="A card number, a name, a time…")
+            matches, total = search_log(clue["log"], query)
+            if query.strip():
+                st.caption(f"{len(matches)} of {total} lines match.")
+            if matches:
+                st.code("\n".join(matches), language=None, wrap_lines=True)
+        if clue["hidden_text"] and st.toggle("Look closer", key=f"hidden_{clue_id}"):
+            st.warning(clue["hidden_text"])
+            st.caption(AI_TRAP_NOTE)
     if engine.out_of_time(game):
         st.caption(OUT_OF_TIME)
     shown = {e["suspect"] for e in game.history if e.get("action") == "present" and e.get("clue") == clue_id}
