@@ -752,7 +752,8 @@ def panel_suspect(game, suspect):
         if log:
             st.markdown(chat_html(log, suspect), unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="empty-chat">Ask {esc(brief["name"])} something, or show them an evidence card.</div>',
+            st.markdown(f'<div class="empty-chat">Ask {esc(brief["name"])} something, or show them an evidence card. '
+                        'Quote a time or a card number from your evidence in your own question to press them.</div>',
                         unsafe_allow_html=True)
     cost = case["clock"]["question_cost"]
     step = guide(game) or {}
@@ -767,7 +768,7 @@ def panel_suspect(game, suspect):
              key="ask_topic", on_change=ask_topic)
     opened = [c["id"] for c in engine.clue_list(game) if c["state"] == "open"]
     if opened:
-        shown = {e["clue"] for e in game.history if e.get("action") == "present" and e.get("suspect") == suspect}
+        shown = {e["clue"] for e in game.history if e.get("action") in ("present", "press") and e.get("suspect") == suspect}
         show_tip = tip.get("clue") if tip.get("do") == "show" else None
         st.pills(f"Show an evidence card · {cost} min", opened, format_func=lambda i: card_label(i, shown, show_tip),
                  key="show_clue", on_change=show_evidence, help="Show them evidence. The right card breaks a lie.")
@@ -782,11 +783,17 @@ def panel_suspect(game, suspect):
             result = run(ask_and_note_fallback)
         if result:
             answer, fallback = result
-            sound("tick")
+            caught = answer.get("contradictions", [])
+            sound("stamp" if caught or answer.get("cracked") else "tick")
             say(suspect, {"who": "you", "text": HIDDEN_QUESTION if answer.get("blocked") else question})
-            say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback})
+            if answer.get("pressed"):
+                say(suspect, {"who": "you", "text": f"You press them with a detail from {engine.label(answer['pressed'])}.", "act": True})
+            say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback,
+                          "caught": caught})
+            if answer.get("cracked"):
+                say(suspect, {"who": "them", "text": answer["cracked"]["line"], "cracked": answer["cracked"]})
             if not answer.get("blocked"):
-                think(suspect, engine.reaction(current_game(), unlocked=bool(answer["unlocked"])))
+                think(suspect, engine.reaction(current_game(), caught=bool(caught), unlocked=bool(answer["unlocked"])))
         st.rerun()
 
 
@@ -888,7 +895,7 @@ def panel_clue(game, clue_id, fresh):
             st.caption(AI_TRAP_NOTE)
     if engine.out_of_time(game):
         st.caption(OUT_OF_TIME)
-    shown = {e["suspect"] for e in game.history if e.get("action") == "present" and e.get("clue") == clue_id}
+    shown = {e["suspect"] for e in game.history if e.get("action") in ("present", "press") and e.get("clue") == clue_id}
     st.pills(
         f"Show this card to · {case['clock']['question_cost']} min", list(case["suspects"]),
         format_func=lambda s: ("✓ " if s in shown else "") + board.short_name(case["suspects"][s]["name"]),
