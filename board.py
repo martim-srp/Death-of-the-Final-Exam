@@ -201,11 +201,14 @@ def calm_html(on):
 
 
 def tutorial_html():
-    """A skippable tour of the screen, before the separate learn-by-playing tutorial."""
+    """The skippable tour of the screen that opens a new case: the one walkthrough a new player gets."""
     steps = [
         ("map", "The map", "Tap a red pin to search a place. Searching costs 30 minutes."),
         ("hand", "Your evidence", "Tap a card to read it. Red cards are ready to search; locked cards need more investigation."),
-        ("suspects", "The suspects", "Tap a face to ask questions or show evidence. A question or showing a card costs 10 minutes."),
+        ("suspects", "The suspects", "Tap a face to ask questions or show evidence. Show the card that breaks their story "
+                                     "to catch a lie. A question or showing a card costs 10 minutes."),
+        ("sheet", "Your notebook", "It writes down every card, every story and every lie for you. "
+                                   "Cross off what can't be: what is left is your accusation."),
         ("accuse", "Accuse", "Choose who leaked the exam, how, where and why. At 09:00 you can only accuse. You have three tries."),
     ]
     items = "".join(
@@ -522,7 +525,7 @@ function tour(root, setTriggerValue) {
             const row = document.querySelector(".st-key-suspect_row");
             return row && row.offsetParent ? row : root.querySelector(".phone-only .suspects");
         }
-        return root.querySelector({ map: ".map", hand: ".hand", accuse: ".accuse" }[name]);
+        return root.querySelector({ map: ".map", hand: ".hand", sheet: '[data-act="sheet"]', accuse: ".accuse" }[name]);
     };
     const place = () => {
         if (box.hidden || !box.isConnected || !ring.isConnected) return;
