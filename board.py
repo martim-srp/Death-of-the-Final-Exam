@@ -287,12 +287,11 @@ def map_html(map_uri, size, points, opened, picked=None, avatar_uri=None, fresh=
         classes = (f"pin {state}" + (" picked" if p["id"] == picked else "") + (" fresh" if p["id"] in fresh else "")
                    + (" goal" if p["id"] == goal else ""))
         label = esc(f"{p['place']}: {PIN_LABEL[state]}")
-        thumb = find_picture("clues", p["id"]) if state == "open" else None
-        if thumb:
+        if state == "open" and find_picture("clues", p["id"]):
+            # The picture itself is sent once, in the evidence hand (pictures_html); the pin reuses it.
             face = (
                 f'<clipPath id="clip{p["id"]}"><circle r="34"/></clipPath>'
-                f'<image href="{thumb}" x="-46" y="-34" width="92" height="69" clip-path="url(#clip{p["id"]})" '
-                'preserveAspectRatio="xMidYMid slice"/>'
+                f'<g clip-path="url(#clip{p["id"]})"><use href="#{picture_id(p["id"])}" x="-46" y="-34" width="92" height="69"/></g>'
             )
         elif state == "open":
             face = '<circle r="34" fill="#efe6d8"/><text class="glyph" y="10" fill="#14100e">✓</text>'
@@ -341,9 +340,9 @@ def card_html(item, picked=None, fresh=(), goal=None):
         classes += " flip" if state == "open" else " fresh"
     name = esc(CARD_NAMES.get(item["id"], item["title"])).replace("/", "/<wbr>")
     if state == "open":
-        uri = find_picture("clues", item["id"])
         art = (
-            f'<div class="art" style="background-image:url({uri})"></div>' if uri
+            f'<div class="art"><svg class="pic" aria-hidden="true"><use href="#{picture_id(item["id"])}" width="100%" height="100%"/></svg></div>'
+            if find_picture("clues", item["id"])
             else f'<div class="art icon">{icon(CARD_ICON.get(item["id"], KIND_ICON[item["kind"]]))}</div>'
         )
     elif state == "available":
@@ -362,11 +361,31 @@ def hand_columns(count):
     return max(1, (count + 1) // 2)
 
 
+def picture_id(clue_id):
+    """The id of an evidence picture's single copy on the board (see pictures_html)."""
+    return f"pic-{clue_id}"
+
+
+def pictures_html(clues):
+    """Each open card's picture, once, as an SVG symbol. The card and its map pin both draw it
+    with <use>, so every redraw sends each picture one time instead of two. Locked and unopened
+    cards are left out, so their pictures never reach the browser."""
+    symbols = "".join(
+        f'<symbol id="{picture_id(c["id"])}"><image href="{uri}" width="100%" height="100%" '
+        'preserveAspectRatio="xMidYMid slice"/></symbol>'
+        for c in clues if c["state"] == "open" and (uri := find_picture("clues", c["id"]))
+    )
+    return f'<svg class="pics" width="0" height="0" aria-hidden="true" focusable="false">{symbols}</svg>' if symbols else ""
+
+
 def hand_html(clues, picked=None, fresh=(), goal=None):
-    """All the evidence cards, numbered 1 to 13. Places also have a pin on the map; both open the same card."""
+    """All the evidence cards, numbered 1 to 13. Places also have a pin on the map; both open the same card.
+
+    The open cards' pictures travel here, once each, and the map pins reuse them."""
     opened = sum(c["state"] == "open" for c in clues)
     return (
-        f'<div class="handhead"><b>Evidence</b><span>{opened} of {len(clues)} found</span></div>'
+        pictures_html(clues)
+        + f'<div class="handhead"><b>Evidence</b><span>{opened} of {len(clues)} found</span></div>'
         f'<div class="hand" lang="en" style="--n:{hand_columns(len(clues))}">' + "".join(card_html(c, picked, fresh, goal) for c in clues) + "</div>"
     )
 
@@ -576,6 +595,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: transform .18s, box-shadow .18s, border-color .18s; }
 .card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,.55); border-color: var(--gold); }
 .card .art { aspect-ratio: 4 / 3; background-size: cover; background-position: center; position: relative; }
+.card .art svg.pic { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pics { position: absolute; width: 0; height: 0; overflow: hidden; }
 .card .art.icon { display: flex; align-items: center; justify-content: center; font-size: 26px; background: #e2d4bd; }
 .card .art.back { display: flex; align-items: center; justify-content: center; color: #f4d9a0; font: 700 26px var(--serif);
   background: repeating-linear-gradient(45deg, #5a1d16 0 6px, #6e241b 6px 12px); }
