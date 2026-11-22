@@ -1170,8 +1170,8 @@ HOW_TO_PLAY = (
 # The rules in one box: how time works, then what each action costs.
 CLOCK_RULE = (
     f'<div class="clock-rule"><b class="headline">Every action costs time. Use your {HOURS} hours well.</b>'
-    "<span>The clock runs from midnight to 09:00, and every search and every question moves it forward. "
-    "At 09:00 you can no longer search or ask: you can only accuse.</span>" + HOW_TO_PLAY + "</div>"
+    "<span>Your clock starts at midnight, and every search and every question moves it forward. "
+    "When the time runs out, you can only accuse.</span>" + HOW_TO_PLAY + "</div>"
 )
 
 

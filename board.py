@@ -156,6 +156,8 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
     calm: whether calm mode is on (no animations, no sounds), shown on its button.
     goal: what the next step asks for; "sheet" makes the notebook button glow."""
     hours, minutes = divmod(max(minutes_left, 0), 60)
+    night_hours, night_minutes = map(int, clock.split(":"))
+    accessible_clock = f"{night_hours % 12 or 12}:{night_minutes:02d} {'AM' if night_hours < 12 else 'PM'}"
     burnt = 100 * (1 - max(minutes_left, 0) / limit)
     urgent = " urgent" if minutes_left <= 120 else ""
     notebook_glow = ' class="goal"' if goal == "sheet" else ""
@@ -164,8 +166,11 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
     return (
         f'<div class="hud{urgent}">'
         f'<div class="me" title="{esc(name)}">{face}</div>'
-        # Time left sits under the clock, so it fits every screen (beside it, it had to hide on most).
-        f'<div class="clock"><span class="time"><b>{esc(clock)}</b><span class="left">{hours}h {minutes:02d}m left</span></span>'
+        # One number: the time left, counting down. Two (a clock counting up, time left counting down)
+        # read as two different things to new players. The night's hour stays on hover.
+        f'<div class="clock" role="timer" title="Night clock: {esc(clock)}. The case closes at 09:00." '
+        f'aria-label="{hours} hours and {minutes:02d} minutes left. Night clock: {accessible_clock}. The case closes at 09:00.">'
+        f'<span class="time"><b>{hours}h {minutes:02d}m left</b></span>'
         f'<div class="fuse"><i style="width:{burnt:.1f}%"></i></div></div>'
         f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span><small>tries left</small></div>'
         f'<button class="stat zapstat" type="button" data-act="lies" title="Lies caught: what they mean">'
@@ -638,11 +643,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 1px solid #3a2e28; border-radius: 14px; margin-bottom: 10px; }
 .hud .me img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: top; border: 2px solid var(--gold); display: block; }
 .hud .clock { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.hud .clock b { font: 700 28px var(--type); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.hud .clock b { font: 700 21px var(--type); letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hud .clock { min-width: auto; } .hud .clock .fuse { min-width: 0; }  /* the bar gives way, never the time left */
 .hud .clock small { font-size: 12px; opacity: .7; white-space: nowrap; }
 .hud .clock .time { display: flex; flex-direction: column; line-height: 1.05; flex: 0 0 auto; }
-.hud .clock .left { font: 600 11px var(--type); letter-spacing: .06em; color: var(--gold); white-space: nowrap; margin-top: 2px; }
-.hud.urgent .clock .left { color: #ff6b5a; }
 .hud .fuse { flex: 1; height: 6px; background: #3a2e28; border-radius: 3px; overflow: hidden; min-width: 30px; }
 .hud .fuse i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--red)); transition: width .6s; }
 .hud.urgent .clock b { color: #ff6b5a; animation: throb 1s ease-in-out infinite; }
@@ -712,6 +716,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* A medium board (a 1280px laptop): the "9h 00m left" note would run over the tries; the fuse bar still shows it. */
 @container (max-width: 820px) {
   .hud .clock small { display: none; }
+  .hud { gap: 9px; }  /* room for the time left and the Accuse button on one row */
+  .hud .clock .fuse { display: none; }
 }
 .card.locked { background: #2a221e; color: #a89a8c; border-color: #3a2e28; }  /* 5.7:1, readable at 11px */
 .card.available { border-color: var(--red); animation: glow 1.8s infinite; }
@@ -750,7 +756,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .hud .clock { order: 1; flex: 1 1 auto; }
   .hud .me { order: 0; }
   .hud .me img { width: 34px; height: 34px; }
-  .hud .clock b { font-size: 22px; }
+  .hud .clock b { font-size: 18px; }
   .hud .clock small { display: none; }
   .hud .stat { order: 2; font-size: 14px; }
   .tools { order: 3; flex: 1 1 100%; }
@@ -834,7 +840,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .hud .clock { order: 1; flex: 1 1 auto; min-width: 0; }
   .hud .me { order: 0; }
   .hud .me img { width: 34px; height: 34px; }
-  .hud .clock b { font-size: 22px; }
+  .hud .clock b { font-size: 18px; }
   .hud .clock small { display: none; }
   .hud .stat { order: 2; font-size: 14px; }
   .tools { order: 3; flex: 1 1 100%; }
