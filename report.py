@@ -4,6 +4,7 @@ It sums up the player's investigation and outcome. A cold case stays unsolved in
 the story, with the correct answer shown separately for the player after it ends.
 """
 
+from game.case import option_label as _label
 from game.engine import COLUMNS, GameError
 
 
@@ -14,10 +15,6 @@ def closing_scene(engine, game):
     if game.status == "cold":
         return engine.case["cold_ending"]
     return engine.case["variants"][game.variant].get("denouement", "").format_map(game.variables)
-
-
-def _label(case, column, option_id):
-    return next(o["label"] for o in case["accusation"][column] if o["id"] == option_id)
 
 
 def _plain(text):
@@ -79,9 +76,10 @@ def build(engine, game, examiner="Detective"):
         lines += ["", "## Commendations", ""]
         lines += [f"- {_plain(b['title'])}: {_plain(b['description'])}" for b in badges]
 
+    answer = [f"- **{c.capitalize()}:** {_plain(_label(case, c, solution[c]))}" for c in COLUMNS]
     lines += ["", "## Finding of the council", ""]
     if solved:
-        lines += [f"- **{c.capitalize()}:** {_plain(_label(case, c, solution[c]))}" for c in COLUMNS]
+        lines += answer
     else:
         lines += ["The case remains unsolved. No culprit has been identified."]
 
@@ -93,7 +91,7 @@ def build(engine, game, examiner="Detective"):
     if not solved:
         lines += ["", "## The correct solution (for the player)", "",
                   "The investigation itself remained unsolved. This is the correct answer for your case.", ""]
-        lines += [f"- **{c.capitalize()}:** {_plain(_label(case, c, solution[c]))}" for c in COLUMNS]
+        lines += answer
 
     lines += ["", f"*{_plain(title)}. All characters, the course and the companies are fictional.*", ""]
     return "\n".join(lines)

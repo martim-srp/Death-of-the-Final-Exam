@@ -22,7 +22,7 @@ import board
 import db
 import reloading
 import report
-from game.case import load_case
+from game.case import load_case, option_label
 
 ROOT = Path(__file__).resolve().parent
 COVER = ROOT / "assets" / "cover.webp"
@@ -44,6 +44,8 @@ FALLBACK_NOTES = {
 }
 # Shown in the chat instead of a typed question that looked like a password or key.
 HIDDEN_QUESTION = "(Hidden: that looked like a password, so it was not sent.)"
+UNSAVED_QUESTION = "(Typed question kept in the original session.)"
+UNSAVED_REPLY = "(Reply to a typed question kept in the original session.)"
 # Shown under the hidden line in the leaked PDF: what that line is, and why it cannot work here.
 AI_TRAP_NOTE = (
     "Behind the scenes: this is a prompt injection, text hidden in evidence that tries to give orders to an AI. "
@@ -90,14 +92,16 @@ def start_new_game():
 
 
 def current_game():
+    st.session_state.save_snapshot = None
     if "game" not in st.session_state:
         requested = st.query_params.get("game")
-        saved = db.load_game(requested) if requested else None
+        saved, snapshot = db.load_game_snapshot(requested)
         if saved is not None and saved.variant not in case["variants"]:
             saved = None  # saved with a variant this case file no longer has
         if saved is not None:
             st.session_state.game = saved.to_dict()
             st.session_state.game_id = requested
+            st.session_state.save_snapshot = snapshot
         else:
             if requested:
                 st.session_state.flash = ("warning", "That saved game was not found, so a new case has started.")
@@ -105,16 +109,21 @@ def current_game():
     elif "game_id" in st.session_state:
         # The saved game is the truth. Another tab or phone with the same link may have
         # played on, so an old copy in this tab must not undo it (or undo a cold case).
-        saved = db.load_game(st.session_state.game_id)
+        saved, snapshot = db.load_game_snapshot(st.session_state.game_id)
         if saved is not None and saved.variant in case["variants"]:
             st.session_state.game = saved.to_dict()
+            st.session_state.save_snapshot = snapshot
     return Game.from_dict(st.session_state.game)
 
 
 def save(game):
-    st.session_state.game = game.to_dict()
     if "game_id" in st.session_state:
-        db.save_game(st.session_state.game_id, game)
+        snapshot = st.session_state.save_snapshot
+        if snapshot is None or not db.save_game(st.session_state.game_id, game, expected_state=snapshot):
+            st.session_state.refusal = "This saved case changed or is unavailable. Your last action was not saved."
+            return False
+    st.session_state.game = game.to_dict()
+    return True
 
 
 def resume_link(game_id):
@@ -135,7 +144,7 @@ def save_game_mailto(link):
     return f"mailto:?subject={subject}&body={body}"
 
 
-def run(action, *args):
+def run(action, *args, dialogue=None):
     """Run an engine action, save the game, and turn rule errors into messages.
 
     Newly unlocked clues pop up as a toast and are dealt into the hand with an animation.
@@ -150,7 +159,10 @@ def run(action, *args):
         # A pop-up, so the player sees it wherever they are on the page.
         st.session_state.refusal = str(error)
         return None
-    save(game)
+    if dialogue is not None:
+        game.history[-1]["dialogue"] = dialogue(game, result)
+    if not save(game):
+        return None
     unlocked = [c for c in engine.clue_list(game) if c["id"] in locked and c["state"] != "locked"]
     st.session_state.fresh = [c["id"] for c in unlocked]
     if unlocked:
@@ -193,7 +205,7 @@ def new_case():
     for key in [k for k in st.session_state
                 if str(k).startswith(("sheet_", "crossed_", "accuse_", "search_", "hidden_", "show_to_"))]:
         del st.session_state[key]
-    for key in ("chats", "focus", "suspect", "verdict", "fresh", "sfx", "tour_active", "pending_accusation"):
+    for key in ("chats", "typed_dialogue", "focus", "suspect", "verdict", "fresh", "sfx", "tour_active", "pending_accusation"):
         st.session_state.pop(key, None)
 
 
@@ -201,7 +213,7 @@ def new_case():
 
 
 def label(column, option_id):
-    return next(o["label"] for o in case["accusation"][column] if o["id"] == option_id)
+    return option_label(case, column, option_id)
 
 
 _MARKDOWN_SPECIAL = re.compile(r"([\\`*_\[\]<>#$~|])")
@@ -527,17 +539,19 @@ def panel_lies(game):
 # ---- Panel: interrogation -----------------------------------------------------------
 
 
-def say(suspect, entry):
-    st.session_state.setdefault("chats", {}).setdefault(suspect, []).append(entry)
-
-
-def think(suspect, line):
-    """The detective's own thought after an answer: a scripted line, no AI call.
-
-    Kept on the answer it reacts to, so the chat stays one question, one answer."""
-    log = st.session_state.get("chats", {}).get(suspect)
-    if line and log and log[-1]["who"] == "them":
-        log[-1]["think"] = line
+def restore_chats(game):
+    """Read saved exchanges, with typed conversations visible only in their original session."""
+    typed = st.session_state.get("typed_dialogue", {})
+    chats = {}
+    for index, event in enumerate(game.history):
+        entries = event.get("dialogue")
+        suspect = event.get("suspect")
+        if entries is None and event.get("cracked") and suspect in game.cracked:
+            line = engine.character_brief(game, suspect)["broke_down"]
+            entries = [{"who": "them", "text": line, "cracked": True}]
+        if entries:
+            chats.setdefault(suspect, []).extend(typed.get(index, entries))
+    st.session_state.chats = chats
 
 
 def ask_topic():
@@ -547,15 +561,18 @@ def ask_topic():
     suspect = st.session_state.get("suspect")
     if topic not in TOPICS or suspect not in case["suspects"]:
         return
-    result = run(engine.ask, suspect, topic)
-    if result:
-        sound("tick")
-        from game import ai
+    from game import ai
 
-        brief = engine.character_brief(current_game(), suspect)
-        say(suspect, {"who": "you", "text": TOPICS[topic][1]})
-        say(suspect, {"who": "them", "text": ai.scripted_reply(brief, topic), "unlocked": result["unlocked"]})
-        think(suspect, engine.reaction(current_game(), topic=topic, unlocked=bool(result["unlocked"])))
+    def dialogue(game, result):
+        brief = engine.character_brief(game, suspect)
+        return [
+            {"who": "you", "text": TOPICS[topic][1]},
+            {"who": "them", "text": ai.scripted_reply(brief, topic), "unlocked": result["unlocked"],
+             "think": engine.reaction(game, topic=topic, unlocked=bool(result["unlocked"]))},
+        ]
+
+    if run(engine.ask, suspect, topic, dialogue=dialogue):
+        sound("tick")
 
 
 def show_evidence():
@@ -579,18 +596,23 @@ def present_card(suspect, clue_id):
     """Show one evidence card to one suspect and write the exchange in their chat. Returns the engine's result."""
     if not clue_id or suspect not in case["suspects"]:
         return None
-    result = run(engine.present, suspect, clue_id)
+    def dialogue(game, result):
+        entries = [
+            {"who": "you", "text": f"You slide {engine.label(clue_id)} across the table.", "act": True},
+            {"who": "them", "text": result["reveal"] or "They look at it and shrug.",
+             "unlocked": result["unlocked"], "caught": result.get("contradictions", [])},
+        ]
+        if result.get("cracked"):
+            entries.append({"who": "them", "text": result["cracked"]["line"], "cracked": result["cracked"]})
+        entries[-1]["think"] = engine.reaction(
+            game, caught=bool(result.get("contradictions")), unlocked=bool(result["unlocked"]),
+            shown=True, reacted=bool(result["reveal"]),
+        )
+        return entries
+
+    result = run(engine.present, suspect, clue_id, dialogue=dialogue)
     if result:
         sound("stamp" if result.get("contradictions") or result.get("cracked") else "tick")
-        say(suspect, {"who": "you", "text": f"You slide {engine.label(clue_id)} across the table.", "act": True})
-        say(suspect, {
-            "who": "them", "text": result["reveal"] or "They look at it and shrug.",
-            "unlocked": result["unlocked"], "caught": result.get("contradictions", []),
-        })
-        if result.get("cracked"):
-            say(suspect, {"who": "them", "text": result["cracked"]["line"], "cracked": result["cracked"]})
-        think(suspect, engine.reaction(current_game(), caught=bool(result.get("contradictions")),
-                                       unlocked=bool(result["unlocked"]), shown=True, reacted=bool(result["reveal"])))
     return result
 
 
@@ -717,25 +739,42 @@ def panel_suspect(game, suspect):
     question = st.chat_input(f"Or type your own question · {cost} min", max_chars=ai.MAX_QUESTION_LENGTH, key="typed")
     if question:
 
-        def ask_and_note_fallback(game):
+        def ask_typed(game):
             answer = ai.ask(engine, game, suspect, question, cloud_key=cloud_key)
-            return answer, game.history[-1].get("fallback")
+            blocked = answer.get("blocked", False)
+            caught = answer.get("contradictions", [])
+            entries = [{"who": "you", "text": HIDDEN_QUESTION if blocked else question}]
+            if answer.get("pressed"):
+                entries.append({"who": "you", "text": f"You press them with a detail from {engine.label(answer['pressed'])}.",
+                                "act": True})
+                # The next history event holds the complete exchange.
+                game.history[-2]["dialogue"] = []
+            entries.append({"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"],
+                            "fallback": game.history[-1].get("fallback"), "caught": caught})
+            if answer.get("cracked"):
+                entries.append({"who": "them", "text": answer["cracked"]["line"], "cracked": answer["cracked"]})
+            if not blocked:
+                entries[-1]["think"] = engine.reaction(game, caught=bool(caught), unlocked=bool(answer["unlocked"]))
+            return entries, answer
+
+        def safe_dialogue(_game, result):
+            entries, answer = result
+            if answer.get("blocked"):
+                return entries
+            saved = [dict(entry) for entry in entries]
+            saved[0]["text"] = UNSAVED_QUESTION
+            reply = next(entry for entry in saved if entry["who"] == "them")
+            if not reply["fallback"]:
+                reply["text"] = UNSAVED_REPLY
+            return saved
 
         with st.spinner(f"{brief['name']} is thinking…"):
-            result = run(ask_and_note_fallback)
+            result = run(ask_typed, dialogue=safe_dialogue)
         if result:
-            answer, fallback = result
-            caught = answer.get("contradictions", [])
-            sound("stamp" if caught or answer.get("cracked") else "tick")
-            say(suspect, {"who": "you", "text": HIDDEN_QUESTION if answer.get("blocked") else question})
-            if answer.get("pressed"):
-                say(suspect, {"who": "you", "text": f"You press them with a detail from {engine.label(answer['pressed'])}.", "act": True})
-            say(suspect, {"who": "them", "text": answer["reply"], "unlocked": answer["unlocked"], "fallback": fallback,
-                          "caught": caught})
-            if answer.get("cracked"):
-                say(suspect, {"who": "them", "text": answer["cracked"]["line"], "cracked": answer["cracked"]})
-            if not answer.get("blocked"):
-                think(suspect, engine.reaction(current_game(), caught=bool(caught), unlocked=bool(answer["unlocked"])))
+            entries, answer = result
+            sound("stamp" if answer.get("contradictions") or answer.get("cracked") else "tick")
+            index = len(st.session_state.game["history"]) - 1
+            st.session_state.setdefault("typed_dialogue", {})[index] = entries
         st.rerun()
 
 
@@ -1213,6 +1252,7 @@ def intro_dialog():
 # ---- The page ---------------------------------------------------------------------------
 
 game = current_game()
+restore_chats(game)
 st.markdown(PAGE_CSS, unsafe_allow_html=True)
 if calm():
     st.markdown(CALM_CSS, unsafe_allow_html=True)

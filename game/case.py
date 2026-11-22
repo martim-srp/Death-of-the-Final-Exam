@@ -53,6 +53,11 @@ def load_ruleouts(path=RULEOUTS_PATH):
     return _load_notes(path)
 
 
+def option_label(case, column, option_id):
+    """How an accusation option reads: ("who", "ta") -> "The Teaching Assistant"."""
+    return next(o["label"] for o in case["accusation"][column] if o["id"] == option_id)
+
+
 def load_case(path=CASE_PATH):
     """Read the case file from disk."""
     with open(path, encoding="utf-8") as f:
