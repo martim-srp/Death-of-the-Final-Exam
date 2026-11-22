@@ -649,7 +649,7 @@ def chat_html(log, suspect):
             unlock = '<span class="unlock">' + board.icon("unlock") + " Unlocked: " + esc(", ".join(engine.label(i) for i in entry["unlocked"])) + "</span>"
         note = FALLBACK_NOTES.get(entry.get("fallback"))
         note = f'<span class="note">{esc(note)}</span>' if note else ""
-        rows.append(f'<div class="bubble them"{style}><i class="face them"></i><div class="say">{emphasize(entry["text"])}{unlock}{note}</div></div>')
+        rows.append(f'<div class="bubble them"{style}><i class="face them"></i><div class="say">{esc(entry["text"])}{unlock}{note}</div></div>')
         for item in entry.get("caught", []):
             rows.append(
                 f'<div class="caught"{style}><b>{board.icon("bolt")} Caught lying</b><small>They said “{esc(item["text"].rstrip("."))}”. '
