@@ -150,13 +150,15 @@ def parse_act(act, suspects, clues):
 # ---- Status bar --------------------------------------------------------------------
 
 
-def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avatar_uri, name, calm=False):
+def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avatar_uri, name, calm=False, goal=None):
     """Time, the fuse burning down to 09:00, accusations left as pips, lies caught, and the buttons.
 
-    calm: whether calm mode is on (no animations, no sounds), shown on its button."""
+    calm: whether calm mode is on (no animations, no sounds), shown on its button.
+    goal: what the next step asks for; "sheet" makes the notebook button glow."""
     hours, minutes = divmod(max(minutes_left, 0), 60)
     burnt = 100 * (1 - max(minutes_left, 0) / limit)
     urgent = " urgent" if minutes_left <= 120 else ""
+    notebook_glow = ' class="goal"' if goal == "sheet" else ""
     pips = "".join(f'<i class="pip{" on" if n < strikes_left else ""}"></i>' for n in range(max_strikes))
     face = f'<img src="{avatar_uri}" alt="">' if avatar_uri else f'<span class="noface">{icon("user")}</span>'
     return (
@@ -170,7 +172,7 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         f'{icon("bolt")}<b>{caught}</b><small>{"lie" if caught == 1 else "lies"} caught</small></button>'
         '<div class="tools">'
         f'<button data-act="home" title="The case so far and your leads">{icon("search")}</button>'
-        f'<button data-act="sheet" title="Notebook">{icon("sheet")}</button>'
+        f'<button{notebook_glow} data-act="sheet" title="Notebook">{icon("sheet")}</button>'
         f'<button data-act="intro" title="Story and rules">{icon("book")}</button>'
         f'<button class="mute" type="button" title="Sound on or off">{icon("sound", "ic on")}{icon("mute", "ic off")}</button>'
         f'<button class="calmbtn{" on" if calm else ""}" data-act="calm" aria-pressed="{"true" if calm else "false"}" '
@@ -212,22 +214,6 @@ def goal_target(step):
     if not step:
         return None
     return step.get("clue") if step["do"] == "search" else step.get("suspect")
-
-
-CASE_NOUNS = {"who": "suspects", "how": "methods", "where": "places", "why": "motives"}
-
-
-def case_html(columns):
-    """The four questions the player must answer, always in sight. Tap to open the notebook.
-
-    columns: [(column, options left, total, the one option left or None)]. An option is left
-    when neither the player nor the evidence has crossed it off."""
-    chips = "".join(
-        f'<button class="cq{" solved" if only else ""}" data-act="sheet" title="Open the notebook to cross off what cannot be">'
-        f"<small>{esc(column.upper())}</small><b>{esc(only) if only else f'{left} {CASE_NOUNS[column]} left'}</b></button>"
-        for column, left, total, only in columns
-    )
-    return f'<div class="case-strip" aria-label="Your case: who, how, where and why">{chips}</div>'
 
 
 def goal_html(step, thought=None):
@@ -663,14 +649,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .suspects { gap: 5px; }
   .pin .tag { font-size: 24px; }
 }
-/* The four questions: who, how, where, why. Always visible, tap to open the notebook */
-.case-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 0 10px; }
-.case-strip .cq { min-width: 0; padding: 5px 8px; text-align: left; cursor: pointer; border-radius: 10px;
-  border: 1px solid rgba(232,194,122,.3); background: rgba(36,28,24,.85); color: var(--ink); font: 13px/1.25 var(--prose); }
-.case-strip .cq:hover { border-color: var(--gold); }
-.case-strip .cq small { display: block; font: 600 10px var(--type); letter-spacing: .16em; color: var(--gold); }
-.case-strip .cq b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-weight: 600; }  /* up to two lines, never cut mid-word */
-.case-strip .cq.solved { border-color: var(--gold); background: rgba(232,194,122,.14); }
 /* Next step: one objective, always visible */
 .goal-bar { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 10px; padding: 8px 12px; text-align: left;
   border: 1px solid rgba(232,194,122,.55); border-radius: 12px; background: linear-gradient(90deg, rgba(232,194,122,.16), rgba(232,194,122,.04));
@@ -683,7 +661,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .goal-bar small.plain { text-transform: none; letter-spacing: .04em; font-size: 11px; margin-bottom: 2px; }
 .goal-bar em { display: block; font-style: italic; line-height: 1.3; }
 @keyframes rise-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-.card.goal, .sus.goal { border-color: var(--gold); animation: beacon-box 1.8s ease-in-out infinite; }
+.card.goal, .sus.goal, .tools button.goal { border-color: var(--gold); animation: beacon-box 1.8s ease-in-out infinite; }
 @keyframes beacon-box { 50% { box-shadow: 0 0 0 4px rgba(232,194,122,.5), 0 0 18px rgba(232,194,122,.45); } }
 /* The living map: night vignette, drifting mist, fog over locked places */
 .night, .mist, .fog, .lift, .beacon { pointer-events: none; }
@@ -700,13 +678,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pin.available, .pin.open { transition: filter .2s; }
 .pin.available:hover, .pin.open:hover, .pin.goal { filter: drop-shadow(0 0 10px rgba(232,194,122,.8)); }
 @media (prefers-reduced-motion: reduce) {
-  .mist, .fog, .lift, .pin .halo, .pin.goal .beacon, .card.goal, .sus.goal, .goal-bar { animation: none !important; }
+  .mist, .fog, .lift, .pin .halo, .pin.goal .beacon, .card.goal, .sus.goal, .tools button.goal, .goal-bar { animation: none !important; }
   .lift { opacity: 0; }
 }
 @media (max-width: 640px) {
   .goal-bar { font-size: 14px; padding: 7px 10px; }
-  .case-strip { gap: 4px; }
-  .case-strip .cq { padding: 4px 6px; font-size: 12px; }
 }
 /* Line icons */
 .ic { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; flex: 0 0 auto; }
