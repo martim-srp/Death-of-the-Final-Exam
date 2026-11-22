@@ -73,6 +73,7 @@ header[data-testid="stHeader"] { display: none; }
 .coach { padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); }
 .coach p { margin: 0; font-size: 1.05rem; line-height: 1.45; }
 .coach b { color: #e8c27a; }
+.coach .ic { width: 18px; height: 18px; vertical-align: -3px; color: #e8c27a; }
 .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
 .tips div span { display: block; font-size: 1.6rem; }

@@ -1,7 +1,8 @@
-"""A new player's first minute: three guided steps that end in a caught lie.
+"""A new player's first minute: three guided steps that end in a caught lie, then the notebook.
 
 Playtesters with no briefing did not understand what to do. The tutorial teaches the core
 loop by doing it: search the faculty corridor, show it to the Companion, see the lie break.
+A fourth step lights up the notebook and says what it is for.
 """
 
 import pytest
@@ -28,7 +29,7 @@ def test_step_one_points_the_guide_at_the_faculty_corridor():
     at = start(tutorial=True)
     markup = board_markup(at)
     assert 'class="goal-bar" data-act="next:clue:L4"' in markup
-    assert "Tutorial 1 of 3 · Tap the glowing Faculty pin, then Search it." in markup
+    assert "Tutorial 1 of 4 · Tap the glowing Faculty pin, then Search it." in markup
     assert "<em>" not in markup.split('class="goal-bar"')[1].split("</button>")[0]  # one sentence, no musing
     assert coach(at) == ""  # the strip says it; the panel only offers to skip
     assert not any("Where to start" in m.value for m in at.markdown)  # the coach card says it once
@@ -38,15 +39,23 @@ def test_step_two_points_at_the_companion_then_step_three_explains_the_game():
     at = start(tutorial=True, focus=("clue", "L4"))
     at.button(key="open_L4").click().run()
     markup = board_markup(at)
-    assert 'data-act="next:suspect:companion"' in markup and "Tutorial 2 of 3" in markup
+    assert 'data-act="next:suspect:companion"' in markup and "Tutorial 2 of 4" in markup
     assert "never went to his office door" in markup
     at.pills(key="show_to_L4").set_value("companion").run()
     assert not at.exception
     assert "Caught her lying! That is the game:" in coach(at)
     assert len(coach(at)) < 200  # one line, not a paragraph
     at.button(key="tutorial_ok").click().run()
+    markup = board_markup(at)
+    assert "Tutorial 4 of 4" in markup and 'data-act="next:sheet"' in markup
+    assert "<em>" not in markup.split('class="goal-bar"')[1].split("</button>")[0]  # no musing: "every card is on the table" would be wrong
+    assert '<button class="goal" data-act="sheet" title="Notebook">' in markup  # the notebook button glows
+    assert "Your notebook</b> writes down every card" in coach(at)
+    at.button(key="tutorial_end").click().run()
     assert coach(at) == ""
-    assert 'data-act="next:clue:D1"' in board_markup(at)  # the usual guide takes over
+    markup = board_markup(at)
+    assert 'data-act="next:clue:D1"' in markup  # the usual guide takes over
+    assert 'class="goal" data-act="sheet"' not in markup
 
 
 def test_the_tutorial_can_be_skipped():
@@ -60,8 +69,8 @@ def test_no_tutorial_in_hard_mode_or_when_not_started():
     engine = Engine()
     game = engine.new_game(seed=1, variant="A")
     engine.set_mode(game, "hard")
-    assert "Tutorial 1 of 3" not in board_markup(start(game=game, tutorial=True))
-    assert "Tutorial 1 of 3" not in board_markup(start())
+    assert "Tutorial 1 of 4" not in board_markup(start(game=game, tutorial=True))
+    assert "Tutorial 1 of 4" not in board_markup(start())
 
 
 def test_starting_a_new_case_starts_the_tutorial():
@@ -70,10 +79,26 @@ def test_starting_a_new_case_starts_the_tutorial():
     start_button.click().run()
     assert not at.exception
     assert at.session_state["tutorial"] is True
-    assert "Tutorial 1 of 3" in board_markup(at)
+    assert "Tutorial 1 of 4" in board_markup(at)
 
 
 def test_the_story_names_the_four_questions():
     at = start(intro_done=False)
     story = next(m.value for m in at.markdown if 'class="story"' in m.value)
     assert "<b>who</b> leaked it, <b>how</b>, <b>where</b> and <b>why</b>" in story
+
+
+def test_the_notebook_step_explains_the_notebook_where_it_opens():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    engine.open_clue(game, "L4")
+    engine.present(game, "companion", "L4")
+    at = start(game=game, tutorial=True, tutorial_notebook=True, focus=("sheet", None))
+    assert "Cross off what can't be: what is left is your accusation." in coach(at)
+    assert any("Everything you have found" in m.value for m in at.markdown)  # the notebook itself, under the coach
+
+
+def test_the_notebook_glow_is_still_in_calm_mode():
+    import board
+    assert '<button class="goal" data-act="sheet"' in board.hud_html("00:00", 540, 540, 3, 3, 0, None, "Detective", calm=True, goal="sheet")
+    assert 'class="goal"' not in board.hud_html("00:00", 540, 540, 3, 3, 0, None, "Detective", goal="search")
