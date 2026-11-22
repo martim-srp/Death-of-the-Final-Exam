@@ -22,7 +22,7 @@ import board
 import db
 import reloading
 import report
-from game.case import load_case
+from game.case import load_case, option_label
 
 ROOT = Path(__file__).resolve().parent
 COVER = ROOT / "assets" / "cover.webp"
@@ -196,10 +196,16 @@ def sound(name):
 
 
 def new_case():
+    mode = current_game().mode  # a new case keeps the mode the player chose (it was silently reset to normal)
     start_new_game()
-    for key in [k for k in st.session_state if str(k).startswith(("sheet_", "crossed_", "accuse_"))]:
+    if mode != "normal":
+        game = current_game()
+        engine.set_mode(game, mode)
+        save(game)
+    for key in [k for k in st.session_state
+                if str(k).startswith(("sheet_", "crossed_", "accuse_", "search_", "hidden_", "show_to_"))]:
         del st.session_state[key]
-    for key in ("chats", "typed_dialogue", "focus", "suspect", "verdict", "fresh", "sfx", "tour_active"):
+    for key in ("chats", "typed_dialogue", "focus", "suspect", "verdict", "fresh", "sfx", "tour_active", "pending_accusation"):
         st.session_state.pop(key, None)
 
 
@@ -207,7 +213,7 @@ def new_case():
 
 
 def label(column, option_id):
-    return next(o["label"] for o in case["accusation"][column] if o["id"] == option_id)
+    return option_label(case, column, option_id)
 
 
 _MARKDOWN_SPECIAL = re.compile(r"([\\`*_\[\]<>#$~|])")
@@ -843,7 +849,7 @@ def panel_clue(game, clue_id, fresh):
                      use_container_width=True):
             if run(engine.open_clue, clue_id):
                 sound("flip")
-                st.session_state.fresh = st.session_state.get("fresh", []) + [clue_id]
+                st.session_state.fresh = st.session_state.get("fresh", []) + [clue_id]  # only a card that really opened
             st.rerun()
         return
     clue = engine.read_clue(game, clue_id)
@@ -982,10 +988,19 @@ def verdict_html(right):
     ) + "</div>"
 
 
-@st.dialog("Are you sure?")
+def forget_accusation():
+    """Closing "Are you sure?" with X forgets the picks, so the dialog cannot come back with old ones."""
+    st.session_state.pop("pending_accusation", None)
+
+
+@st.dialog("Are you sure?", on_dismiss=forget_accusation)
 def accusation_confirmation():
-    choice = st.session_state.get("pending_accusation")
-    if not choice:
+    if not st.session_state.get("pending_accusation"):
+        return
+    # Accuse with what is on screen now: the player may have changed a pick since pressing Accuse.
+    choice = {c: st.session_state.get(f"accuse_{c}") for c in COLUMNS}
+    if None in choice.values():
+        forget_accusation()
         return
     strikes_left = case["max_strikes"] - current_game().strikes
     tries = "try" if strikes_left == 1 else "tries"

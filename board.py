@@ -681,7 +681,7 @@ export default function(component) {
 """
 
 BOARD_CSS = """
-:host { --ink: #efe6d8; --red: #c0392b; --gold: #e8c27a; --bg: #14100e; --type: "Special Elite", "Courier New", monospace;
+:host { --ink: #efe6d8; --red: #c0392b; --gold: #e8c27a; --type: "Special Elite", "Courier New", monospace;
   --serif: "Playfair Display", Georgia, serif; --prose: Georgia, "Times New Roman", serif;
   --ui: "Source Sans Pro", "Source Sans 3", system-ui, sans-serif; }
 .phone-only { display: none; }

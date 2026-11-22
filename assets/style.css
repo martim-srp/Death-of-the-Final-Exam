@@ -257,7 +257,6 @@ header[data-testid="stHeader"] { display: none; }
   .story { font-size: 1rem; }
   .facts { grid-template-columns: repeat(2, 1fr); }
   .finale .mug, .finale .mug img { width: 160px; }
-  .finale h1 { font-size: 2rem; }
   .st-key-pick_buttons button { width: 110px; height: 138px; }
 }
 /* Key-word emphasis for easier scanning: the people, places, times and objects a sentence turns on, in bold.

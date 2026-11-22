@@ -171,7 +171,7 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
     # so the suspect's brief already holds the lie and their reaction.
     pressed = engine.press(game, suspect, text)
     brief = engine.character_brief(game, suspect)
-    topics = engine.case["topics"]
+    topics = engine.topics_for(suspect)  # nobody is asked about themselves (the TA about the TA)
     fallback_topic = _scripted_topic(text, topics)
     ai_calls = sum(event.get("ai_call", False) for event in game.history)
     attempted = False
