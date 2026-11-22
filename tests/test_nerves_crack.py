@@ -1,5 +1,4 @@
-"""Nerves: at 100 a suspect cracks. The culprit lets their motive slip; an innocent swears
-they did not do it (and is ruled out) and says where the paper really left from.
+"""Nerves: at 100 a suspect cracks, denies the leak and gives the location.
 
 Checked in every variant, so the lines always fit the variant's solution and never give
 the whole answer away."""
@@ -91,16 +90,13 @@ def test_nobody_cracks_below_full_nerves(variant):
 
 
 @pytest.mark.parametrize("variant", VARIANTS)
-def test_every_suspect_cracks_the_same_way_and_says_where(variant):
-    # Guilty or not, a suspect who cracks swears they did not do it and says where the
-    # paper left from. Same line, nobody ruled out: a crack never shows who is guilty.
+def test_every_suspect_cracks_and_says_where(variant):
     engine = Engine()
-    where = CASE["variants"][variant]["solution"]["where"]
     for suspect in SUSPECTS:
         game = all_open(variant)
         last = push_to_the_edge(engine, game, suspect)
         result = engine.present(game, suspect, last)
-        assert result["cracked"] == {"suspect": suspect, "line": CRACKS["where"][where]}
+        assert result["cracked"] == {"suspect": suspect, "line": CRACKS["variants"][variant][suspect]}
         assert engine.nerves(game, suspect) == 100
         assert game.cracked == [suspect]
         assert game.history[-1]["cracked"] is True
@@ -109,16 +105,18 @@ def test_every_suspect_cracks_the_same_way_and_says_where(variant):
 
 
 @pytest.mark.parametrize("variant", VARIANTS)
-def test_the_culprit_and_an_innocent_crack_identically(variant):
+def test_the_culprit_and_an_innocent_give_the_same_lead(variant):
     engine = Engine()
     who = culprit(variant)
     innocent = next(s for s in SUSPECTS if s != who)
-    lines = []
+    lead = {
+        "library_print_station": "printed at the library printing station",
+        "chiado_restaurant": "over dinner at a restaurant in Chiado",
+    }[CASE["variants"][variant]["solution"]["where"]]
     for suspect in (who, innocent):
         game = all_open(variant)
         last = push_to_the_edge(engine, game, suspect)
-        lines.append({k: v for k, v in engine.present(game, suspect, last)["cracked"].items() if k != "suspect"})
-    assert lines[0] == lines[1]
+        assert lead in engine.present(game, suspect, last)["cracked"]["line"]
 
 
 @pytest.mark.parametrize("variant", VARIANTS)
@@ -180,7 +178,6 @@ def test_cracked_suspects_survive_saving_and_old_saves_still_load():
 
 
 def test_every_place_has_a_line():
-    assert set(CRACKS) == {"where"}  # one kind of line for everyone, so a crack never shows guilt
     assert set(CRACKS["where"]) == {o["id"] for o in CASE["accusation"]["where"]}
 
 
@@ -234,7 +231,7 @@ def test_the_prompt_tells_the_ai_not_to_deny_the_crack():
     prompt = ai.system_prompt(engine.character_brief(game, "companion"), CASE["topics"])
     assert "Never deny it" in prompt
     character = json.loads(prompt.split("Character brief: ", 1)[1])
-    assert character["broke_down"] == CRACKS["where"]["chiado_restaurant"]
+    assert character["broke_down"] == CRACKS["variants"]["C"]["companion"]
     calm = ai.system_prompt(engine.character_brief(game, "professor"), CASE["topics"])
     assert "Never deny it" not in calm
 
@@ -245,7 +242,7 @@ def test_a_resumed_game_keeps_the_crack_in_the_brief():
     for clue in cards_without_lies(engine, game, "ta")[:6]:
         engine.present(game, "ta", clue)
     resumed = Game.from_dict(json.loads(json.dumps(game.to_dict())))
-    assert engine.character_brief(resumed, "ta")["broke_down"] == CRACKS["where"]["library_print_station"]
+    assert engine.character_brief(resumed, "ta")["broke_down"] == CRACKS["variants"]["B"]["ta"]
 
 
 def test_a_change_to_the_crack_lines_rebuilds_the_engine():
@@ -267,7 +264,7 @@ def test_the_app_shows_the_crack_and_rules_nobody_out():
     text = page(at)
     assert "width:100%" in text
     assert "Cracked" in text and "Their story broke." in text
-    assert "I did not touch that paper" in text
+    assert CRACKS["variants"]["A"]["exchange"].strip('"') in text
     assert at.session_state["game"]["cracked"] == ["exchange"]
     assert "RULED OUT" not in suspect_markup(at)
 
@@ -281,5 +278,5 @@ def test_the_app_shows_the_culprit_cracking_like_anyone_else():
     assert not at.exception
     text = page(at)
     assert "Their story broke." in text
-    assert "I did not touch that paper" in text  # the culprit swears it too
+    assert CRACKS["variants"]["A"]["class_rep"].strip('"') in text
     assert "RULED OUT" not in suspect_markup(at)
