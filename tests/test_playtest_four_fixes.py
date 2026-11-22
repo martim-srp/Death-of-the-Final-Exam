@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 import board
+import reloading
 from game.case import load_case, resolve_variant
 from game.engine import Engine
 from tests.test_board_game import board_markup, page, start
@@ -80,3 +81,24 @@ def test_the_sheet_shows_why_card_2_crossed_off_the_photo_on_the_desk():
     text = page(at)
     assert "Photographed the paper" in text and "ruled out by evidence 2" in text
     assert "Job 88213 is printed on the leaked pages, and the log shows it printed at the library printer." in text
+
+
+def test_the_story_text_files_are_watched_so_an_edit_shows_without_a_restart(tmp_path):
+    for name in ("data/keyfacts.json", "data/lies.json", "data/ruleouts.json"):
+        assert name in reloading.SOURCES
+    root = Path(__file__).resolve().parent.parent
+    for name in reloading.SOURCES:
+        (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / name).write_bytes((root / name).read_bytes())
+    before = reloading.source_version(tmp_path)
+    (tmp_path / "data" / "ruleouts.json").write_text("{}", encoding="utf-8")
+    assert reloading.source_version(tmp_path) != before
+
+
+def test_rule_out_reasons_state_only_what_the_card_shows():
+    engine = Engine()
+    game = engine.new_game(seed=1, variant="A")
+    assert engine.rule_out_reason(game, "D3", "why") == "The leak is the old draft, v3. Students will sit version 4, whose Question 5 is different."
+    assert engine.rule_out_reason(game, "D5", "why") == "The paper was posted free to all 212 students in the class group."
+    for line in (engine.rule_out_reason(game, "D3", "why"), engine.rule_out_reason(game, "D5", "why")):
+        assert "nobody" not in line.lower()
