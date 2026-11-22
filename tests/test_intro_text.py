@@ -1,4 +1,4 @@
-"""The start screen says plainly how time works, and the tour and map use the team's wording."""
+"""The start screen says plainly how time works, and the map uses the team's wording."""
 
 import json
 from pathlib import Path
@@ -35,12 +35,6 @@ def test_the_start_screen_explains_that_time_runs_out():
     assert "every search and every question moves it forward" in box
     assert f'−{CASE["clock"]["clue_cost"]} min' in page and f'−{CASE["clock"]["question_cost"]} min' in page
     assert f'no time · {CASE["max_strikes"]} tries' in page
-
-
-def test_the_tour_uses_the_new_wording():
-    tour = board.tutorial_html()
-    assert "To search a new area, click on the red circle." in tour
-    assert "Tap a face to question them, or show them an evidence card." in tour
 
 
 def test_the_status_bar_names_its_counters_without_hovering():

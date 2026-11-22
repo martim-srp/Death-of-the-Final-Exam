@@ -364,8 +364,6 @@ def on_act(key):
     kind, value = parsed
     if kind == "intro":
         st.session_state.intro_done = False
-    elif kind == "tour_done":
-        st.session_state.tour_done = True
     elif kind == "calm":
         toggle_calm()
     else:
@@ -680,7 +678,6 @@ def draw_board(game, clues, fresh):
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
         + pending_sound()
-        + (board.tutorial_html() if show_tour(game) else "")
         + board.calm_html(calm())
     )
     deck(data=markup, key="board", on_act_change=functools.partial(on_act, "board"))
@@ -692,11 +689,6 @@ def pending_sound():
     if calm():
         return ""
     return board.sfx_html(name, st.session_state.get("sfx_n", 0)) if name else ""
-
-
-def show_tour(game):
-    """The first-play tour: once, after the intro, before the first move."""
-    return bool(st.session_state.get("intro_done")) and not st.session_state.get("tour_done") and not game.history
 
 
 def draw_suspects(game):
@@ -1425,8 +1417,7 @@ def finish_intro():
     st.session_state.intro_done = True
     game = current_game()
     if not game.history and not engine.hard(game) and "tutorial" not in st.session_state:
-        st.session_state.tutorial = True  # the guided first minute teaches by doing, so it replaces the tour
-        st.session_state.tour_done = True
+        st.session_state.tutorial = True  # the guided first minute teaches by doing
 
 
 @st.dialog("The exam has leaked", width="large", on_dismiss=finish_intro)
@@ -1524,9 +1515,6 @@ with side_column:
             panel_home(game)
     next_step_button(game)
 save_corner()
-if show_tour(game):  # the first-play tour card sits at the bottom of a phone screen: lift the icon above it
-    st.markdown("<style>@media (max-width: 640px) { .st-key-save_corner { bottom: 10.5rem; } }</style>",
-                unsafe_allow_html=True)
 
 # Called last, so the story and rules open over the game on a new case.
 if not st.session_state.get("intro_done", bool(game.history)):

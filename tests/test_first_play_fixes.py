@@ -1,12 +1,11 @@
-"""Fixes from a first-time playthrough: the detective's reaction to an answer, a tour that
-survives redraws, the confrontation shown first at the end, and visible accusation picks."""
+"""Fixes from a first-time playthrough: the detective's reaction to an answer, the confrontation
+shown first at the end, and visible accusation picks. (Fix 2, the pop-up tour, went with the tour.)"""
 
 import json
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-import board
 from game.case import load_case
 from game.engine import Engine
 
@@ -51,15 +50,6 @@ def test_the_class_reps_cafeteria_answer_gets_a_reacted_thought():
     chat = at.session_state["chats"]["class_rep"]
     assert "hand it in" in chat[1]["text"]
     assert chat[-1]["think"] in VOICE["replies"]["reacted"]
-
-
-# ---- 2. The tour resumes after a redraw, and its ring follows the target ------------------
-
-
-def test_the_tour_keeps_its_step_across_redraws_and_tracks_its_target():
-    assert "window.__dfeTourStep" in board.BOARD_JS
-    assert "requestAnimationFrame(place)" in board.BOARD_JS
-    assert "}, 350);" not in board.BOARD_JS.split("function tour", 1)[1].split("function revealPanel", 1)[0]
 
 
 # ---- 3. The confrontation comes first and starts open -----------------------------------

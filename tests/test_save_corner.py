@@ -47,12 +47,6 @@ def test_on_a_phone_the_icon_is_finger_sized_and_hugs_the_corner():
     assert '.st-key-save_corner [data-testid="stPopoverButton"] { width: 52px; height: 52px; }' in phone
 
 
-def test_during_the_first_play_tour_the_icon_moves_up_out_of_the_tour_card_on_phones():
-    lifted = ".st-key-save_corner { bottom: 10.5rem; }"
-    assert lifted in page(start())  # a new game: the tour is showing
-    assert lifted not in page(start(tour_done=True))
-
-
 def test_no_save_icon_once_the_case_is_closed():
     at = start(tour_done=True)
     at.session_state["game"] = {**at.session_state["game"], "status": "cold"}

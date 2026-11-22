@@ -64,12 +64,12 @@ def test_no_tutorial_in_hard_mode_or_when_not_started():
     assert "Tutorial 1 of 3" not in board_markup(start())
 
 
-def test_starting_a_new_case_starts_the_tutorial_in_place_of_the_tour():
+def test_starting_a_new_case_starts_the_tutorial():
     at = start(intro_done=False)
     start_button = next(b for b in at.button if b.label == "Start the investigation")
     start_button.click().run()
     assert not at.exception
-    assert at.session_state["tutorial"] is True and at.session_state["tour_done"] is True
+    assert at.session_state["tutorial"] is True
     assert "Tutorial 1 of 3" in board_markup(at)
 
 
