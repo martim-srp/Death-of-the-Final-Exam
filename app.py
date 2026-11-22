@@ -12,7 +12,6 @@ board.py builds the board's markup from that.
 """
 
 import functools
-import html
 import re
 from pathlib import Path
 from urllib.parse import quote, urlsplit, urlunsplit
@@ -33,7 +32,6 @@ TITLE = load_case()["title"]  # the game's name lives in data/case.json
 # The detectives a player can be: assets/detectives/<id>.webp, 4:5 like the suspects. Purely cosmetic.
 AVATARS = {"she": "Play as her", "he": "Play as him"}
 DEFAULT_AVATAR = "she"
-COLUMNS = ("who", "how", "where", "why")
 APP_URL = "https://carcavelos-paper.streamlit.app"
 COLUMN_ICONS = {"who": ":material/person:", "how": ":material/build:", "where": ":material/location_on:", "why": ":material/psychology_alt:"}
 # Shown under a free-text answer when the suspect gave a scripted line instead of the AI's.
@@ -76,7 +74,7 @@ engine = get_engine(reloading.source_version())
 case = engine.case
 
 # Imported after get_engine(), which may have just reloaded game.engine.
-from game.engine import NERVES_MAX, NERVES_PER_CARD, NERVES_PER_LIE, Game, GameError  # noqa: E402
+from game.engine import COLUMNS, NERVES_MAX, NERVES_PER_CARD, NERVES_PER_LIE, Game, GameError  # noqa: E402
 
 
 # ---- Saving and loading --------------------------------------------------------------
@@ -208,13 +206,7 @@ def plain(text):
     return _MARKDOWN_SPECIAL.sub(r"\\\1", text)
 
 
-def mid_sentence(name):
-    """A suspect's name inside a sentence: "The Professor" becomes "the Professor"."""
-    return "the" + name[3:] if name.startswith("The ") else name
-
-
-def esc(text):
-    return html.escape(str(text), quote=True)
+esc = board.esc  # one HTML escape for the whole page
 
 
 def search_log(log, query):
