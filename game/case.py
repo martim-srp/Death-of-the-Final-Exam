@@ -14,6 +14,7 @@ VOICE_PATH = CASE_PATH.parent / "voice.json"
 CRACKS_PATH = CASE_PATH.parent / "cracks.json"
 KEYFACTS_PATH = CASE_PATH.parent / "keyfacts.json"
 LIES_PATH = CASE_PATH.parent / "lies.json"
+RULEOUTS_PATH = CASE_PATH.parent / "ruleouts.json"
 
 
 def load_hunches(path=HUNCHES_PATH):
@@ -42,6 +43,12 @@ def load_keyfacts(path=KEYFACTS_PATH):
 
 def load_lies(path=LIES_PATH):
     """Read what each caught lie tells the player, by claim id (data/lies.json)."""
+    with open(path, encoding="utf-8") as f:
+        return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
+
+
+def load_ruleouts(path=RULEOUTS_PATH):
+    """Read why each evidence card crosses options off, shared and per variant (data/ruleouts.json)."""
     with open(path, encoding="utf-8") as f:
         return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
 
