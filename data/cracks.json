@@ -1,5 +1,28 @@
 {
-  "_about": "What a suspect blurts out when their nerves reach the top (Engine.nerves, at 100). Every suspect who cracks, guilty or not, says the same kind of thing: they swear they did not do it (the culprit is lying) and, to get you off their back, say where the paper really left from. Keyed by the variant's 'where' option. So a crack gives one part of the answer and never shows who is guilty. No line names a suspect, a card or a time, and none says how it was done.",
+  "_about": "At full nerves, each suspect denies the leak and gives the location. Dialogue is keyed by case variant and suspect. Generic lines are keyed by location for cases without a scripted line.",
+  "variants": {
+    "A": {
+      "class_rep": "\"I am trying to keep this class together, and you keep treating me like the problem. I did not leak the exam. It was printed at the library printing station, so please investigate that.\"",
+      "ta": "\"Please, stop pushing me. I did not leak it, but the paper was printed at the library printing station. That is where you need to look.\"",
+      "exchange": "\"You want something useful instead of another accusation? I did not leak the exam; it was printed at the library printing station. There, free information.\"",
+      "professor": "\"Enough of this interrogation. I did not leak my own examination, and repeating the accusation will not change that. The paper was printed at the library printing station; investigate the printer.\"",
+      "companion": "\"Darling, my patience has limits, and you have just found them. I did not leak your exam; it was printed at the library printing station. Surely that is more useful than watching me lose my temper.\""
+    },
+    "B": {
+      "class_rep": "\"Being responsible for the class chat does not make me responsible for the leak. I did not send that paper out. It was printed at the library printing station, and that is where your investigation should lead.\"",
+      "ta": "\"I did not leak the exam, all right? It was printed at the library printing station. Please, follow that instead of asking me the same thing again.\"",
+      "exchange": "\"We are getting nowhere, and I am tired of defending myself. I did not leak it; the paper was printed at the library printing station. Follow the printing trail.\"",
+      "professor": "\"Do you intend to repeat this until I give you the answer you want? I did not leak the examination. It was printed at the library printing station, so direct your questions there.\"",
+      "companion": "\"You are becoming exhausting, darling. I did not leak the exam, but I will give you something useful: it was printed at the library printing station. Now give me a moment to breathe.\""
+    },
+    "C": {
+      "class_rep": "\"I cannot keep answering accusations while the whole class waits for an explanation. I did not leak the exam. Nothing was printed; the paper got out over dinner at a restaurant in Chiado.\"",
+      "ta": "\"I did not leak it, and I cannot keep doing this. Nothing was printed; the paper got out over dinner at a restaurant in Chiado. Please, follow that lead.\"",
+      "exchange": "\"I am done with this conversation, but here is something useful before you go. I did not leak the exam, and nothing was printed. The paper got out over dinner at a restaurant in Chiado.\"",
+      "professor": "\"Enough; I did not leak the examination. Nothing was printed—the paper got out over dinner at a restaurant in Chiado. That is all I am saying.\"",
+      "companion": "\"Darling, I did not leak your exam, so stop looking at me like that. Nothing was printed; the paper got out over dinner at a restaurant in Chiado. There, you have your answer.\""
+    }
+  },
   "where": {
     "library_print_station": "\"Enough. I did not touch that paper, and I will swear it to the Dean. But since you keep pushing: it was printed, in the library. Go and ask who stood at that printer, not me.\"",
     "professor_office": "\"Enough. I did not touch that paper, and I will swear it to the Dean. But since you keep pushing: it never left the faculty. It was taken from that office. Ask who had a reason to be there.\"",
