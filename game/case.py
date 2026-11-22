@@ -17,40 +17,40 @@ LIES_PATH = CASE_PATH.parent / "lies.json"
 RULEOUTS_PATH = CASE_PATH.parent / "ruleouts.json"
 
 
-def load_hunches(path=HUNCHES_PATH):
-    """Read the detective's inner-voice lines for clues that break a story (data/hunches.json)."""
+def _load_notes(path):
+    """Read one of the story's notes files, without its "_about" and other "_" keys."""
     with open(path, encoding="utf-8") as f:
         return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
+
+
+def load_hunches(path=HUNCHES_PATH):
+    """Read the detective's inner-voice lines for clues that break a story (data/hunches.json)."""
+    return _load_notes(path)
 
 
 def load_voice(path=VOICE_PATH):
     """Read the detective's other lines: thoughts on clues, reactions to replies, the next step (data/voice.json)."""
-    with open(path, encoding="utf-8") as f:
-        return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
+    return _load_notes(path)
 
 
 def load_cracks(path=CRACKS_PATH):
     """Read what a suspect blurts out when their nerves break (data/cracks.json)."""
-    with open(path, encoding="utf-8") as f:
-        return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
+    return _load_notes(path)
 
 
 def load_keyfacts(path=KEYFACTS_PATH):
     """Read the one-line summary of each evidence card, shared and per variant (data/keyfacts.json)."""
-    with open(path, encoding="utf-8") as f:
-        return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
+    return _load_notes(path)
 
 
 def load_lies(path=LIES_PATH):
     """Read what each caught lie tells the player, by claim id (data/lies.json)."""
-    with open(path, encoding="utf-8") as f:
-        return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
+    return _load_notes(path)
 
 
 def load_ruleouts(path=RULEOUTS_PATH):
     """Read why each evidence card crosses options off, shared and per variant (data/ruleouts.json)."""
-    with open(path, encoding="utf-8") as f:
-        return {key: value for key, value in json.load(f).items() if not key.startswith("_")}
+    return _load_notes(path)
 
 
 def load_case(path=CASE_PATH):
