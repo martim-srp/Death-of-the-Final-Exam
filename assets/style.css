@@ -170,6 +170,7 @@ header[data-testid="stHeader"] { display: none; }
 .proof { display: flex; flex-direction: column; gap: 0.15rem; margin: -0.4rem 0 0.7rem; font-size: 0.8rem; color: #a89a88; }
 .proof .ic { color: #e8c27a; width: 13px; height: 13px; }
 .proof em { font-style: normal; font: 0.72rem var(--label); color: #e8c27a; }
+.proof small { display: block; margin: 0 0 0.3rem 1.1rem; font-size: 0.8rem; color: #cdbfa8; line-height: 1.35; }
 .tips div span .ic { width: 26px; height: 26px; color: #e8c27a; }
 .facedown.locked .ic { width: 40px; height: 40px; }
 .medals span .ic { width: 15px; height: 15px; }

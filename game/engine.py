@@ -14,7 +14,7 @@ import re
 import secrets
 from dataclasses import asdict, dataclass, field, fields
 
-from game.case import load_case, load_cracks, load_hunches, load_keyfacts, load_lies, load_voice, option_ids, resolve_variant
+from game.case import load_case, load_cracks, load_hunches, load_keyfacts, load_lies, load_ruleouts, load_voice, option_ids, resolve_variant
 
 COLUMNS = ("who", "how", "where", "why")
 HINT_COST = 15  # minutes, used when the case file's clock has no hint_cost
@@ -188,6 +188,7 @@ class Engine:
         self.crack_lines = cracks if cracks is not None else load_cracks()
         self.keyfacts = load_keyfacts()
         self.lie_lines = load_lies()
+        self.ruleout_lines = load_ruleouts()
         self.clock_rules = self.case["clock"]
         self._resolved = {v: resolve_variant(self.case, v) for v in self.case["variants"]}
         # Players see evidence as 1 to 13, in case-file order; the ids (D1, L4) stay internal.
@@ -677,6 +678,16 @@ class Engine:
         if self.hard(game) or clue_id not in game.opened:
             return None
         return self.keyfacts.get(game.variant, {}).get(clue_id) or self.keyfacts["base"].get(clue_id)
+
+    def rule_out_reason(self, game, by, column):
+        """Why an evidence card crossed an option off in this column, in one sentence, so a
+        crossed-off option never looks arbitrary. None for a wrong accusation (it says itself)."""
+        if by == "accusation":
+            return None
+        for source in (self.ruleout_lines.get(game.variant, {}), self.ruleout_lines["base"]):
+            if column in source.get(by, {}):
+                return source[by][column]
+        return None
 
     def lie_meaning(self, game, claim_id):
         """What a caught lie tells you: what is now known, and the question it opens. Never who

@@ -941,14 +941,21 @@ def panel_sheet():
             if proven:
                 st.markdown(
                     '<div class="proof">' + "".join(
-                        f"<span>{board.icon('check')} {esc(label(column, o))} <em>ruled out by {esc(proof_name(by))}</em></span>"
-                        for o, by in proven.items()
+                        ruled_out_html(game, column, o, by) for o, by in proven.items()
                     ) + "</div>",
                     unsafe_allow_html=True,
                 )
     if st.button("Accuse", type="primary", icon=":material/balance:", use_container_width=True, key="to_accuse"):
         set_focus("accuse")
         st.rerun()
+
+
+def ruled_out_html(game, column, option, by):
+    """One crossed-off option: what, by which card, and why in one sentence."""
+    reason = engine.rule_out_reason(game, by, column)
+    why = f"<small>{esc(reason)}</small>" if reason else ""
+    return (f"<span>{board.icon('check')} {esc(label(column, option))} <em>ruled out by {esc(proof_name(by))}</em>"
+            f"{why}</span>")
 
 
 def proof_name(by):

@@ -34,9 +34,9 @@
   "random": {
     "alias": ["M. Hari", "I. Adler", "C. Hale"],
     "pastry": [
-      "Pastéis do Outeiro, a pastel de nata chain with 14 shops in Lisbon",
-      "Bifanas do Largo, a bifana chain with 9 shops in Porto",
-      "Ginjinha Real, a chain of 6 ginjinha bars in Óbidos"
+      "Atlântico Telecom, a mid-size Portuguese telecom operator",
+      "Cortiça Viva, a family-owned cork producer listed in Lisbon",
+      "Luso Energia, a Lisbon electricity distributor"
     ],
     "weather": [
       "Rain is coming in sideways off the sea.",
@@ -199,7 +199,7 @@
       "title": "Rules/Standings",
       "kind": "document",
       "unlock": {"start": true},
-      "text": "- School rules, Article 14: a leaked exam is annulled. Until a resit, grades come from the other assessments.\n- No resit can happen before January.\n- The fellowship: 20,000 euros and an analyst job for the student ranked first at 18:00 on Friday.\n- Ranking now, out of 20: Class Representative 18.4, Exchange Student 18.3.\n- Mock finals: Exchange Student 19, 18, 19. Class Representative 15, 14, 15."
+      "text": "- School rules, Article 14: a leaked exam is annulled. Until a resit, grades come from the other assessments.\n- No resit can happen before January.\n- The fellowship: 20,000 euros and an analyst job for the student ranked first at 18:00 on Friday.\n- Ranking now, out of 20: Class Representative 18.4, Exchange Student 18.3.\n- Mock finals: Exchange Student 19, 18, 19. Class Representative 15, 14, 15.\n- So: if the exam goes ahead, the Exchange Student will probably finish first. If it is annulled, today's ranking decides the fellowship."
     },
     "D5": {
       "title": "Mystery number",
