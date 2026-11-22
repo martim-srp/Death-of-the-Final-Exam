@@ -54,7 +54,9 @@ It is midnight. Every action costs time: searching a place or opening a document
 each question to a suspect (or showing them a card) costs 10. Tap a red **?** card or pin to search it.
 Tap a face to interrogate: pick a question, show them a card, or type your own. You can also show an
 open card straight from the card itself. Show a suspect the card that breaks their story and you catch
-them lying; their portrait turns nervous. Tap the lightning in the status bar to see what a caught lie
+them lying; their portrait turns nervous. Or press them in your own words: a typed question that
+quotes a detail from an open card (a time, a card number, a job number) catches the lie the same way
+and rattles them more. Tap the lightning in the status bar to see what a caught lie
 means and the lies you have caught. Every new card shown raises a suspect's nerves; at full nerves
 they crack and let slip where the paper left from. A crack never shows who is guilty: the culprit
 cracks exactly like an innocent. Stuck on a locked card? A hint costs 15 minutes,
@@ -104,7 +106,10 @@ flowchart LR
 
 1. The player taps a card or types a question in `app.py`.
 2. A typed question goes through `Engine.check_secret()` first, so a password never reaches the model.
-3. `game/ai.py` sends only the suspect's brief and the question. The model answers in character and
+   Then `Engine.press()` checks whether it quotes a detail of an opened card that breaks this
+   suspect's story; if so, the lie is caught as if the card were shown. The engine decides, not the model.
+3. `game/ai.py` sends only the suspect's brief (including the titles of cards shown to them, their
+   lies caught so far and how rattled they are, never a card's text) and the question. The model answers in character and
    picks a topic tag from the list in `case.json`.
 4. If the call fails, the suspect answers with scripted lines and the game goes on.
 5. `game/engine.py` accepts the tag only if it is on the list, then moves the clock and opens any
