@@ -1199,11 +1199,13 @@ def pick_detective(avatar):
     st.session_state.player_avatar = avatar
 
 
-def finish_intro():
+def finish_intro(start_tutorial=True):
     st.session_state.intro_done = True
     game = current_game()
     if not game.history and "tutorial" not in st.session_state:
-        st.session_state.tutorial = True  # the guided first minute teaches by doing
+        st.session_state.tutorial = start_tutorial  # the guided first minute teaches by doing
+        if not start_tutorial:
+            st.session_state.tutorial_done = True
 
 
 @st.dialog("The exam has leaked", width="large", on_dismiss=finish_intro)
@@ -1248,7 +1250,7 @@ def intro_dialog():
             st.rerun()
         if st.button("Show the screen walkthrough", icon=":material/help_outline:", use_container_width=True):
             st.session_state.tour_active = True
-            finish_intro()
+            finish_intro(start_tutorial=False)
             st.rerun()
 
 
