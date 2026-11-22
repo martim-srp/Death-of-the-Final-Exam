@@ -64,6 +64,6 @@ def test_leads_and_lies_name_cards_by_number_not_by_id():
     game = engine.new_game(seed=1, variant="A")
     engine.open_clue(game, "L4")
     engine.present(game, "companion", "L4")
-    text = page(start(game=game))
+    text = page(start(game=game, focus=("lies", None)))  # caught lies are listed on the lightning's panel
     assert "broken by <b>evidence 12</b>" in text
     assert "<b>L4</b>" not in text and "<b>L2</b>" not in text
