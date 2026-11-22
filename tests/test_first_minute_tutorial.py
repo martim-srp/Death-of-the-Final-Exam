@@ -65,12 +65,39 @@ def test_the_tutorial_can_be_skipped():
     assert 'data-act="next:clue:D1"' in board_markup(at)
 
 
-def test_no_tutorial_in_hard_mode_or_when_not_started():
+def test_no_tutorial_when_not_started():
+    assert "Tutorial 1 of 4" not in board_markup(start())
+
+
+def hard_game():
     engine = Engine()
     game = engine.new_game(seed=1, variant="A")
     engine.set_mode(game, "hard")
-    assert "Tutorial 1 of 4" not in board_markup(start(game=game, tutorial=True))
-    assert "Tutorial 1 of 4" not in board_markup(start())
+    return game
+
+
+def test_hard_mode_gets_the_whole_tutorial_too():
+    at = start(game=hard_game(), tutorial=True, focus=("clue", "L4"))
+    assert "Tutorial 1 of 4" in board_markup(at)
+    at.button(key="open_L4").click().run()
+    assert "Tutorial 2 of 4" in board_markup(at)
+    at.pills(key="show_to_L4").set_value("companion").run()
+    assert not at.exception
+    assert "Caught her lying! That is the game:" in coach(at)
+    at.button(key="tutorial_ok").click().run()
+    markup = board_markup(at)
+    assert "Tutorial 4 of 4" in markup and '<button class="goal" data-act="sheet"' in markup
+    at.button(key="tutorial_end").click().run()
+    assert coach(at) == ""
+    assert 'class="goal-bar"' not in board_markup(at)  # then hard mode's usual: no next step
+
+
+def test_starting_a_hard_case_starts_the_tutorial():
+    at = start(game=hard_game(), intro_done=False)
+    next(b for b in at.button if b.label == "Start the investigation").click().run()
+    assert not at.exception
+    assert at.session_state["tutorial"] is True
+    assert "Tutorial 1 of 4" in board_markup(at)
 
 
 def test_starting_a_new_case_starts_the_tutorial():

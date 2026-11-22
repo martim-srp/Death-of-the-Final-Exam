@@ -273,7 +273,7 @@ def set_focus(kind, value=None):
 
 
 # ---- The first-minute tutorial ----------------------------------------------------------
-# A new player's first case (normal mode) starts with four guided steps: search the faculty
+# A new player's first case, in any mode, starts with four guided steps: search the faculty
 # corridor, show it to the Companion, see the lie break, then meet the notebook. The same in
 # every variant, and a caught lie is not a confession, so it never points at the culprit.
 
@@ -285,7 +285,7 @@ def tutorial_step(game):
     None once over or off."""
     if not st.session_state.get("tutorial") or st.session_state.get("tutorial_done"):
         return None
-    if engine.hard(game) or game.status != "playing":
+    if game.status != "playing":  # every mode gets it, hard too: it teaches the game, not the case
         return None
     if game.contradictions:
         return 4 if st.session_state.get("tutorial_notebook") else 3
@@ -1181,7 +1181,7 @@ def pick_detective(avatar):
 def finish_intro():
     st.session_state.intro_done = True
     game = current_game()
-    if not game.history and not engine.hard(game) and "tutorial" not in st.session_state:
+    if not game.history and "tutorial" not in st.session_state:
         st.session_state.tutorial = True  # the guided first minute teaches by doing
 
 
