@@ -65,8 +65,14 @@ arrive. These events are story only and change no rules.
 
 When you are ready, press **Accuse** and pick who, how, where and why. Under each answer you can add
 an evidence card as proof; on a solved case each right proof raises your rank. You must accuse before
-09:00, so you have 540 minutes. A wrong accusation shows which of the four parts are right. After three
-wrong ones, or at 09:00, the case goes cold and stays unsolved: the game never tells you who did it.
+09:00, so you have 540 minutes. At 09:00 you can no longer search or ask; you can only accuse. A wrong
+accusation shows which of the four parts are right. After three wrong ones the case goes cold and stays
+unsolved: the story never tells you who did it, but the final screen then shows you, the
+player, the correct answer.
+
+Two more buttons sit in the status bar. The moon turns on **calm mode**: no animations, no sounds, and
+the next step as one plain line. The round save icon in the corner gives you the game's private link,
+so you can close the tab and carry on later.
 
 ## How it works
 
@@ -134,6 +140,10 @@ rejects any topic that is not on the list.
   model.
 - **Bad replies:** a reply that is not valid JSON, or has no `reply` field, is thrown away. The
   suspect then answers with a scripted line.
+- **Limit:** the model can still say something off-story in the reply text. It cannot change the
+  game, but it can confuse the player for one answer.
+- **How it could change:** a second check of the reply text against the suspect's facts in
+  `case.json`, or more scripted answers so fewer questions need the model at all.
 
 ### What happens when the AI is unavailable
 
@@ -144,6 +154,11 @@ picked from keywords in the question.
 - **Limit:** the free Requesty plan allows 200 requests per day, shared by the whole account.
 - **Per game:** each game makes at most 12 AI calls (`MAX_AI_CALLS`), so about 16 games a day fit in the
   free plan. After that, the suspects use the scripted lines.
+- **Why 15 seconds and not less:** a suspect answering in character often takes several seconds;
+  a shorter timeout would drop many good answers to the scripted lines.
+- **How it could change:** a paid plan with a spending limit, or caching answers to common
+  questions. Only `game/ai.py` talks to the model, so another provider means changing that file
+  alone.
 
 ### Where the data is stored
 
@@ -184,6 +199,11 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
 - **Dependencies:** three for the app (`requirements.txt`) and pytest for the tests only
   (`requirements-dev.txt`), each pinned to an exact version and checked for
   known vulnerabilities by `pip-audit` on every pull request.
+- **Limits:** the password trap is a pattern check, so it can miss an unusual password or stop a
+  harmless word that looks like one (for example a long word mixing letters and digits). Anyone
+  who has a game's link can open that game.
+- **How it could change:** accounts with a login would tie each game to a player instead of to a
+  link, and the trap could ask the player to confirm before hiding a message.
 
 ### Demo script for the presentation
 
@@ -219,6 +239,8 @@ If the AI is down or out of quota, the suspects answer with scripted lines and t
 - invalid input: blank, too long or HTML questions, replies of the wrong shape, AI timeouts
   and rejected keys (`tests/test_invalid_input.py`)
 - the main screens, through Streamlit's `AppTest`
+- simulated players: thousands of random actions, right and wrong, after which the rules must
+  still hold (`tests/test_random_players.py`)
 
 **Not covered:**
 - the real model's replies, which change from run to run
