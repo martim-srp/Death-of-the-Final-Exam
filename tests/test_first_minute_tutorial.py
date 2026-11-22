@@ -6,6 +6,7 @@ A fourth step lights up the notebook and says what it is for.
 """
 
 import re
+from pathlib import Path
 
 import pytest
 
@@ -133,3 +134,10 @@ def test_the_notebook_glow_is_still_in_calm_mode():
     import board
     assert '<button class="goal" data-act="sheet"' in board.hud_html("00:00", 540, 540, 3, 3, 0, None, "Detective", calm=True, goal="sheet")
     assert 'class="goal"' not in board.hud_html("00:00", 540, 540, 3, 3, 0, None, "Detective", goal="search")
+
+
+def test_the_tutorial_button_sits_below_the_text_not_over_it():
+    # Streamlit gives a markdown block a -1rem bottom margin; inside the tutorial card that pulled
+    # the button up over the last line of text, so the card resets it.
+    css = (Path(__file__).resolve().parent.parent / "assets" / "style.css").read_text(encoding="utf-8")
+    assert '.st-key-coach [data-testid="stMarkdownContainer"] { margin-bottom: 0; }' in css
