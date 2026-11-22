@@ -523,7 +523,7 @@ def save_corner():
             game_id = st.session_state.get("game_id")
             if game_id:
                 link = resume_link(game_id)
-                st.code(link, language=None)
+                st.code(link, language=None, wrap_lines=True)  # the whole link shows on a phone, no sideways scroll
                 st.link_button("Send to my email", save_game_mailto(link), icon=":material/mail:",
                                use_container_width=True)
             else:
