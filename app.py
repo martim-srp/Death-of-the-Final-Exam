@@ -22,7 +22,7 @@ import board
 import db
 import reloading
 import report
-from game.case import load_case
+from game.case import load_case, option_label
 
 ROOT = Path(__file__).resolve().parent
 COVER = ROOT / "assets" / "cover.webp"
@@ -207,7 +207,7 @@ def new_case():
 
 
 def label(column, option_id):
-    return next(o["label"] for o in case["accusation"][column] if o["id"] == option_id)
+    return option_label(case, column, option_id)
 
 
 _MARKDOWN_SPECIAL = re.compile(r"([\\`*_\[\]<>#$~|])")

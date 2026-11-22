@@ -377,8 +377,7 @@ class Engine:
         game.clock += minutes
 
     def _check_suspect(self, game, suspect):
-        if suspect not in self._suspects(game):
-            raise GameError(f"There is no suspect called {suspect}.")
+        self._check_suspect_id(suspect)  # variants never add suspects, so the case file's list is the same
 
     def _award(self, game, badge_id):
         if badge_id not in game.badges:
