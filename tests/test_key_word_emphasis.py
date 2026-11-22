@@ -56,6 +56,11 @@ def test_a_hunch_detail_is_marked_and_wins_over_a_key_word():
     assert bold(markup) == ["19:40"]
 
 
+def test_overlapping_marks_never_nest():
+    markup = board.emphasize("job 88213 released", ["job 88213", "88213 released"])
+    assert markup == "<mark>job 88213</mark> released"
+
+
 def test_only_whole_words_and_ta_only_in_capitals():
     assert bold(board.emphasize("Data from the stack: ta, TA, libraryish, 123:456.")) == ["TA"]
 

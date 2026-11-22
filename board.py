@@ -163,7 +163,7 @@ def emphasize(text, marks=()):
     spans = []
     for detail in marks:
         start = text.find(detail) if detail else -1
-        if start >= 0:
+        if start >= 0 and not any(start < e and s < start + len(detail) for s, e, _ in spans):
             spans.append((start, start + len(detail), "mark"))
     ends = [m.end() for m in SENTENCE_END.finditer(text)]
     seen, used, sentence = set(), 0, 0
