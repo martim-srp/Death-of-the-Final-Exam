@@ -5,6 +5,8 @@ loop by doing it: search the faculty corridor, show it to the Companion, see the
 A fourth step lights up the notebook and says what it is for.
 """
 
+import re
+
 import pytest
 
 from game.engine import Engine
@@ -31,7 +33,8 @@ def test_step_one_points_the_guide_at_the_faculty_corridor():
     assert 'class="goal-bar" data-act="next:clue:L4"' in markup
     assert "Tutorial 1 of 4 · Tap the glowing Faculty pin, then Search it." in markup
     assert "<em>" not in markup.split('class="goal-bar"')[1].split("</button>")[0]  # one sentence, no musing
-    assert coach(at) == ""  # the strip says it; the panel only offers to skip
+    assert "Tutorial · 1 of 4" in coach(at)  # one tidy card: step number, one line, its buttons inside
+    assert at.button(key="tutorial_skip") is not None
     assert not any("Where to start" in m.value for m in at.markdown)  # the coach card says it once
 
 
@@ -44,7 +47,7 @@ def test_step_two_points_at_the_companion_then_step_three_explains_the_game():
     at.pills(key="show_to_L4").set_value("companion").run()
     assert not at.exception
     assert "Caught her lying! That is the game:" in coach(at)
-    assert len(coach(at)) < 200  # one line, not a paragraph
+    assert len(re.sub(r"<[^>]+>", "", coach(at))) < 200  # one line, not a paragraph
     assert "Tutorial 3 of 4 · Lie caught!" in board_markup(at)  # the strip stays on the tutorial
     at.button(key="tutorial_ok").click().run()
     markup = board_markup(at)

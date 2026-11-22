@@ -321,26 +321,32 @@ def to_notebook_step():
     st.session_state.tutorial_notebook = True
 
 
+COACH_LINES = {
+    1: ("search", "Start with a search", "Tap the glowing Faculty pin on the map, then Search it."),
+    2: ("card", "Show your evidence", "Show card 12 to the Companion. She says she never went to his office door."),
+    3: ("bolt", "Caught her lying! That is the game:", "find the card that breaks each story."),
+    4: ("sheet", "Your notebook", "writes down every card, every story and every lie for you. "
+                                  "Cross off what can't be: what is left is your accusation."),
+}
+
+
 def coach_card(game):
-    """The tutorial in the side panel: a skip link while it runs (the guide strip says what to tap),
-    then one line once the lie is caught, then what the notebook is for."""
+    """The tutorial in the side panel: one card per step, with its step number, one line and its buttons inside."""
     number = tutorial_step(game)
     if not number:
         return
+    icon, title, line = COACH_LINES[number]
     with st.container(key="coach"):
-        if number == 3:
-            st.markdown('<div class="coach"><p><b>Caught her lying! That is the game:</b> '
-                        "find the card that breaks each story.</p></div>", unsafe_allow_html=True)
-            st.button("Got it", key="tutorial_ok", type="primary", icon=":material/check:",
-                      on_click=to_notebook_step, use_container_width=True)
-        elif number == 4:
-            st.markdown(f'<div class="coach"><p>{board.icon("sheet")} <b>Your notebook</b> writes down every card, '
-                        "every story and every lie for you. Cross off what can't be: what is left is your accusation.</p></div>",
-                        unsafe_allow_html=True)
-            st.button("Got it, let me play", key="tutorial_end", type="primary", icon=":material/check:",
-                      on_click=end_tutorial, use_container_width=True)
-        else:
-            st.button("Skip the tutorial", key="tutorial_skip", type="tertiary", on_click=end_tutorial)
+        st.markdown(f'<div class="coach"><small>Tutorial · {number} of 4</small>'
+                    f"<p>{board.icon(icon)} <b>{html.escape(title, quote=False)}</b> {html.escape(line, quote=False)}</p></div>", unsafe_allow_html=True)
+        with st.container(horizontal=True, key="coach_actions"):
+            if number == 3:
+                st.button("Got it", key="tutorial_ok", type="primary", icon=":material/check:", on_click=to_notebook_step)
+            elif number == 4:
+                st.button("Got it, let me play", key="tutorial_end", type="primary", icon=":material/check:",
+                          on_click=end_tutorial)
+            if number < 4:
+                st.button("Skip the tutorial", key="tutorial_skip", type="tertiary", on_click=end_tutorial)
 
 
 def go_next():

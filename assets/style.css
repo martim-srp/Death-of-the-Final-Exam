@@ -70,10 +70,18 @@ header[data-testid="stHeader"] { display: none; }
 .lead { display: flex; gap: 0.6rem; align-items: flex-start; background: #241c18; border-left: 3px solid #e8c27a; border-radius: 8px;
   padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.92rem; }
 .lead b { font-family: var(--label); color: #e8c27a; }
-.coach { padding: 0.75rem 0.9rem; border: 2px solid #e8c27a; border-radius: 10px; background: rgba(232, 194, 122, 0.1); }
-.coach p { margin: 0; font-size: 1.05rem; line-height: 1.45; }
+/* The tutorial: one card with its step, one line and its buttons inside, set apart from the panel below. */
+.st-key-coach { gap: 0.7rem; margin: 0 0 1.4rem; padding: 0.9rem 1rem 0.85rem; border: 1px solid rgba(232, 194, 122, 0.6);
+  border-left: 4px solid #e8c27a; border-radius: 12px; background: linear-gradient(135deg, rgba(232, 194, 122, 0.13), rgba(232, 194, 122, 0.04));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35); }
+.coach small { display: block; margin-bottom: 0.3rem; font: 600 0.68rem var(--label); letter-spacing: 0.18em; text-transform: uppercase; color: #e8c27a; }
+.coach p { margin: 0; font-size: 1rem; line-height: 1.5; color: #efe6d8; }
 .coach b { color: #e8c27a; }
-.coach .ic { width: 18px; height: 18px; vertical-align: -3px; color: #e8c27a; }
+.coach .ic { width: 18px; height: 18px; vertical-align: -3px; color: #e8c27a; margin-right: 0.15rem; }
+.st-key-coach_actions { gap: 0.4rem 0.9rem; align-items: center; flex-wrap: wrap; }
+.st-key-coach_actions [data-testid="stButton"] { width: auto; }
+.st-key-coach_actions button[kind="primary"] { min-height: 2.2rem; padding: 0.3rem 1.1rem; border-radius: 8px; }
+.st-key-coach_actions button[kind="tertiary"] { color: #a89a88; }
 .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
 .tips div { background: #241c18; border-radius: 10px; padding: 0.6rem; text-align: center; font-size: 0.85rem; line-height: 1.25; }
 .tips div span { display: block; font-size: 1.6rem; }
