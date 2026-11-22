@@ -156,6 +156,8 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
     calm: whether calm mode is on (no animations, no sounds), shown on its button.
     goal: what the next step asks for; "sheet" makes the notebook button glow."""
     hours, minutes = divmod(max(minutes_left, 0), 60)
+    night_hours, night_minutes = map(int, clock.split(":"))
+    accessible_clock = f"{night_hours % 12 or 12}:{night_minutes:02d} {'AM' if night_hours < 12 else 'PM'}"
     burnt = 100 * (1 - max(minutes_left, 0) / limit)
     urgent = " urgent" if minutes_left <= 120 else ""
     notebook_glow = ' class="goal"' if goal == "sheet" else ""
@@ -167,7 +169,7 @@ def hud_html(clock, minutes_left, limit, strikes_left, max_strikes, caught, avat
         # One number: the time left, counting down. Two (a clock counting up, time left counting down)
         # read as two different things to new players. The night's hour stays on hover.
         f'<div class="clock" role="timer" title="Night clock: {esc(clock)}. The case closes at 09:00." '
-        f'aria-label="{hours} hours and {minutes:02d} minutes left. Night clock: {esc(clock)}. The case closes at 09:00.">'
+        f'aria-label="{hours} hours and {minutes:02d} minutes left. Night clock: {accessible_clock}. The case closes at 09:00.">'
         f'<span class="time"><b>{hours}h {minutes:02d}m left</b></span>'
         f'<div class="fuse"><i style="width:{burnt:.1f}%"></i></div></div>'
         f'<div class="stat" title="Accusations left">{icon("scale")}<span class="pips">{pips}</span><small>tries left</small></div>'
