@@ -188,7 +188,41 @@ class Game:
         """Rebuild a game from to_dict(). Keys this version does not know are ignored,
         so a save from a newer or older version of the code still loads."""
         known = {f.name for f in fields(cls)}
-        return cls(**{key: value for key, value in data.items() if key in known})
+        game = cls(**{key: value for key, value in data.items() if key in known})
+        if type(game.seed) is not int or not isinstance(game.variant, str):
+            raise ValueError("Invalid case identity in saved game.")
+        if type(game.clock) is not int or game.clock < 0 or type(game.strikes) is not int or game.strikes < 0:
+            raise ValueError("Invalid clock or strikes in saved game.")
+        if game.status not in ("playing", "solved", "cold") or game.mode not in ("normal", "hard"):
+            raise ValueError("Invalid status or mode in saved game.")
+        if not isinstance(game.variables, dict) or not all(isinstance(value, str) for value in game.variables.values()):
+            raise ValueError("Invalid case variables in saved game.")
+        for entries in (game.opened, game.unlocked, game.badges, game.hints, game.cracked):
+            if not isinstance(entries, list) or not all(isinstance(entry, str) for entry in entries):
+                raise ValueError("Invalid list of case records in saved game.")
+        for pairs in (game.presented, game.pressed, game.contradictions):
+            if not isinstance(pairs, list) or any(
+                not isinstance(pair, list) or len(pair) != 2 or not all(isinstance(item, str) for item in pair)
+                for pair in pairs
+            ):
+                raise ValueError("Invalid evidence or contradictions in saved game.")
+        if not isinstance(game.history, list):
+            raise ValueError("Invalid history in saved game.")
+        history_fields = {"ask": ("suspect", "topic"), "open": ("clue",), "hint": ("clue",),
+                          "present": ("suspect", "clue"), "press": ("suspect", "clue")}
+        for event in game.history:
+            if not isinstance(event, dict) or not isinstance(event.get("action"), str):
+                raise ValueError("Invalid history event in saved game.")
+            if any(not isinstance(event.get(key), str) for key in history_fields.get(event["action"], ())):
+                raise ValueError("Missing history details in saved game.")
+            if "dialogue" in event:
+                entries = event["dialogue"]
+                if event["action"] not in ("ask", "present", "press") or not isinstance(entries, list) or any(
+                    not isinstance(entry, dict) or entry.get("who") not in ("you", "them")
+                    or not isinstance(entry.get("text"), str) for entry in entries
+                ):
+                    raise ValueError("Invalid dialogue in saved game.")
+        return game
 
 
 class Engine:
@@ -524,6 +558,9 @@ class Engine:
         """What a suspect blurted out when they cracked, or None if they have not cracked."""
         if suspect not in game.cracked:
             return None
+        line = self.crack_lines.get("variants", {}).get(game.variant, {}).get(suspect)
+        if line is not None:
+            return line
         return self.crack_lines["where"][self._resolved[game.variant]["solution"]["where"]]
 
     def _catch_contradictions(self, game, suspect, clue_id):

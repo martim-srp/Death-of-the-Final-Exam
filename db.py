@@ -69,28 +69,39 @@ def create_game(game):
     return game_id
 
 
-def save_game(game_id, game):
-    """Update a saved game. Rejects ids we did not issue."""
+def save_game(game_id, game, *, expected_state=None):
+    """Update a saved game if it still matches the snapshot used for the action."""
     if not valid_id(game_id):
         raise ValueError("Invalid game id.")
     with _connect() as conn:
-        conn.execute(
-            "UPDATE games SET state = ?, updated_at = ? WHERE id = ?",
-            (json.dumps(game.to_dict()), _now(), game_id),
-        )
+        params = (json.dumps(game.to_dict()), _now(), game_id)
+        if expected_state is None:
+            cursor = conn.execute("UPDATE games SET state = ?, updated_at = ? WHERE id = ?", params)
+        else:
+            cursor = conn.execute(
+                "UPDATE games SET state = ?, updated_at = ? WHERE id = ? AND state = ?",
+                (*params, expected_state),
+            )
+        return cursor.rowcount == 1
 
 
 def load_game(game_id):
     """The saved game, or None if the id is malformed or unknown, or the save is damaged."""
+    return load_game_snapshot(game_id)[0]
+
+
+def load_game_snapshot(game_id):
+    """Return the game and the stored state used to guard its next update."""
     if not valid_id(game_id):
-        return None
+        return None, None
     with _connect() as conn:
         row = conn.execute("SELECT state FROM games WHERE id = ?", (game_id,)).fetchone()
     if row is None:
-        return None
+        return None, None
     try:
-        return Game.from_dict(json.loads(row[0]))
+        game = Game.from_dict(json.loads(row[0]))
+        return game, row[0]
     except (ValueError, TypeError, AttributeError):
         # Not JSON, not an object, or missing a required field: treat it as not found,
         # so the player gets a new case instead of an error page.
-        return None
+        return None, None

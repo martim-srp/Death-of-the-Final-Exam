@@ -156,7 +156,9 @@ header[data-testid="stHeader"] { display: none; }
 .hunch { display: flex; gap: 0.7rem; align-items: center; margin: 0 0 0.6rem; padding: 0.35rem 0.2rem;
   animation: rise 0.5s ease-out both; animation-delay: 0.2s; }  /* the detective's voice: no box, so it never reads as a fact */
 .hunch img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; border: 1px solid #5a4a40; flex: 0 0 auto; }
-.hunch p { margin: 0; font-family: var(--display); font-style: italic; font-size: 0.98rem; line-height: 1.4; color: var(--gold); }  /* gold: a hint worth acting on */
+.hunch p { display: inline; margin: 0; font-family: var(--display); font-style: italic; font-size: 0.98rem; line-height: 1.6; color: #fff1d0;
+  background: rgba(255, 210, 80, 0.34); padding: 0.1em 0.3em; border-radius: 3px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }  /* a highlighter stroke: a hint worth acting on */
 .hunch code { display: block; margin-top: 0.4rem; font-size: 0.75rem; background: #1c1613; color: #cdbfa8; padding: 0.3rem 0.45rem; border-radius: 6px; white-space: pre-wrap; }
 .hunch mark { background: rgba(232, 194, 122, 0.25); color: #ffe2a8; padding: 0 0.1em; border-radius: 3px; }
 .st-key-panel h4 { font: 600 0.72rem var(--label) !important; letter-spacing: 0.16em; text-transform: uppercase;
