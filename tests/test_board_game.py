@@ -399,7 +399,7 @@ def test_home_panel_shows_a_lead_after_the_print_log():
     Engine().open_clue(game, "D1")
     Engine().open_clue(game, "D2")
     at = start(game=game)
-    assert "Show Evidence 2. Print server log to the Teaching Assistant." in page(at)
+    assert "Show Evidence 2. Print server log to the Teaching Assistant." in page(at).replace('<strong class="kw">', "").replace("</strong>", "")  # key words are bold
 
 
 def test_a_bought_hint_also_shows_in_the_home_panel():
@@ -407,7 +407,7 @@ def test_a_bought_hint_also_shows_in_the_home_panel():
     click(at, "Hint")
     at.session_state["focus"] = ("home", None)
     at.run()
-    assert "Ask the Professor about the exam." in page(at)
+    assert "Ask the Professor about the exam." in page(at).replace('<strong class="kw">', "").replace("</strong>", "")  # key words are bold
 
 
 def test_no_hint_button_on_a_ready_clue():

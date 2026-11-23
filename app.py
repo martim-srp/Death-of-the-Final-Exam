@@ -225,6 +225,7 @@ def plain(text):
 
 
 esc = board.esc  # one HTML escape for the whole page
+emphasize = board.emphasize  # escape story text and put its key words in bold
 
 
 def search_log(log, query):
@@ -454,7 +455,7 @@ def leads_html(game, heading):
     if leads:
         st.markdown(heading)
         st.markdown(
-            "".join(f'<div class="lead"><b>Evidence {engine.number(lead["clue"])}</b><span>{esc(lead["text"])}</span></div>' for lead in leads),
+            "".join(f'<div class="lead"><b>Evidence {engine.number(lead["clue"])}</b><span>{emphasize(lead["text"])}</span></div>' for lead in leads),
             unsafe_allow_html=True,
         )
     return bool(leads)
@@ -465,7 +466,7 @@ def night_html(game, heading):
     night = engine.night_events(game)
     if night:
         st.markdown(heading)
-        st.markdown("".join(f'<div class="lead"><b>{e["time"]}</b><span>{esc(e["text"])}</span></div>' for e in night),
+        st.markdown("".join(f'<div class="lead"><b>{e["time"]}</b><span>{emphasize(e["text"])}</span></div>' for e in night),
                     unsafe_allow_html=True)
 
 
@@ -659,7 +660,7 @@ def chat_html(log, suspect):
             after = "Their story broke. Write down what slipped out."
             rows.append(f'<div class="caught cracked"{style}><b>{board.icon("bolt")} Cracked</b><small>{after}</small></div>')
         if entry.get("think"):
-            rows.append(f'<div class="bubble think"{style}><i class="face you"></i><div class="say">{esc(entry["think"])}</div></div>')
+            rows.append(f'<div class="bubble think"{style}><i class="face you"></i><div class="say">{emphasize(entry["think"])}</div></div>')
     return '<div class="chat">' + "".join(rows) + "</div>"
 
 
@@ -791,23 +792,32 @@ def hunch_html(hunches, log):
         if line:
             marked = esc(line.strip()).replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
             quote = f"<code>{marked}</code>"
-        rows.append(f'<div class="hunch"><img src="{face}" alt=""><div><p>"{esc(hunch["line"])}"</p>{quote}</div></div>')
+        rows.append(f'<div class="hunch"><img src="{face}" alt=""><div><p>"{emphasize(hunch["line"])}"</p>{quote}</div></div>')
     return "".join(rows)
 
 
-def clue_body_html(text):
-    """A clue's text as HTML: lines starting with "- " become a bulleted list, other lines paragraphs."""
-    parts, points = [], []
+def clue_body_html(text, marks=()):
+    """A clue's text as HTML: lines starting with "- " become a bulleted list, other lines paragraphs.
+
+    Key words are in bold. Each detail in `marks` is highlighted with <mark> where it first appears."""
+    parts, points, marks = [], [], [m for m in marks if m]
+
+    def line_html(line):
+        found = [m for m in marks if m in line]
+        for detail in found:
+            marks.remove(detail)
+        return emphasize(line, found)
+
     for line in text.splitlines():
         line = line.strip()
         if line.startswith("- "):
-            points.append(f"<li>{esc(line[2:])}</li>")
+            points.append(f"<li>{line_html(line[2:])}</li>")
             continue
         if points:
             parts.append("<ul>" + "".join(points) + "</ul>")
             points = []
         if line:
-            parts.append(f"<p>{esc(line)}</p>")
+            parts.append(f"<p>{line_html(line)}</p>")
     if points:
         parts.append("<ul>" + "".join(points) + "</ul>")
     return "".join(parts)
@@ -847,13 +857,10 @@ def panel_clue(game, clue_id, fresh):
     art = f'<img src="{picture}" alt="">' if picture else ""  # no placeholder: the words are the evidence
     style = "" if clue_id in fresh else ' style="animation:none"'
     hunches = engine.hunches(game, clue_id)
-    body = clue_body_html(clue["text"])
-    for hunch in hunches:
-        if hunch["mark"] and hunch["mark"] in clue["text"]:
-            body = body.replace(esc(hunch["mark"]), f'<mark>{esc(hunch["mark"])}</mark>', 1)
+    body = clue_body_html(clue["text"], [hunch["mark"] for hunch in hunches])
     fact = engine.key_fact(game, clue_id)
     if fact:
-        st.markdown(f'<div class="keyfact"><small>In short</small>{esc(fact)}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="keyfact"><small>In short</small>{emphasize(fact)}</div>', unsafe_allow_html=True)
     if hunches:
         st.markdown(hunch_html(hunches, clue["log"]), unsafe_allow_html=True)
     else:
@@ -929,7 +936,7 @@ def notebook_notes(game):
                 for item in caught.get(suspect, [])
             )
             rows.append(f'<div class="story-note"><b>{esc(board.short_name(brief["name"]))}</b>'
-                        f'<span>“{esc(brief["cover"].strip())}”</span>{lies}</div>')  # whole story: a cut could hide the line a card breaks
+                        f'<span>“{emphasize(brief["cover"].strip())}”</span>{lies}</div>')  # whole story: a cut could hide the line a card breaks
         st.markdown("".join(rows), unsafe_allow_html=True)
     night_html(game, "#### The night so far")
 
