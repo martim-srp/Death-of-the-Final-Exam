@@ -22,6 +22,8 @@ python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
+Python 3.11 or newer (the checks on GitHub use 3.13).
+
 The game runs without an AI key: the suspects then answer with their scripted lines. To let the AI play
 them, copy `.env.example` to `.env` and put a [Requesty](https://requesty.ai) key in it. `.env` is
 ignored by git.
@@ -62,7 +64,8 @@ they crack and let slip where the paper left from. A crack never shows who is gu
 cracks exactly like an innocent. Stuck on a locked card? A hint costs 15 minutes,
 and the notebook shows your free leads and the night so far. Cross off what it cannot be on the case sheet; the game
 crosses off what a wrong accusation has proved. When a card breaks someone's story, your detective notices: the odd detail is
-highlighted and a short thought hints at who to show it to.
+highlighted and a short thought hints at who to show it to. In the story text, a few key words per
+sentence (times, places, names) are in bold so a quick read still catches them.
 
 As the clock runs, the night moves on without you: the storm cuts the lights, the Dean calls, students
 arrive. These events are story only and change no rules.
@@ -74,9 +77,15 @@ accusation shows which of the four parts are right. After three wrong ones the c
 unsolved: the story never tells you who did it, but the final screen then shows you, the
 player, the correct answer.
 
-Two more buttons sit in the status bar. The moon turns on **calm mode**: no animations, no sounds, and
-the next step as one plain line. The round save icon in the corner gives you the game's private link,
-so you can close the tab and carry on later.
+The status bar also has the notebook button and the moon, which turns on **calm mode**: no
+animations, no sounds, and the next step as one plain line. Two round icons sit in the corner (on a
+phone, at the end of the page). The
+save icon gives you the game's private link (copy it or send it to your own email), so you can close
+the tab and carry on later. The restart icon above it starts a new case, after asking first so a
+mis-tap never wipes one.
+
+When you solve the case you get your rank out of 100 and a spoiler-free line to share. Solved or cold,
+you can download the honour council report.
 
 ## How it works
 
@@ -123,6 +132,8 @@ flowchart LR
 | --- | --- | --- |
 | Screens | `app.py` | The Streamlit interface: the side panel, the accusation and the reveal. Only shows what the engine returns. |
 | Board | `board.py` | Builds the board's HTML (status bar, map, evidence cards, suspects) and turns taps into panel ids. |
+| Report | `report.py` | The honour council report the player downloads when the case closes. |
+| Pictures and style | `assets/`, `static/` | Evidence pictures, portraits, the map and `style.css`. `static/` holds only the map and portraits, never evidence pictures, because Streamlit serves that folder to anyone. |
 | Rules | `game/engine.py` | Clock, unlocks, questions, evidence, contradictions, accusations, badges. |
 | Story | `data/case.json`, `game/case.py` | Clues, suspects, claims, the three variants, and the loader that merges a variant. |
 | AI | `game/ai.py` | Sends one question to the model through Requesty and checks the reply. |
