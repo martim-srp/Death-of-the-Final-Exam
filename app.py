@@ -40,6 +40,7 @@ FALLBACK_NOTES = {
     "no_key": "The AI isn't connected, so this is the suspect's scripted answer.",
     "failed": "The AI didn't answer this time, so this is the suspect's scripted answer.",
     "unreadable": "The AI's answer couldn't be read, so this is the suspect's scripted answer.",
+    "off_script": "The AI's answer went off script, so this is the suspect's scripted answer.",
     "limit": "This case has used up its AI questions. Suspects now give their scripted answers.",
 }
 # Shown in the chat instead of a typed question that looked like a password or key.

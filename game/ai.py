@@ -143,7 +143,47 @@ def _parse_answer(raw, topics):
     reply = answer.get("reply")
     if not isinstance(reply, str) or not reply.strip():
         return None
-    return _shorten(reply.strip()), topic if topic in topics else "other"
+    reply = reply.strip()
+    if confesses(reply):
+        return "confessed"  # out of character: the suspect gives their scripted answer instead
+    return _shorten(_keep_sentences(reply)), topic if topic in topics else "other"
+
+
+MAX_SENTENCES = 3  # the prompt asks for 1 to 3 sentences; the reply is cut to that, so it is enforced
+# A suspect never confesses to the leak (the engine decides who did it, and a false confession would mislead
+# the player). These first-person admissions of the leak are checked in each sentence that is not a question;
+# a denial ("I did not leak it", "It wasn't me") or a rhetorical "You think I did it?" does not match.
+_A = r"(?:'|\u2019| a)"  # I'm, I’m or I am
+_LEAK_VERB = r"(?:leaked|posted|stole|uploaded|shared|sold)"
+_EXAM = r"(?:it|the (?:exam|paper|draft|questions?|file|pdf|test)|question 5)"
+_CONFESSION = re.compile(
+    r"\bI(?:'ve|\u2019ve| have)? (?:leaked|posted)\b"
+    rf"|\bI(?:'ve|\u2019ve| have)? {_LEAK_VERB} {_EXAM}\b"
+    r"|\bI did it(?:[.!]*$| for | because )"
+    r"|\bI confess(?:[.!]*$| to (?:the leak|leaking|it))"
+    r"|\bit was (?:all )?me[.!,]*$"
+    rf"|\bit was me (?:who|that) {_LEAK_VERB}\b"
+    rf"|\bI{_A}m (?:the (?:leaker|culprit|thief)|guilty(?:[.!,;]|$| of (?:the leak|leaking|it\b|this\b)))"
+    rf"|\bI(?:{_A}m| was) the one who {_LEAK_VERB}\b"
+    rf"|\bI{_A}m responsible for the leak",
+    re.IGNORECASE,
+)
+_SENTENCE_END = re.compile(r"(?<=[.!?][\"”’)])\s+|(?<=[.!?])\s+")
+
+
+def _sentences(reply):
+    return [part for part in _SENTENCE_END.split(reply) if part.strip()]
+
+
+def confesses(reply):
+    """True if the reply has a suspect admit the leak in a statement (not a question)."""
+    return any(_CONFESSION.search(s.strip()) for s in _sentences(reply) if not s.rstrip(' "”’)').endswith("?"))
+
+
+def _keep_sentences(reply):
+    """At most MAX_SENTENCES sentences, as the prompt asks."""
+    parts = _sentences(reply)
+    return reply if len(parts) <= MAX_SENTENCES else " ".join(p.strip() for p in parts[:MAX_SENTENCES])
 
 
 def _shorten(reply):
@@ -217,6 +257,9 @@ def ask(engine, game, suspect, text, *, complete=None, cloud_key=None):
                 if answer is None:
                     fallback = "unreadable"
                     logging.warning("AI: could not parse model reply")
+                elif answer == "confessed":
+                    fallback = "off_script"
+                    logging.warning("AI: model reply confessed to the leak; using the scripted answer")
                 else:
                     reply, topic = answer
 

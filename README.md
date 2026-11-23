@@ -170,6 +170,10 @@ If there is no key, the call fails or times out (15 seconds), or the reply canno
 game keeps working. The suspect answers with scripted lines from `case.json`, and the topic is
 picked from keywords in the question.
 
+- **Out of character:** the prompt's rules are also checked in code. A reply is cut to three
+  sentences, and a reply in which the suspect admits the leak ("I leaked it", "It was me") is thrown
+  away for the scripted answer, so the model can never mislead the player with a false confession.
+
 - **Limit:** the free Requesty plan allows 200 requests per day, shared by the whole account.
 - **Per game:** each game makes at most 12 AI calls (`MAX_AI_CALLS`), so about 16 games a day fit in the
   free plan. After that, the suspects use the scripted lines.
@@ -187,8 +191,9 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
 
 - **Access:** there are no accounts. Anyone with the link can resume that game, and nobody can
   list or guess other games. Ids that do not have the right shape are rejected before any query.
-- **What is not saved:** the text the player types to the suspects. History only records the
-  topic, so a password typed into the game never reaches the database or the model.
+- **What is not saved:** the text the player types to the suspects. History records the topic and
+  the suspect's scripted answer, never the typed words, so a password typed into the game never
+  reaches the database or the model.
 - **Limit:** Streamlit Community Cloud has a temporary disk, so saved games are lost when the
   app restarts. That is acceptable for a game that lasts minutes.
 - **How it could change:** move `db.py` to a hosted database such as Supabase. Both use SQL, and
