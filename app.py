@@ -390,7 +390,7 @@ def draw_board(game, clues, fresh):
         + board.map_html(map_uri, size, board.map_points(clues), game.opened, picked, avatar, fresh, goal)
         + board.hand_html(clues, picked, fresh, goal)
         + pending_sound()
-        + (board.tutorial_html() if show_tour(game) else "")
+        + (board.tutorial_html(hard=engine.hard(game)) if show_tour(game) else "")
         + board.calm_html(calm())
     )
     deck(data=markup, key="board", on_act_change=functools.partial(on_act, "board"))
