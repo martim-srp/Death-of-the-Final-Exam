@@ -262,7 +262,13 @@ def calm_html(on):
     return '<i class="calm-on" hidden></i>' if on else ""
 
 
-def tutorial_html():
+# The tour's last step ends with one move to try, so a new player sees a lie break in the first minutes.
+# The same in every variant (the Companion's door lie is broken by card 12 in A, B and C) and not a clue
+# to the culprit: she is innocent in A and B. Left out in hard mode, which gives no tips.
+FIRST_MOVE = "Try this first: search the Faculty, then show card 12 to the Companion."
+
+
+def tutorial_html(hard=False):
     """The skippable tour of the screen that opens a new case: the one walkthrough a new player gets."""
     steps = [
         ("map", "The map", "Tap a red pin to search a place. Searching costs 30 minutes."),
@@ -271,7 +277,8 @@ def tutorial_html():
                                      "to catch a lie. A question or showing a card costs 10 minutes."),
         ("sheet", "Your notebook", "It writes down every card, every story and every lie for you. "
                                    "Cross off what can't be: what is left is your accusation."),
-        ("accuse", "Accuse", "Choose who leaked the exam, how, where and why. At 09:00 you can only accuse. You have three tries."),
+        ("accuse", "Accuse", "Choose who leaked the exam, how, where and why. At 09:00 you can only accuse. You have three tries."
+                             + ("" if hard else " " + FIRST_MOVE)),
     ]
     items = "".join(
         f'<div class="step" data-target="{target}" data-i="{i}" hidden><b>{esc(title)}</b><p>{emphasize(text)}</p></div>'
