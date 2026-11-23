@@ -598,6 +598,12 @@ def present_card(suspect, clue_id):
     """Show one evidence card to one suspect and write the exchange in their chat. Returns the engine's result."""
     if not clue_id or suspect not in case["suspects"]:
         return None
+    last = current_game().history[-1:]
+    if last and last[0].get("action") == "present" and (last[0]["suspect"], last[0]["clue"]) == (suspect, clue_id):
+        # A double tap sends the same card twice before the page redraws. The suspect has just
+        # seen it, so the second one is dropped: no second answer, no minutes spent.
+        return None
+
     def dialogue(game, result):
         entries = [
             {"who": "you", "text": f"You slide {engine.label(clue_id)} across the table.", "act": True},
