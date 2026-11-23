@@ -11,7 +11,7 @@ from game.engine import Engine
 
 
 APP = str(Path(__file__).resolve().parent.parent / "app.py")
-PUBLIC_URL = "https://carcavelos-paper.streamlit.app"
+PUBLIC_URL = "https://death-of-the-final-exam.streamlit.app"
 
 
 def start(game=None, game_id=None):
