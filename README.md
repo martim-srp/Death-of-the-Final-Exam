@@ -6,6 +6,15 @@ where and why. The culprit changes from game to game.
 
 **Play it:** https://death-of-the-final-exam.streamlit.app
 
+## Objectives
+
+- **For the player:** solve a mystery by reasoning, not by luck. Every action costs time, every clue
+  can be checked against what the suspects say, and a wrong accusation shows which parts were right.
+- **For the AI:** let a language model play the suspects in their own words while the game's rules stay
+  in code, so the model can never change what is true, unlock a clue or give away the answer.
+- **For the course:** a deployed Streamlit app with its own rules engine, saved games in SQLite, an
+  external API that can fail without breaking the game, and tests for accepted and rejected actions.
+
 ## Team
 
 | Name | Student number |
@@ -25,6 +34,8 @@ Who built what (from the pull requests each member wrote):
 | Salvador | Suspect dialogue per variant, safe saves (no lost moves between tabs), screen walkthrough, cold-case ending |
 
 ## Run it locally
+
+Install the dependencies, then start the app:
 
 ```bash
 python -m pip install -r requirements.txt
