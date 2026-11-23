@@ -238,6 +238,7 @@ class Engine:
         self.ruleout_lines = load_ruleouts()
         self.clock_rules = self.case["clock"]
         self._resolved = {v: resolve_variant(self.case, v) for v in self.case["variants"]}
+        self._variable_names = frozenset(self._random_variables(random.Random(0)))
         # Players see evidence as 1 to 13, in case-file order; the ids (D1, L4) stay internal.
         self._numbers = {clue_id: n for n, clue_id in enumerate(self.case["clues"], start=1)}
         self._vocabulary = case_vocabulary(self.case)
@@ -274,6 +275,10 @@ class Engine:
         for suspect, moods in r["moods"].items():
             variables[f"mood_{suspect}"] = rng.choice(moods)
         return variables
+
+    def valid_saved_game(self, game):
+        """Whether a deserialized save fits this case version well enough to resume."""
+        return game.variant in self.case["variants"] and self._variable_names.issubset(game.variables)
 
     # ---- Reading the state ----------------------------------------------
 

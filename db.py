@@ -16,12 +16,19 @@ import secrets
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
-from game.engine import Game
+from game.engine import Engine, Game
 
 DEFAULT_PATH = Path(__file__).resolve().parent / "data" / "app.db"
 GAME_ID = re.compile(r"^[A-Za-z0-9_-]{20,64}$")
+
+
+@lru_cache(maxsize=1)
+def _save_validator():
+    """Reuse the current case schema when checking saves at the database boundary."""
+    return Engine()
 
 
 def _path():
@@ -100,6 +107,8 @@ def load_game_snapshot(game_id):
         return None, None
     try:
         game = Game.from_dict(json.loads(row[0]))
+        if not _save_validator().valid_saved_game(game):
+            return None, None
         return game, row[0]
     except (ValueError, TypeError, AttributeError):
         # Not JSON, not an object, or missing a required field: treat it as not found,
