@@ -6,7 +6,8 @@ Claude Code, Codex, Copilot and any other agent must follow this file.
 ## The project
 
 Death of the Final Exam is a detective game. An exam has leaked the night before it is sat; the player
-opens clues, questions five AI-played suspects and accuses someone before 09:00. At the start of each
+opens clues and questions five AI-played suspects until 09:00, then accuses someone (an accusation
+is still allowed at 09:00). At the start of each
 game the server picks one of three variants (A, B, C), each with a different culprit, and randomises
 details such as card numbers.
 
@@ -77,10 +78,10 @@ streamlit run app.py                        # run the app locally
 
 | GitHub | Feature |
 | --- | --- |
-| @martim-srp | Rule engine and tests (`game/`, `tests/`) |
-| @lucia123-456 | Story and case data (`data/case.json`) |
-| @Salvador-ai19 | AI suspects (prompts, Requesty, fallback, password trap) |
-| @DuarteFurtado | Interface and deployment (`app.py`, Streamlit Community Cloud) |
+| @martim-srp | Rule engine and tests (`game/engine.py`, `tests/`), AI suspects (`game/ai.py`, password filter), board and interface polish (`board.py`, `assets/style.css`), deployment |
+| @lucia123-456 | Story and case data (`data/case.json`, `data/keyfacts.json`), evidence proofs, night events, nervous portraits, code cleanups |
+| @Salvador-ai19 | Suspect dialogue per variant (`data/cracks.json`), safe saves (`db.py`, strict loading), screen walkthrough, cold-case ending |
+| @DuarteFurtado | Save game and resume link, damaged-save checks, timer accessibility, hard mode |
 
 Every member reviews someone else's pull requests and must be able to explain every part of the project.
 
