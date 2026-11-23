@@ -19,11 +19,11 @@ MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
 TOPIC_PHRASES = {
-    "alibi": ("where were you", "where did you", "last night", "at what time"),
+    "alibi": ("where were you", "where did you", "last night", "at what time", "were you at"),
     "exam": ("question 5", "draft", "sealed exam", "sv final"),
     "report": ("email", "reported", "told the dean"),
-    "work": ("consulting", "meridian", "project lantern", "valuation"),
-    "teaching_assistant": ("assistant", "proofread"),
+    "work": ("consulting", "meridian", "project lantern", "valuation", "your job"),
+    "teaching_assistant": ("assistant", "proofread", "ta"),
     "leak": ("leaked", "group chat", "anonymous", "posted"),
 }
 
@@ -125,7 +125,15 @@ def _parse_answer(raw, topics):
     try:
         answer = json.loads(raw)
     except json.JSONDecodeError:
-        return None
+        # Some models wrap the object in a sentence or a reasoning note ("Here it is: {...}").
+        # Read the outermost {...} instead; it is checked exactly like a clean reply.
+        start, end = raw.find("{"), raw.rfind("}")
+        if start < 0 or end <= start:
+            return None
+        try:
+            answer = json.loads(raw[start : end + 1])
+        except json.JSONDecodeError:
+            return None
     if not isinstance(answer, dict):
         return None
 
