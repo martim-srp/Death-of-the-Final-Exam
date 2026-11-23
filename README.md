@@ -122,11 +122,11 @@ All characters, the course and the companies in the game are fictional.
 ```mermaid
 flowchart LR
     P([Player]) -->|tap or typed question| A[app.py<br/>screens]
-    A -->|open, ask, present, hint, accuse| E[game/engine.py<br/>rules]
+    A -->|open_clue, ask, present, hint, accuse| E[game/engine.py<br/>rules]
     E -->|reads| C[(data/case.json<br/>story)]
     A -->|typed question| AI[game/ai.py]
-    AI -->|check_secret, press, character_brief only| E
-    AI -->|one request| R{{Requesty<br/>model}}
+    AI -->|check_secret, press, character_brief, ask| E
+    AI -->|one request: character_brief only| R{{Requesty<br/>model}}
     R -.->|fails, slow or bad JSON| F[scripted lines<br/>from the brief]
     AI -->|reply and topic tag| E
     E -->|cost, unlocks, contradictions| A
