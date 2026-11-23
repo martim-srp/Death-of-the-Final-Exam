@@ -15,6 +15,15 @@ where and why. The culprit changes from game to game.
 | Martim Pereira | 62329 |
 | Salvador Rendeiro | 62548 |
 
+Who built what (from the pull requests each member wrote):
+
+| Member | Main work |
+| --- | --- |
+| Duarte | Save game and resume link, damaged-save checks, timer accessibility, hard mode |
+| Lúcia | Story and case data, evidence proofs, night events, nervous portraits, "In short" lines, code cleanups |
+| Martim | Rule engine and tests, AI suspects and password filter, board and interface, deployment, README |
+| Salvador | Suspect dialogue per variant, safe saves (no lost moves between tabs), screen walkthrough, cold-case ending |
+
 ## Run it locally
 
 ```bash
@@ -71,8 +80,8 @@ As the clock runs, the night moves on without you: the storm cuts the lights, th
 arrive. These events are story only and change no rules.
 
 When you are ready, press **Accuse** and pick who, how, where and why. Under each answer you can add
-an evidence card as proof; on a solved case each right proof raises your rank. You must accuse before
-09:00, so you have 540 minutes. At 09:00 you can no longer search or ask; you can only accuse. A wrong
+an evidence card as proof; on a solved case each right proof raises your rank. You have 540 minutes,
+until 09:00, to search and ask. At 09:00 you can no longer search or ask, but you can still accuse. A wrong
 accusation shows which of the four parts are right. After three wrong ones the case goes cold and stays
 unsolved: the story never tells you who did it, but the final screen then shows you, the
 player, the correct answer.
