@@ -233,6 +233,12 @@ header[data-testid="stHeader"] { display: none; }
 @media (min-width: 641px) { .st-key-restart_corner { left: auto; right: 1rem; } }
 /* On wider screens the icon sits bottom-right, under the side panel, so it never covers an evidence card. */
 @media (min-width: 641px) { .st-key-save_corner { left: auto; right: 1rem; } }
+/* On the deployed site Streamlit pins its own badge and avatar to the bottom-right corner (about 50px tall),
+   over the save icon. Lift both icons clear of it on desktop; phones keep them at the end of the page. */
+@media (min-width: 641px) {
+  .st-key-save_corner { bottom: 4.5rem; }
+  .st-key-restart_corner { bottom: calc(4.5rem + 66px); }
+}
 @media (max-width: 640px) {
   [data-testid="stMainBlockContainer"] { padding: 0.6rem 0.6rem 1.5rem; }  /* the save icon is in the page now, not floating */
   [data-testid="stToastContainer"] { left: 0.5rem; right: 0.5rem; top: 0.5rem !important; }
