@@ -15,11 +15,15 @@ details such as card numbers.
 - `data/case.json`: the story. Clues, suspects, unlock rules, accusation options and the three variants.
 - `data/hunches.json`: the detective's inner-voice line for each clue that breaks a suspect's story, and the detail it highlights. Tests check every line matches the case in every variant.
 - `data/voice.json`: the detective's other lines: a thought on every opened clue, a scripted reaction after each suspect answer (no AI call), and the next step told as a thought. Every line is the same in every variant and for every suspect, so none of it points at the culprit.
+- `data/cracks.json`, `data/lies.json`, `data/keyfacts.json`, `data/ruleouts.json`: what a suspect lets slip when they crack, what a caught lie means, each card's key fact, and what each card crosses off the notebook.
 - `game/case.py`: loads the case file and merges a variant's overrides.
+- `game/ai.py`: the only module that calls the model (Requesty), with a timeout, a call limit and the scripted fallback.
 - `game/engine.py`: the rules. Clock, unlocks, questions, evidence, accusations, saving.
 - `db.py`: saved games in SQLite. All database code lives here.
 - `app.py`: the Streamlit interface. Game state lives in `st.session_state` on the server.
 - `assets/style.css`: the page's look (fonts, colours, layout), loaded by `app.py`.
+- `report.py`: the honour council report the player downloads when the case closes.
+- `reloading.py`: rebuilds the cached engine when Streamlit Cloud pulls new code without a restart.
 - `board.py`: the HTML of the game board (map, evidence cards, suspects), built only from what the engine returns.
 - `static/`: copies of the map and the portraits, served at `app/static/` so the browser caches them. Never put evidence pictures here: anyone can fetch a static file, even for a locked card.
 - `tests/`: pytest tests for the engine and for the story's consistency.

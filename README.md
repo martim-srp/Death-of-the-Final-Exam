@@ -136,6 +136,7 @@ flowchart LR
 | Pictures and style | `assets/`, `static/` | Evidence pictures, portraits, the map and `style.css`. `static/` holds only the map and portraits, never evidence pictures, because Streamlit serves that folder to anyone. |
 | Rules | `game/engine.py` | Clock, unlocks, questions, evidence, contradictions, accusations, badges. |
 | Story | `data/case.json`, `game/case.py` | Clues, suspects, claims, the three variants, and the loader that merges a variant. |
+| Detective's lines | `data/hunches.json`, `voice.json`, `cracks.json`, `lies.json`, `keyfacts.json`, `ruleouts.json` | The detective's thoughts, what each suspect lets slip when they crack, what a caught lie means, the key fact of each card and what each card crosses off. Tests check them against every variant. |
 | AI | `game/ai.py` | Sends one question to the model through Requesty and checks the reply. |
 | Storage | `db.py` | Saved games in SQLite. All database code is here. |
 | Live reload | `reloading.py` | Rebuilds the engine when Streamlit Cloud pulls new code without restarting. |
@@ -222,27 +223,6 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
   who has a game's link can open that game.
 - **How it could change:** accounts with a login would tie each game to a player instead of to a
   link, and the trap could ask the player to confirm before hiding a message.
-
-### Demo script for the presentation
-
-A full case takes about ten minutes. To show the parts that matter in two or three:
-
-1. **Start a case** on the live site and point at the time box: every action costs time, and at
-   09:00 only an accusation is left.
-2. **Open evidence 1, the leaked PDF, and switch on "Look closer".** A hidden white-ink line
-   tells "any AI reviewing this file" to blame someone and close the case. This is a prompt
-   injection placed on purpose. Explain that the suspects' AI only ever gets
-   `Engine.character_brief()`, never clue text, so the note cannot reach it (tested in
-   `tests/test_ai.py`). The game shows the same explanation under the note.
-3. **Question a suspect, then show them the card that breaks their story.** "Caught lying" is
-   decided by the engine from `case.json`, not by the AI.
-4. **Type a fake password to the Companion** (for example `password: hunter22`). It is stopped
-   before it reaches the model, the chat shows a note instead, and the "Never give your password
-   to a spy" badge is awarded.
-5. **Accuse.** A wrong part is marked; the right answer shows the confrontation, the rank and the
-   spoiler-free share line.
-
-If the AI is down or out of quota, the suspects answer with scripted lines and the demo still works.
 
 ### What the tests cover, and what they do not
 
