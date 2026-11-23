@@ -29,7 +29,7 @@ Who built what (from the pull requests each member wrote):
 | Member | Main work |
 | --- | --- |
 | Duarte | Save game and resume link, damaged-save checks, timer accessibility, hard mode |
-| Lúcia | Story and case data, evidence proofs, night events, nervous portraits, "In short" lines, code cleanups |
+| Lúcia | Story and case data, normal and hard mode, evidence proofs, night events, nervous portraits, "In short" and "What it means" lines, the tour's first move, bug fixes from fuzzing and the audit, code cleanups |
 | Martim | Rule engine and tests, AI suspects and password filter, board and interface, deployment, README |
 | Salvador | Suspect dialogue per variant, safe saves (no lost moves between tabs), screen walkthrough, cold-case ending |
 
@@ -61,8 +61,8 @@ python -m pytest
 ## How to play
 
 On the start screen you choose your detective and a mode. **Normal mode** gives tips; **Hard mode**
-is the same case with no tips: no next step, no leads, no hints, no highlighted details, and evidence
-crosses nothing off your notebook.
+is the same case with no tips: no next step, no leads, no hints, no highlighted details, no "In short"
+lines, and evidence crosses nothing off your notebook.
 
 The screen is laid out like a board game. The campus map is the board, the clues are a hand of evidence
 cards, and the five suspects sit across the top. Tap anything to open it in the side panel. A new case
@@ -83,7 +83,7 @@ means and the lies you have caught. Every new card shown raises a suspect's nerv
 they crack and let slip where the paper left from. A crack never shows who is guilty: the culprit
 cracks exactly like an innocent. Stuck on a locked card? A hint costs 15 minutes,
 and the notebook shows your free leads and the night so far. Cross off what it cannot be on the case sheet; the game
-crosses off what a wrong accusation has proved. When a card breaks someone's story, your detective notices: the odd detail is
+crosses off what the evidence (normal mode) and a wrong accusation have proved. When a card breaks someone's story, your detective notices: the odd detail is
 highlighted and a short thought hints at who to show it to. In the story text, a few key words per
 sentence (times, places, names) are in bold so a quick read still catches them.
 
@@ -122,10 +122,11 @@ All characters, the course and the companies in the game are fictional.
 ```mermaid
 flowchart LR
     P([Player]) -->|tap or typed question| A[app.py<br/>screens]
-    A -->|check_secret, ask, present| E[game/engine.py<br/>rules]
+    A -->|open_clue, ask, present, hint, accuse| E[game/engine.py<br/>rules]
     E -->|reads| C[(data/case.json<br/>story)]
-    A -->|character_brief only| AI[game/ai.py]
-    AI -->|one request| R{{Requesty<br/>model}}
+    A -->|typed question| AI[game/ai.py]
+    AI -->|check_secret, press, character_brief, ask| E
+    AI -->|one request: character_brief only| R{{Requesty<br/>model}}
     R -.->|fails, slow or bad JSON| F[scripted lines<br/>from the brief]
     AI -->|reply and topic tag| E
     E -->|cost, unlocks, contradictions| A
@@ -156,7 +157,7 @@ flowchart LR
 | Pictures and style | `assets/`, `static/` | Evidence pictures, portraits, the map and `style.css`. `static/` holds only the map and portraits, never evidence pictures, because Streamlit serves that folder to anyone. |
 | Rules | `game/engine.py` | Clock, unlocks, questions, evidence, contradictions, accusations, badges. |
 | Story | `data/case.json`, `game/case.py` | Clues, suspects, claims, the three variants, and the loader that merges a variant. |
-| Detective's lines | `data/hunches.json`, `voice.json`, `cracks.json`, `lies.json`, `keyfacts.json`, `ruleouts.json` | The detective's thoughts, what each suspect lets slip when they crack, what a caught lie means, the key fact of each card and what each card crosses off. Tests check them against every variant. |
+| Detective's lines | `data/`: `hunches.json`, `voice.json`, `cracks.json`, `lies.json`, `keyfacts.json`, `ruleouts.json` | The detective's thoughts, what each suspect lets slip when they crack, what a caught lie means, the key fact of each card and what each card crosses off. Tests check them against every variant. |
 | AI | `game/ai.py` | Sends one question to the model through Requesty and checks the reply. |
 | Storage | `db.py` | Saved games in SQLite. All database code is here. |
 | Live reload | `reloading.py` | Rebuilds the engine when Streamlit Cloud pulls new code without restarting. |
@@ -211,9 +212,9 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
 
 - **Access:** there are no accounts. Anyone with the link can resume that game, and nobody can
   list or guess other games. Ids that do not have the right shape are rejected before any query.
-- **What is not saved:** the text the player types to the suspects. History records the topic and
-  the suspect's scripted answer, never the typed words, so a password typed into the game never
-  reaches the database or the model.
+- **What is not saved:** the words the player types to the suspects, and the AI's reply to them.
+  History records the topic and the exchange with a placeholder in their place (a scripted answer is
+  kept), so a password typed into the game never reaches the database or the model.
 - **Limit:** Streamlit Community Cloud has a temporary disk, so saved games are lost when the
   app restarts. That is acceptable for a game that lasts minutes.
 - **How it could change:** move `db.py` to a hosted database such as Supabase. Both use SQL, and
@@ -238,7 +239,7 @@ Saved games are stored in SQLite (`db.py`), in `data/app.db` or the file named b
 - **Resume links:** a link that is malformed, unknown or points to a damaged save starts a new
   case. Every action reloads the saved game first, so a second tab with an old copy cannot undo
   progress, or a cold case, made in another tab.
-- **Hidden content:** locked clue text never reaches the browser. The interface reads clues only
+- **Hidden content:** locked clue text never reaches the browser. The interface reads clue text only
   through `Engine.clue_list()` and `Engine.read_clue()`.
 - **Dependencies:** three for the app (`requirements.txt`) and pytest for the tests only
   (`requirements-dev.txt`), each pinned to an exact version and checked for
