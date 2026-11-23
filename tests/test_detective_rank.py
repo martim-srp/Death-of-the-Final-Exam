@@ -121,7 +121,7 @@ def test_share_line_never_names_the_culprit_or_the_answer(engine):
         at = closed_app(solved_at_once(engine, variant))
         assert len(at.code) == 1
         line = at.code[0].value
-        assert "Inspector (75/100)" in line and "carcavelos-paper.streamlit.app" in line
+        assert "Inspector (75/100)" in line and "death-of-the-final-exam.streamlit.app" in line
         for column, option_id in SOLUTION[variant].items():
             option = next(o for o in CASE["accusation"][column] if o["id"] == option_id)
             assert option["label"].lower() not in line.lower()

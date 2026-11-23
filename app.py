@@ -32,7 +32,7 @@ TITLE = load_case()["title"]  # the game's name lives in data/case.json
 # The detectives a player can be: assets/detectives/<id>.webp, 4:5 like the suspects. Purely cosmetic.
 AVATARS = {"she": "Play as her", "he": "Play as him"}
 DEFAULT_AVATAR = "she"
-APP_URL = "https://carcavelos-paper.streamlit.app"
+APP_URL = "https://death-of-the-final-exam.streamlit.app"
 COLUMN_ICONS = {"who": ":material/person:", "how": ":material/build:", "where": ":material/location_on:", "why": ":material/psychology_alt:"}
 # Shown under a free-text answer when the suspect gave a scripted line instead of the AI's.
 # Keys are the reasons game/ai.py records in the game's history.

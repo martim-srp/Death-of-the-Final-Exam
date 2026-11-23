@@ -4,7 +4,7 @@ A detective game. The night before the Investments exam, the paper leaks in the 
 group chat. You have until 09:00 to question five suspects, played by AI, and name who did it, how,
 where and why. The culprit changes from game to game.
 
-**Play it:** https://carcavelos-paper.streamlit.app
+**Play it:** https://death-of-the-final-exam.streamlit.app
 
 ## Team
 
