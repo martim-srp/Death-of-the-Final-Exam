@@ -76,6 +76,10 @@ _GAME_FIELDS = frozenset(
     {"admin", "card", "expires", "job", "owner", "pages", "queue", "staff", "station"}
 )
 _FIELD = re.compile(r"^([A-Za-z_]+)=")
+# A time or a range of times, as players type them: 11pm, 23h47, 23h47min, 11pm-1am, 23h00-23h30.
+# Such a word mixes letters and digits like a password does, but it is an alibi question.
+_TIME = r"\d{1,2}(?:[:.h]\d{2})?(?:am|pm|h|min|m)?"
+_TIME_RANGE = re.compile(rf"{_TIME}(?:[-–]{_TIME})*", re.IGNORECASE)
 
 
 def _words(text):
@@ -91,7 +95,7 @@ def _looks_like_password(word, known_words):
     checked instead: card=STU-2291 is fine, owner=Carcavelos2026 and secret2026.txt are not.
     A file name's stem is checked part by part (report_final2.docx is "report" and "final2").
     """
-    if word.lower() in known_words or _CARD_NUMBER.fullmatch(word):
+    if word.lower() in known_words or _CARD_NUMBER.fullmatch(word) or _TIME_RANGE.fullmatch(word):
         return False
     field = _FIELD.match(word)
     if field and field.group(1).lower() in _GAME_FIELDS:
